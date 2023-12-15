@@ -57,7 +57,7 @@ the colour direction and start value.
 ```json
 {
     "type" :  "builtin.gradients",
-    "groupsTemplates": {
+    "groupsTemplate": {
         "separator": {
             "height": 0,
             "color": "white"

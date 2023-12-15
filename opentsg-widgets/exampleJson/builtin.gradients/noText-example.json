@@ -29,7 +29,7 @@
             "initialPixelValue": 128
         }
     ],
-    "groupsTemplates": {
+    "groupsTemplate": {
         "gradientSeparator": {
             "colors": null,
             "height": 0

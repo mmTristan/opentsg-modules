@@ -8,7 +8,7 @@ import (
 )
 
 type Ramp struct {
-	Gradients        groupContents     `json:"groupsTemplates,omitempty" yaml:"groupsTemplates,omitempty"`
+	Gradients        groupContents     `json:"groupsTemplate,omitempty" yaml:"groupsTemplate,omitempty"`
 	Groups           []RampProperties  `json:"groups,omitempty" yaml:"groups,omitempty"`
 	WidgetProperties control           `json:"widgetProperties,omitempty" yaml:"widgetProperties,omitempty"`
 	ColourSpace      colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`

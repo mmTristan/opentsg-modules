@@ -24,8 +24,8 @@
         "groups": {
             "$ref": "#/$defs/groups"
         },
-        "groupsTemplates": {
-            "$ref": "#/$defs/groupsTemplates"
+        "groupsTemplate": {
+            "$ref": "#/$defs/groupsTemplate"
         }
     },
     "required": [
@@ -221,7 +221,7 @@
             },
             "additionalProperties": false
         },
-        "groupsTemplates": {
+        "groupsTemplate": {
             "type": "object",
             "properties": {
                 "gradientSeparator": {

@@ -22,7 +22,7 @@
             "color": "red"
         }
     ],
-    "groupsTemplates": {
+    "groupsTemplate": {
         "gradientSeparator": {
             "colors": null,
             "height": 0
