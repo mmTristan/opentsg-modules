@@ -290,6 +290,7 @@ func splicegrid(x, y int, xscale, yscale float64) map[string][]Segmenter {
 			count++
 		}
 	}
+	
 	return sections
 }
 

@@ -100,9 +100,15 @@ func TestTpigGeometry(t *testing.T) {
 		htest := sha256.New()
 
 		hnormal.Write(readImage.Pix)
-		htest.Write(v.Image.(*colour.NRGBA64).Pix())
+		switch img := v.Image.(type) {
+		case *image.NRGBA64:
+			htest.Write(img.Pix)
+		case *colour.NRGBA64:
+			htest.Write(img.Pix())
+		}
+
 		Convey("Checking the carved images match their expected tpig carving", t, func() {
-			Convey(fmt.Sprintf("comparing the result to %v", v.Location[0]), func() {
+			Convey(fmt.Sprintf("comparing the result to %v ", v.Location[0]), func() {
 				Convey("The hashes of the two images match exactly", func() {
 					So(htest.Sum(nil), ShouldResemble, hnormal.Sum(nil))
 				})
