@@ -6,10 +6,10 @@ import (
 	"image/png"
 	"os"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-io/csvsave"
-	"github.com/mrmxf/opentsg-modules/opentsg-io/dpx"
-	"github.com/mrmxf/opentsg-modules/opentsg-io/exr"
-	"github.com/mrmxf/opentsg-modules/opentsg-io/tiffup"
+	"github.com/mmTristan/opentsg-modules/opentsg-io/csvsave"
+	"github.com/mmTristan/opentsg-modules/opentsg-io/dpx"
+	"github.com/mmTristan/opentsg-modules/opentsg-io/exr"
+	"github.com/mmTristan/opentsg-modules/opentsg-io/tiffup"
 	"golang.org/x/image/tiff"
 )
 

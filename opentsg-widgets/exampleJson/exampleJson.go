@@ -7,7 +7,7 @@ import (
 	"image/png"
 	"os"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/widgethandler"
 )
 
 /*

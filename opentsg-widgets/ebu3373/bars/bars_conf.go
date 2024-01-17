@@ -3,8 +3,8 @@ package bars
 import (
 	_ "embed"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/colour"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/config"
 )
 
 /*
@@ -17,7 +17,7 @@ const hooks = ""*/
 type barJSON struct {
 	//	Type    string      `json:"type" yaml:"type"`
 	ColourSpace *colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
-	GridLoc     config.Grid       `json:"grid,omitempty" yaml:"grid,omitempty"`
+	GridLoc     config.Grid        `json:"grid,omitempty" yaml:"grid,omitempty"`
 }
 
 //go:embed jsonschema/barschema.json

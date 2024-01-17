@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config/validator"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/config/core"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/config/validator"
 	"gopkg.in/yaml.v3"
 )
 

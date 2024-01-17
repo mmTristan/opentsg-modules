@@ -10,8 +10,8 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config/validator"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/credentials"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/config/validator"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/credentials"
 	"gopkg.in/yaml.v3"
 )
 

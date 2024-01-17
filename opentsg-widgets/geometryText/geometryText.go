@@ -8,11 +8,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/text"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/colour"
+	errhandle "github.com/mmTristan/opentsg-modules/opentsg-core/errHandle"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/gridgen"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/widgethandler"
+	"github.com/mmTristan/opentsg-modules/opentsg-widgets/text"
 )
 
 func LabelGenerator(canvasChan chan draw.Image, debug bool, c *context.Context, wg, wgc *sync.WaitGroup, logs *errhandle.Logger) {

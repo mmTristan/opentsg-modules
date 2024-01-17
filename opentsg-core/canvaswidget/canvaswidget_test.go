@@ -6,8 +6,8 @@ import (
 	"image"
 	"testing"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/config"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/config/core"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

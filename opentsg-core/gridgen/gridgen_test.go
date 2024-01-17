@@ -10,9 +10,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/canvaswidget"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/canvaswidget"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/colour"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/config/core"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

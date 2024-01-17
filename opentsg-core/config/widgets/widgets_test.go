@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/config/core"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

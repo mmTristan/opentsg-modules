@@ -7,11 +7,11 @@ import (
 	"image/draw"
 	"sync"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colourgen"
-	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
-	texter "github.com/mrmxf/opentsg-modules/opentsg-widgets/text"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/colour"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/colourgen"
+	errhandle "github.com/mmTristan/opentsg-modules/opentsg-core/errHandle"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/widgethandler"
+	texter "github.com/mmTristan/opentsg-modules/opentsg-widgets/text"
 )
 
 const (

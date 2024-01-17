@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/credentials"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/credentials"
 	. "github.com/smartystreets/goconvey/convey"
 	"gopkg.in/yaml.v3"
 )

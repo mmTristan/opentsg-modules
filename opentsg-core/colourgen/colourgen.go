@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/colour"
 )
 
 // AssignRGBValues takes a string and the rgb value and returns a [3]int array of the rgb values for a colour.

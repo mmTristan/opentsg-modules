@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/cespare/xxhash"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config/internal/get"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/config/internal/get"
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v3"
 )

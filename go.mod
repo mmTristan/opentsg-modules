@@ -1,4 +1,4 @@
-module github.com/mrmxf/opentsg-modules
+module github.com/mmTristan/opentsg-modules
 
 go 1.19
 

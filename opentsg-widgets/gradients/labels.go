@@ -5,8 +5,8 @@ import (
 	"image"
 	"image/draw"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/text"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/colour"
+	"github.com/mmTristan/opentsg-modules/opentsg-widgets/text"
 )
 
 // labels places the label on the stripe based on the angle of the stripe, the text does not change angle

@@ -10,11 +10,11 @@ import (
 	"math"
 	"sync"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/text"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/colour"
+	errhandle "github.com/mmTristan/opentsg-modules/opentsg-core/errHandle"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/gridgen"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/widgethandler"
+	"github.com/mmTristan/opentsg-modules/opentsg-widgets/text"
 )
 
 const (

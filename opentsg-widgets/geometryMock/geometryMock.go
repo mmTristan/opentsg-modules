@@ -6,7 +6,7 @@ import (
 	"image"
 	"math/rand"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/gridgen"
 )
 
 func Mockgeom(w, h int) []gridgen.Segmenter {

@@ -11,10 +11,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
-	examplejson "github.com/mrmxf/opentsg-modules/opentsg-widgets/exampleJson"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/colour"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/config"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/gridgen"
+	examplejson "github.com/mmTristan/opentsg-modules/opentsg-widgets/exampleJson"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

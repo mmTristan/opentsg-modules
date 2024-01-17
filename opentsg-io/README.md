@@ -51,7 +51,7 @@ go get opentsg-io
 import (
     image/image
     image/draw
-    github.com/mrmxf/opentsg-modules/opentsg-io/dpx
+    github.com/mmTristan/opentsg-modules/opentsg-io/dpx
 )
 
 func main() {

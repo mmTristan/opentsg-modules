@@ -12,11 +12,11 @@ import (
 	"strings"
 
 	"github.com/fogleman/gg"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/aces"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/canvaswidget"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colourgen"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/aces"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/canvaswidget"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/colour"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/colourgen"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/config/core"
 )
 
 type gridContextKey struct {

@@ -9,9 +9,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	examplejson "github.com/mrmxf/opentsg-modules/opentsg-widgets/exampleJson"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/mask"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/colour"
+	examplejson "github.com/mmTristan/opentsg-modules/opentsg-widgets/exampleJson"
+	"github.com/mmTristan/opentsg-modules/opentsg-widgets/mask"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

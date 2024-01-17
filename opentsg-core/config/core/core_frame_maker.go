@@ -11,7 +11,7 @@ import (
 
 	"github.com/cbroglie/mustache"
 	gonanoid "github.com/matoous/go-nanoid"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config/internal/get"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/config/internal/get"
 	"github.com/peterbourgon/mergemap"
 	"gopkg.in/yaml.v3"
 )

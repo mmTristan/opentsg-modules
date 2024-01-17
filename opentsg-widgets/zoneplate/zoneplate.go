@@ -9,10 +9,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/anglegen"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/anglegen"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/colour"
+	errhandle "github.com/mmTristan/opentsg-modules/opentsg-core/errHandle"
+	"github.com/mmTristan/opentsg-modules/opentsg-core/widgethandler"
 )
 
 const (
