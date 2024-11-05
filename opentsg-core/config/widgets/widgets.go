@@ -19,8 +19,21 @@ func widgetFactory(tag string, c *context.Context) map[core.AliasIdentity]json.R
 	frameWidgets := core.GetFrameWidgets(*c) // use  a get function here with contents exported
 	for k, wf := range frameWidgets {
 		if wf.Tag == tag {
-			tagBytes[core.AliasIdentity{Alias: k, ZPos: wf.Pos}] = wf.Data
+			tagBytes[core.AliasIdentity{FullName: k, ZPos: wf.Pos}] = wf.Data
 		}
+	}
+
+	return tagBytes
+}
+
+func ExtractAllWidgets(c *context.Context) map[core.AliasIdentity]json.RawMessage {
+
+	frameWidgets := core.GetFrameWidgets(*c)
+	tagBytes := make(map[core.AliasIdentity]json.RawMessage)
+	for k, wf := range frameWidgets {
+
+		tagBytes[core.AliasIdentity{FullName: k, ZPos: wf.Pos, WType: wf.Tag, GridAlias: wf.Alias, Location: wf.Location}] = wf.Data
+
 	}
 
 	return tagBytes
@@ -41,7 +54,7 @@ func ExtractWidgetStructs[T any](ftype string, schema []byte, c *context.Context
 	defer names.Mu.Unlock()
 
 	for key, val := range get {
-		k := key.Alias
+		k := key.FullName
 		var baseWidg T
 
 		// check it passes the schema
@@ -73,7 +86,7 @@ func MissingWidgetCheck(c context.Context) map[core.AliasIdentity]string {
 	missed := make(map[core.AliasIdentity]string)
 	for widgetName, content := range bases {
 		if appliedWidgets.Data[widgetName] == "" && content.Tag != "" { // if it wasn't assigned a tag and isn't a factory
-			missed[core.AliasIdentity{Alias: widgetName, ZPos: content.Pos}] = widgetName
+			missed[core.AliasIdentity{FullName: widgetName, ZPos: content.Pos}] = widgetName
 		}
 	}
 

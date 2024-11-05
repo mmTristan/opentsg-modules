@@ -174,8 +174,15 @@ type jsonUpdate struct {
 }
 
 // each json has factory has a tag that defines the widget it represents
-type widgetID struct {
-	ID string `json:"type,omitempty" yaml:"type,omitempty"`
+type widgetEssentials struct {
+	WType   string `json:"type,omitempty" yaml:"type,omitempty"`
+	GridLoc Grid   `json:"grid,omitempty" yaml:"grid,omitempty"`
+}
+
+// Grid gives the grid system with the coordinates and an alias
+type Grid struct {
+	Location string `json:"location,omitempty" yaml:"location,omitempty"`
+	Alias    string `json:"alias,omitempty" yaml:"alias,omitempty"`
 }
 
 // createWidgets loops through the create functions of all the factories and generates
@@ -447,17 +454,19 @@ func (b *base) frameBytesAdder(createUpdate map[string]any, widgetBase json.RawM
 			return fmt.Errorf("0036 error when updating the widget %v: %v", dotPath, err)
 		}
 
-		var id widgetID
+		var id widgetEssentials
 		err = yaml.Unmarshal(raw, &id)
 		if err != nil {
 
 			return fmt.Errorf("0009 %v when parsing the widget %s", err, dotPath)
 		}
 
-		if id.ID == "" {
-			id.ID, _ = gonanoid.Nanoid() // generate a random id so widgets can't pick it up with delibrate names
+		if id.WType == "" {
+			id.WType, _ = gonanoid.Nanoid() // generate a random id so widgets can't pick it up with delibrate names
 		}
-		b.generatedFrameWidgets[dotPath] = widgetContents{raw, *zPos, positions, id.ID}
+		b.generatedFrameWidgets[dotPath] = widgetContents{Data: raw, Pos: *zPos, arrayPos: positions, Tag: id.WType,
+			Location: id.GridLoc.Location, Alias: id.GridLoc.Alias,
+		}
 		*zPos++
 	}
 
@@ -698,7 +707,7 @@ func (b base) dataToFrame(jsonBase json.RawMessage, results []arrayValues, data 
 				continue
 			}
 
-			var id widgetID
+			var id widgetEssentials
 			err = yaml.Unmarshal(newbase, &id)
 			if err != nil {
 				// if there's an error move onto the next one
@@ -711,7 +720,9 @@ func (b base) dataToFrame(jsonBase json.RawMessage, results []arrayValues, data 
 				// or do I break here?
 				errs = append(errs, fmt.Errorf("0015 %s has already been generated for the parent %s", parent[:len(parent)-1]+result.name, parent[:len(parent)-1]))
 			} else {
-				b.generatedFrameWidgets[parent[:len(parent)-1]+result.name] = widgetContents{newbase, *zPos, append(pos, result.effectiveArray...), id.ID}
+				b.generatedFrameWidgets[parent[:len(parent)-1]+result.name] = widgetContents{
+					Data: newbase, Pos: *zPos, arrayPos: append(pos, result.effectiveArray...), Tag: id.WType,
+					Location: id.GridLoc.Location, Alias: id.GridLoc.Alias}
 				*zPos++
 			}
 		}

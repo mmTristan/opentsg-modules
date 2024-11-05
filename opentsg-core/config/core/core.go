@@ -79,12 +79,17 @@ type widgetContents struct {
 	Pos      int
 	arrayPos []int
 	Tag      string
+	Location string
+	Alias    string
 }
 
 // AliasIdentity is the name and zposition of a widget. Where zposition is the widgets position in the global array of widgets
 type AliasIdentity struct {
-	Alias string
-	ZPos  int
+	FullName  string
+	ZPos      int
+	WType     string
+	Location  string
+	GridAlias string
 }
 
 // SyncMap  is a map with a sync.Mutex to prevent concurrent writes.

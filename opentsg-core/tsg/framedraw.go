@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -44,20 +45,28 @@ type syncmap struct {
 	data   map[string]any
 }
 
-type opentsg struct {
+type openTSG struct {
 	internal      context.Context
 	framcount     int
 	customWidgets []func(chan draw.Image, bool, *context.Context, *sync.WaitGroup, *sync.WaitGroup, *errhandle.Logger)
 	customSaves   map[string]func(io.Writer, draw.Image, int) error
+	handler       map[string]hand
+	middlewares   []func(Handler) Handler
+}
+
+type hand struct {
+	schema  []byte
+	handler Handler
 }
 
 // BuildOpenTSG creates the OpenTSG engine.
 // It is configured by an input json file and any profile set up information.
-func BuildOpenTSG(inputFile string, profile string, debug bool, httpsKeys ...string) (*opentsg, error) {
+func BuildOpenTSG(inputFile string, profile string, debug bool, httpsKeys ...string) (*openTSG, error) {
 	cont, framenumber, configErr := core.FileImport(inputFile, profile, debug, httpsKeys...)
 
-	return &opentsg{internal: cont, framcount: framenumber,
+	return &openTSG{internal: cont, framcount: framenumber,
 			customWidgets: baseWidgets(),
+			handler:       map[string]hand{},
 			customSaves:   baseSaves()},
 		configErr
 }
@@ -83,7 +92,7 @@ and then would be  to the tsg object like this
 
 	tpg.AddCustomSaves([]tsg.NameSave{{Extension: "JPEG", SaveFunction: WriteJPEGFile}
 */
-func (tsg *opentsg) AddCustomSaves(customSaves []NameSave) {
+func (tsg *openTSG) AddCustomSaves(customSaves []NameSave) {
 	// need name and save function
 	// TODO:emit warnings
 
@@ -95,12 +104,12 @@ func (tsg *opentsg) AddCustomSaves(customSaves []NameSave) {
 
 // Add CustomWidgets allows for custom widget functions to be run from opentsg. Without going into the internals of the opentsg and changing things up.
 // To understand the design of the widgets function, please check the layout of the widget module.
-func (tsg *opentsg) AddCustomWidgets(widgets ...func(chan draw.Image, bool, *context.Context, *sync.WaitGroup, *sync.WaitGroup, *errhandle.Logger)) {
+func (tsg *openTSG) AddCustomWidgets(widgets ...func(chan draw.Image, bool, *context.Context, *sync.WaitGroup, *sync.WaitGroup, *errhandle.Logger)) {
 	tsg.customWidgets = append(tsg.customWidgets, widgets...)
 }
 
 // Draw generates the images for each array section of the json array and applies it to the test card grid.
-func (tsg *opentsg) Draw(debug bool, mnt, logType string) {
+func (tsg *openTSG) Draw(debug bool, mnt, logType string) {
 	imageNo := tsg.framcount
 
 	// wait for every frame to run before exiting the lopp
@@ -233,7 +242,7 @@ func baseWidgets() []func(chan draw.Image, bool, *context.Context, *sync.WaitGro
 }
 
 // each image is added to the base image
-func (tsg *opentsg) widgetGen(c *context.Context, debug bool, canvas draw.Image, logs *errhandle.Logger) {
+func (tsg *openTSG) widgetGen(c *context.Context, debug bool, canvas draw.Image, logs *errhandle.Logger) {
 
 	// gridgen.ParamToCanvas can be changed depending on the coordinate system
 	canvasChan := make(chan draw.Image, 1)
@@ -351,4 +360,44 @@ func averageCalc(targetImg draw.Image) any {
 
 	return AverageImageColour{R / count, G / count, B / count}
 
+}
+
+// Generator contains the method for running widgets to generate segments of the test chart.
+type Generator interface {
+	Generate(draw.Image) error
+}
+
+/*
+// run some tests to check how the unmarshalling works
+func (tsg *openTSG) AddWidget(wType string, schema []byte, Gen Generator) {
+	//@TODO add panics if things are overwritten
+	// the Generator is nil
+	tsg.widgets[wType] = Unmarshal(Gen)
+
+}*/
+
+func Unmarshal(Han Handler) func(input []byte) (Handler, error) {
+
+	return func(input []byte) (Handler, error) {
+		/*
+			x := Gen
+			//	v := reflect.ValueOf(&x)
+			v := reflect.New(reflect.TypeOf(Gen))
+			fmt.Println(reflect.TypeOf(&Gen))
+			fmt.Println(v.Type(), "HERE", v.Interface(), v.Kind(), v.Elem().Type())
+			yaml.Unmarshal([]byte("{\"input\":\"yes\"}"), v.Interface())
+			fmt.Println(x, reflect.TypeOf(x), "HERES", v.Elem().Interface())*/
+
+		//copy the underlying type to generate a new value
+		// that points to the type of generator and not
+		// just the generator
+		v := reflect.New(reflect.TypeOf(Han))
+		err := yaml.Unmarshal(input, v.Interface())
+
+		if err != nil {
+			return nil, err
+		}
+
+		return v.Interface().(Handler), nil
+	}
 }

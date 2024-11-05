@@ -39,7 +39,7 @@ func TestExtract(t *testing.T) {
 		Convey("using ./testdata/types_loader.json as the input file then extract the bytes into the all struct", func() {
 			Convey(fmt.Sprintf("No error is returned and the filled struct should match %v", types), func() {
 				So(errs, ShouldBeNil)
-				So(frames[core.AliasIdentity{Alias: "types", ZPos: 0}], ShouldResemble, types)
+				So(frames[core.AliasIdentity{FullName: "types", ZPos: 0}], ShouldResemble, types)
 			})
 		})
 	})
@@ -50,7 +50,7 @@ func TestMissed(t *testing.T) {
 	c2, _ := core.FrameWidgetsGenerator(fc, 0, false)
 	typeWrapper(c2, types, "missed")
 	missed := MissingWidgetCheck(c2)
-	actualMiss := map[core.AliasIdentity]string{{Alias: "types", ZPos: 0}: "types"}
+	actualMiss := map[core.AliasIdentity]string{{FullName: "types", ZPos: 0}: "types"}
 	Convey("Checking that missed structs are found", t, func() {
 		Convey("using ./testdata/types_loader.json as the input file then not searching for the widget type", func() {
 			Convey(fmt.Sprintf("The missed map of %v is returned", actualMiss), func() {

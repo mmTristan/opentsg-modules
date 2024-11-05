@@ -121,7 +121,7 @@ func WidgetRunner[T Generator](canvasChan chan draw.Image, g GenConf[T], c *cont
 	for _, key := range runOrder {
 		var generated bool
 		v := runMap[key]
-		k := key.Alias
+		k := key.FullName
 		gridcanvas, imgLocation, mask, err := gridgen.GridSquareLocatorAndGenerator(v.Location(), v.Alias(), c)
 
 		if err != nil {
@@ -286,7 +286,7 @@ func put[T any](toSave map[core.AliasIdentity]T, c *context.Context) error {
 
 			return fmt.Errorf("0201 Error inserting metadata %v", err)
 		}
-		imageGeneration.data[k.Alias] = readForm
+		imageGeneration.data[k.FullName] = readForm
 	}
 	// imageGeneration.data[widget] = alias
 
@@ -423,7 +423,7 @@ func MockMissedGen(canvasChan chan draw.Image, debug bool, c *context.Context, w
 	for count < len(runOrder) {
 		z := (*c).Value(zKey).(*int)
 		if *z == runOrder[count].ZPos {
-			missedNames[count] = runOrder[count].Alias
+			missedNames[count] = runOrder[count].FullName
 			count++
 			*z++
 		}

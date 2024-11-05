@@ -314,7 +314,7 @@ func TestPut(t *testing.T) {
 	for i, ts := range tests {
 		// map to add
 		gen := make(map[core.AliasIdentity]interface{})
-		gen[core.AliasIdentity{Alias: names[i], ZPos: 0}] = ts
+		gen[core.AliasIdentity{FullName: names[i], ZPos: 0}] = ts
 		err := put(gen, newC)
 
 		// add to the expected total
@@ -359,7 +359,7 @@ func TestExtract(t *testing.T) {
 	top.Nest = middle
 
 	gen := make(map[core.AliasIdentity]nested)
-	gen[core.AliasIdentity{Alias: "testKey", ZPos: 0}] = top
+	gen[core.AliasIdentity{FullName: "testKey", ZPos: 0}] = top
 	dummy := context.TODO()
 	newC := MetaDataInit(dummy)
 	_ = put(gen, newC)
