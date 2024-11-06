@@ -1,0 +1,7 @@
+{
+    "type": "test.fill",
+    "grid": {
+        "location": "a"
+    },
+    "fill":"#0000ff"
+}

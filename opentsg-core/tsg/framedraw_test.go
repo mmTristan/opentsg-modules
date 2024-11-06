@@ -2,11 +2,13 @@ package tsg
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"image"
 	"image/draw"
 	"log/slog"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -92,7 +94,7 @@ func TestRaceConditions(t *testing.T) {
 	otsg, _ := BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true)
 	otsg.Handle("test.fill", []byte("{}"), Filler{})
 
-	fmt.Println(otsg.handler)
+	fmt.Println(otsg.handlers)
 	otsg.Run(true, "", "stdout")
 	// run with -race without the old code
 	/*
@@ -128,6 +130,52 @@ func TestMiddlewares(t *testing.T) {
 			})
 		})
 	})
+
+	// set up the order
+	otsg, err = BuildOpenTSG("./testdata/handlerLoaders/singleloader.json", "", true)
+	otsg.Handle("test.fill", []byte(`{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+    },
+    "required": [
+        "fail"
+    ]
+}`), Filler{})
+
+	first := func(next Handler) Handler {
+		return HandlerFunc(func(r1 Response, r2 *Request) {
+			r1.Write(0, "first")
+			next.Handle(r1, r2)
+		})
+	}
+
+	second := func(next Handler) Handler {
+		return HandlerFunc(func(r1 Response, r2 *Request) {
+			r1.Write(0, "second")
+			next.Handle(r1, r2)
+		})
+	}
+	orderLog := &testSlog{logs: make([]string, 0)}
+	otsg.Use(Logger(slog.New(orderLog)), first, second)
+	otsg.Run(true, "", "stdout")
+
+	Convey("Checking the middleware runs in the oder it is called", t, func() {
+		Convey("the return of the logs are 3 messages in the order of, first, second and validator", func() {
+			Convey("the logs match that order", func() {
+				So(err, ShouldBeNil)
+				So(orderLog.logs, ShouldResemble, []string{"0:first", "0:second",
+					"400:0027 fail is required in unknown files please check your files for the fail property in the name blue,"})
+			})
+		})
+	})
+
+	/*
+
+	   test run order
+
+	*/
+
 	/*
 
 		utilise the slogger to extract data points
@@ -144,9 +192,9 @@ func TestMiddlewares(t *testing.T) {
         "fail"
     ]
 }`), Filler{})
-	buf = bytes.NewBuffer([]byte{})
-	jSlog = slog.NewJSONHandler(buf, &slog.HandlerOptions{})
-	otsg.Use(Logger(slog.New(jSlog)))
+
+	logArr := testSlog{logs: make([]string, 0)}
+	otsg.Use(Logger(slog.New(&logArr)))
 
 	otsg.Run(true, "", "stdout")
 
@@ -155,14 +203,16 @@ func TestMiddlewares(t *testing.T) {
 	if logEntries[len(logEntries)-1] == "" {
 		logEntries = logEntries[:len(logEntries)-1]
 	}
-	valid := messageValidator(logEntries, "400:0027 fail is required in unknown files please check your files for the fail property in the name cs.red\n")
-	fmt.Println(logEntries)
+	//valid := messageValidator(logEntries, "400:0027 fail is required in unknown files please check your files for the fail property in the name cs.red\n")
+	//fmt.Println(logEntries)
 
 	Convey("Checking the log handle runs the logs", t, func() {
 		Convey("3 logs should be returned", func() {
 			Convey("3 logs are returned denoting a successful run", func() {
 				So(err, ShouldBeNil)
-				So(valid, ShouldBeTrue)
+				So(logArr.logs, ShouldResemble, []string{"400:0027 fail is required in unknown files please check your files for the fail property in the name cs.blue,",
+					"400:0027 fail is required in unknown files please check your files for the fail property in the name cs.green,",
+					"400:0027 fail is required in unknown files please check your files for the fail property in the name cs.red,"})
 
 			})
 		})
@@ -227,6 +277,61 @@ func TestMarshallHandler(t *testing.T) {
 	}
 }
 
+func TestErrors(t *testing.T) {
+
+	// have a set of jsons inserted into a runner
+	/*
+		these consist of bad json
+		bad coordinates
+		invalid gridgen for tsg? - maybe laters
+
+	*/
+
+	errors := []string{
+		`{
+    "type": "test.fills",
+    "grid": {
+        "location": "a0:f5"
+    },
+    "fill":"#0000ff"
+}`,
+		`{
+    "type": "test.fill",
+    "grid": {
+        "location": "a"
+    },
+    "fill":"#0000ff"
+}`,
+	}
+
+	expectedErrs := []string{"400:no handler found for widgets of type \"test.fills\" for widget path  \"err\"",
+		"400:0046 a is not a valid grid alias"}
+
+	for i, e := range errors {
+		f, fErr := os.Create("./testdata/handlerLoaders/err.json")
+		_, wErr := f.Write([]byte(e))
+
+		otsg, err := BuildOpenTSG("./testdata/handlerLoaders/errLoader.json", "", true)
+		otsg.Handle("test.fill", []byte(`{}`), Filler{})
+
+		orderLog := &testSlog{logs: make([]string, 0)}
+		otsg.Use(Logger(slog.New(orderLog)))
+		otsg.Run(true, "", "stdout")
+
+		Convey("Calling openTSG with a widget that deliberately fails", t, func() {
+			Convey(fmt.Sprintf("using a json of \"%s\"", e), func() {
+				Convey(fmt.Sprintf("An error of \"%s\" is returned", expectedErrs[i]), func() {
+					So(fErr, ShouldBeNil)
+					So(wErr, ShouldBeNil)
+					So(err, ShouldBeNil)
+					So(orderLog.logs, ShouldResemble, []string{expectedErrs[i]})
+				})
+			})
+		})
+	}
+
+}
+
 type dummyHandler struct {
 	Input string `json:"input"`
 }
@@ -239,4 +344,30 @@ type secondDummyHandler struct {
 }
 
 func (d secondDummyHandler) Handle(resp Response, req *Request) {
+}
+
+// test log is a struct for piping logs into
+// an array.
+// not thread safe and just something dumb for tests
+type testSlog struct {
+	logs []string
+}
+
+func (ts *testSlog) Enabled(context.Context, slog.Level) bool {
+	return true
+}
+
+func (ts *testSlog) Handle(_ context.Context, rec slog.Record) error {
+
+	ts.logs = append(ts.logs, rec.Message)
+
+	return nil
+}
+
+func (ts *testSlog) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return ts
+}
+
+func (ts *testSlog) WithGroup(name string) slog.Handler {
+	return ts
 }

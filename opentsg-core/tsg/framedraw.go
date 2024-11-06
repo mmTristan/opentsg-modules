@@ -50,8 +50,9 @@ type openTSG struct {
 	framcount     int
 	customWidgets []func(chan draw.Image, bool, *context.Context, *sync.WaitGroup, *sync.WaitGroup, *errhandle.Logger)
 	customSaves   map[string]func(io.Writer, draw.Image, int) error
-	handler       map[string]hand
+	handlers      map[string]hand
 	middlewares   []func(Handler) Handler
+	encoders      map[string]Encoder
 }
 
 type hand struct {
@@ -66,7 +67,7 @@ func BuildOpenTSG(inputFile string, profile string, debug bool, httpsKeys ...str
 
 	return &openTSG{internal: cont, framcount: framenumber,
 			customWidgets: baseWidgets(),
-			handler:       map[string]hand{},
+			handlers:      map[string]hand{},
 			customSaves:   baseSaves()},
 		configErr
 }

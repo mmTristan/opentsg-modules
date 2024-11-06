@@ -22,6 +22,28 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-io/tiffup"
 )
 
+type Encoder func(io.Writer, image.Image, EncodeOptions) error
+
+type EncodeOptions struct {
+	BitDepth int
+}
+
+// HandleFunc registers the handler function for the given pattern in [DefaultServeMux].
+// The documentation for [ServeMux] explains how patterns are matched.
+func (o openTSG) EncoderFunc(extension string, encoder Encoder) {
+	// set up router here
+	extension = strings.ToUpper(extension)
+	if _, ok := o.encoders[extension]; ok {
+		panic(fmt.Sprintf("The encoder extension %s has already been declared", extension))
+	}
+
+	// do some checking for invalid characters, if there
+	// are any
+
+	o.encoders[extension] = encoder
+
+}
+
 // CanvasSave saves the file according to the extensions provided
 // the name add is for debug to allow to identify images
 func (tpg *openTSG) canvasSave(canvas draw.Image, filename []string, bitdeph int, mnt, framenumber string, debug bool, logs *errhandle.Logger) {
@@ -65,7 +87,6 @@ func (tpg *openTSG) savefile(filename, framenumber string, base draw.Image, bitd
 	// regPNG := regexp.MustCompile(`^[\w\W]{1,255}\.[pP][nN][gG]$`)
 	// regCSV := regexp.MustCompile(`^[\w\W]{1,255}\.[cC][sS][Vv]$`)
 	// regDPX := regexp.MustCompile(`^[\w\W]{1,255}\.[dD][pP][xX]$`)
-	// regSTH := regexp.MustCompile(`^[\w\W]{1,255}\.[7][tT][hH]$`)
 	// regEXR := regexp.MustCompile(`^[\w\W]{1,255}\.[eE][xX][rR]$`)
 
 	filename, _ = mustache.Render(filename, map[string]string{"framenumber": framenumber})
@@ -77,7 +98,7 @@ func (tpg *openTSG) savefile(filename, framenumber string, base draw.Image, bitd
 	saveFunc, ok := tpg.customSaves[strings.ToUpper(ext)]
 
 	if !ok {
-		return fmt.Errorf("%s is not a valid file format, please choose one of the following: tiff, png, dpx,exr,7th or csv", filename)
+		return fmt.Errorf("%s is not a valid file format, please choose one of the following: tiff, png, dpx,exr or csv", filename)
 	}
 
 	// open the file if not sth or the other
@@ -195,4 +216,71 @@ func WriteCSVFile(w io.Writer, toDraw draw.Image, empty int) error {
 
 	}
 	// return csvsave.Encode(filename, img.(*image.NRGBA64))
+}
+
+func (tsg *openTSG) encodeFrame(filename, framenumber string, base draw.Image, bitdepth int) error {
+	// regTIFF := regexp.MustCompile(`^[\w\W]{1,255}\.[tT][iI][fF]{1,2}$`)
+	// regPNG := regexp.MustCompile(`^[\w\W]{1,255}\.[pP][nN][gG]$`)
+	// regCSV := regexp.MustCompile(`^[\w\W]{1,255}\.[cC][sS][Vv]$`)
+	// regDPX := regexp.MustCompile(`^[\w\W]{1,255}\.[dD][pP][xX]$`)
+	// regEXR := regexp.MustCompile(`^[\w\W]{1,255}\.[eE][xX][rR]$`)
+
+	// @TODO remove speciality and include at the metadata substitution phase
+	filename, _ = mustache.Render(filename, map[string]string{"framenumber": framenumber})
+
+	extensions := strings.Split(filename, ".")
+	ext := extensions[len(extensions)-1]
+
+	// extract the extension type
+	encodeFunc, ok := tsg.encoders[strings.ToUpper(ext)]
+
+	if !ok {
+		formats := make([]string, len(tsg.encoders))
+		i := 0
+		for k := range tsg.encoders {
+			formats[i] = k
+			i++
+		}
+
+		return fmt.Errorf("%s does not have an available encoder, available encoders are: %v", filename, formats)
+	}
+
+	// open the file if not sth or the other
+
+	saveTarget, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0777)
+	if err != nil {
+		return fmt.Errorf("0051 %v", err)
+	}
+
+	defer saveTarget.Close()
+
+	fwErr := encodeFunc(saveTarget, base, EncodeOptions{BitDepth: bitdepth})
+	if fwErr != nil {
+		return fmt.Errorf("0051 %v", fwErr)
+	}
+
+	// Amend the case statement for the different types of files here.
+	// This means only the open tpg code can be changed
+	// and custom save functions can be plugged in.
+
+	// get the 16 bit pixels and put it through
+	canvas, ok := base.(*image.NRGBA64)
+	if !ok { // set to nrgba64 if not ok
+		canvas = image.NewNRGBA64(base.Bounds())
+		colour.Draw(canvas, canvas.Bounds(), base, image.Point{}, draw.Src)
+	}
+	pixB := canvas.Pix
+	// reset the file to the start for the hashreader
+	_, err = saveTarget.Seek(0, io.SeekStart)
+	if err != nil {
+		return fmt.Errorf("0052 %v", err)
+	}
+	err = ascmhl.MhlGenFile(saveTarget, ascmhl.ToHash{Md5: true, C4: true, Xxh128: true, Crc32RGB: true, Crc16RGB: true}, pixB, 16)
+
+	if err != nil {
+		return fmt.Errorf("0053 %v", err)
+	}
+	return err
+	// return saveCRC(saveTarget, pixB)
+
 }

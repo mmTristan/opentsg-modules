@@ -31,9 +31,10 @@ func ExtractAllWidgets(c *context.Context) map[core.AliasIdentity]json.RawMessag
 	frameWidgets := core.GetFrameWidgets(*c)
 	tagBytes := make(map[core.AliasIdentity]json.RawMessage)
 	for k, wf := range frameWidgets {
-
-		tagBytes[core.AliasIdentity{FullName: k, ZPos: wf.Pos, WType: wf.Tag, GridAlias: wf.Alias, Location: wf.Location, ColourSpace: wf.ColourSpace}] = wf.Data
-
+		// skip factories that don't have types
+		if wf.Tag != "" {
+			tagBytes[core.AliasIdentity{FullName: k, ZPos: wf.Pos, WType: wf.Tag, GridAlias: wf.Alias, Location: wf.Location, ColourSpace: wf.ColourSpace}] = wf.Data
+		}
 	}
 
 	return tagBytes

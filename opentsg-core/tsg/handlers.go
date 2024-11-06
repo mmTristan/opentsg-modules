@@ -7,7 +7,6 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -39,33 +38,23 @@ func (o openTSG) HandleFunc(wType string, handler HandlerFunc) {
 	// set up router here
 
 	o.Handle(wType, []byte("{}"), handler)
-	// o.handler[wType] = hand{schema: []byte("{}"), handler: handler}
+
 }
 
 func (o openTSG) Handle(wType string, schema []byte, handler Handler) {
 
-	if _, ok := o.handler[wType]; ok {
+	if _, ok := o.handlers[wType]; ok {
 		panic(fmt.Sprintf("The widget type %s has already been declared", wType))
 	}
 
 	// do some checking for invalid characters, if there
 	// are any
 
-	o.handler[wType] = hand{schema: schema, handler: handler}
-}
-
-type Encoder interface {
-	Encode(io.Writer, image.Image, EncodeOptions)
+	o.handlers[wType] = hand{schema: schema, handler: handler}
 }
 
 func (o *openTSG) Use(middlewares ...func(Handler) Handler) {
 	o.middlewares = append(o.middlewares, middlewares...)
-}
-
-// remove and just leave as 16, or do we need 10,12 still?
-// are there any other forseeable encodeOptions
-type EncodeOptions struct {
-	BitDepth int
 }
 
 type Request struct {
@@ -168,13 +157,14 @@ type Legacy struct {
 func (l Legacy) Handle(resp Response, req *Request) {
 
 	otsg, err := BuildOpenTSG(l.FileLocation, "", true)
-	fmt.Println(err, "ERR")
+
 	if err != nil {
 
 		resp.Write(500, err.Error())
 		return
 	}
 
+	// run the old program as normal
 	otsg.Draw(true, l.MNT, "stdout")
 
 	resp.Write(200, "")
@@ -270,7 +260,7 @@ func (tsg *openTSG) Run(debug bool, mnt, logType string) {
 			carves := gridgen.Carve(frameContext, canvas, canvaswidget.GetFileName(*frameContext))
 			for _, carvers := range carves {
 				// save.CanvasSave(canvas, canvaswidget.GetFileName(*frameContext), canvaswidget.GetFileDepth(*frameContext), mnt, i4, debug, frameLog)
-				tsg.canvasSave(carvers.Image, carvers.Location, canvaswidget.GetFileDepth(*frameContext), mnt, i4, debug, frameLog)
+				tsg.canvasSave2(carvers.Image, carvers.Location, canvaswidget.GetFileDepth(*frameContext), mnt, i4, debug, frameLog)
 			}
 			saveTime = time.Since(saveMeasure).Microseconds()
 
@@ -300,27 +290,52 @@ func (tsg *openTSG) Run(debug bool, mnt, logType string) {
 	}
 }
 
+// CanvasSave saves the file according to the extensions provided
+// the name add is for debug to allow to identify images
+func (tsg *openTSG) canvasSave2(canvas draw.Image, filename []string, bitdeph int, mnt, framenumber string, debug bool, logs *errhandle.Logger) {
+	for _, name := range filename {
+		truepath, err := filepath.Abs(filepath.Join(mnt, name))
+		if err != nil {
+			logs.PrintErrorMessage("E_opentsg_SAVE_", err, debug)
+
+			continue
+		}
+		err = tsg.encodeFrame(truepath, framenumber, canvas, bitdeph)
+		if err != nil {
+			logs.PrintErrorMessage("E_opentsg_SAVE_", err, debug)
+		}
+	}
+}
+
 // // update widgetHandle to make the choices for me
 func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, frameNo int) {
 
+	// set up the core context functions
 	allWidgets := widgets.ExtractAllWidgets(c)
 	// add the validator last
 	lineErrs := core.GetJSONLines(*c)
-
-	allWidgetsArr := make([]core.AliasIdentity, len(allWidgets))
-	for alias := range allWidgets {
-		allWidgetsArr[alias.ZPos] = alias
-	}
-
 	webSearch := func(URI string) ([]byte, error) {
 		return core.GetWebBytes(c, URI)
 	}
 
+	// get the widgtes to be used
+	allWidgetsArr := make([]core.AliasIdentity, len(allWidgets))
+	for alias := range allWidgets {
+
+		allWidgetsArr[alias.ZPos] = alias
+
+	}
+
+	// set up the properties for all requests
 	fp := FrameProperties{WorkingDir: core.GetDir(*c), FrameNumber: frameNo}
 
+	// sync tools for running the widgets async
 	runPool := Pool{AvailableMemeory: 3}
+	// wg for each widget
 	var wg sync.WaitGroup
 	wg.Add(len(allWidgets))
+	// ensure z order
+	// prevent race conditions writing to the canvas
 	zpos := 0
 	zPos := &zpos
 	var zPosLock sync.Mutex
@@ -328,6 +343,7 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, frameNo 
 
 	for i := 0; i < len(allWidgets); i++ {
 
+		// get a runner to run the widget
 		runner, available := runPool.GetRunner()
 		for !available {
 
@@ -335,28 +351,9 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, frameNo 
 			runner, available = runPool.GetRunner()
 		}
 
+		// run the widget async
 		go func() {
 			position := i
-			/*var gridcanvas, mask draw.Image
-			var imgLocation image.Point
-
-			defer func() {
-				zPosLock.Lock()
-				widgePos := *zPos
-				zPosLock.Unlock()
-				for widgePos != position {
-					time.Sleep(time.Millisecond * 10)
-					zPosLock.Lock()
-					widgePos = *zPos
-					zPosLock.Unlock()
-				}
-
-				// if resp.Code == 200
-				// else skip
-				canvasLock.Lock()
-				colour.DrawMask(canvas, gridcanvas.Bounds().Add(imgLocation), gridcanvas, image.Point{}, mask, image.Point{}, draw.Over)
-				canvasLock.Unlock()
-			}() */
 			defer runPool.PutRunner(runner)
 			defer wg.Done()
 
@@ -364,55 +361,80 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, frameNo 
 			widgProps := allWidgetsArr[i]
 
 			if widgProps.WType != "builtin.canvasoptions" && widgProps.WType != "" {
-				handlers := tsg.handler[allWidgetsArr[i].WType]
 
+				handlers, handlerExists := tsg.handlers[allWidgetsArr[i].WType]
+				// make a function so the handler is returned
 				// @TODO skip the handler and come back to it later
 
 				var Han Handler
-				var err error
-				switch hdler := handlers.handler.(type) {
-				// don't parse, as it will break
-				// just run the function
-				case HandlerFunc:
-					Han = hdler
-				default:
-					Han, err = Unmarshal(handlers.handler)(widg)
-				}
+				var resp response
+				var req Request
+				var gridcanvas, mask draw.Image
+				var imgLocation image.Point
 
-				// @TODO  handle the error in a sensible manner
+				// run a set up function that can return early
+				// to make the handler just spit out the error
+				func() {
+					// ensure the chain is always kept
+					defer func() {
+						Han = chain(tsg.middlewares, Han)
+					}()
 
-				gridcanvas, imgLocation, mask, err := gridgen.GridSquareLocatorAndGenerator(widgProps.Location, widgProps.GridAlias, c)
+					if !handlerExists {
+						Han = GenErrorHandler(400,
+							fmt.Sprintf("no handler found for widgets of type \"%s\" for widget path  \"%s\"", widgProps.WType, widgProps.FullName))
+						return
+					}
 
-				// when the function am error is returned,
-				// the function just becomes return an error
-				if err != nil {
-					Han = HandlerFunc(func(r Response, _ *Request) {
-						r.Write(400, err.Error())
-					})
-				}
+					var err error
+					switch hdler := handlers.handler.(type) {
+					// don't parse, as it will break
+					// just run the function
+					case HandlerFunc:
+						Han = hdler
+					default:
+						Han, err = Unmarshal(handlers.handler)(widg)
+					}
 
-				flats, err := gridgen.GetGridGeometry(c, widgProps.Location)
+					if err != nil {
+						Han = GenErrorHandler(400, err.Error())
+						return
+					}
 
-				// @TODO handle error
+					gridcanvas, imgLocation, mask, err = gridgen.GridSquareLocatorAndGenerator(widgProps.Location, widgProps.GridAlias, c)
+					// when the function am error is returned,
+					// the function just becomes return an error
+					if err != nil {
+						Han = GenErrorHandler(400, err.Error())
+						return
+					}
 
-				pp := PatchProperties{WidgetType: widgProps.WType, Dimensions: gridcanvas.Bounds(),
-					TSGLocation: imgLocation, Geomtetry: flats,
-					ColourSpace: widgProps.ColourSpace}
-				//	Han, err := Unmarshal(handlers.handler)(widg)
-				resp := response{baseImg: gridcanvas}
-				req := Request{FrameProperties: fp, RawWidgetYAML: widg,
-					searchWithCredentials: webSearch, PatchProperties: pp,
-				}
+					flats, err := gridgen.GetGridGeometry(c, widgProps.Location)
+					if err != nil {
+						Han = GenErrorHandler(400, err.Error())
+						return
+					}
 
-				// chain that middleware at the last second?
-				validatorMid := jSONValidator(lineErrs, handlers.schema, widgProps.FullName)
-				Han = chain(append(tsg.middlewares, validatorMid), Han)
+					// set up the requests
+					// and chain the middleware for the handler
+
+					pp := PatchProperties{WidgetType: widgProps.WType, Dimensions: gridcanvas.Bounds(),
+						TSGLocation: imgLocation, Geomtetry: flats,
+						ColourSpace: widgProps.ColourSpace}
+					//	Han, err := Unmarshal(handlers.handler)(widg)
+					resp = response{baseImg: gridcanvas}
+					req = Request{FrameProperties: fp, RawWidgetYAML: widg,
+						searchWithCredentials: webSearch, PatchProperties: pp,
+					}
+
+					// chain that middleware at the last second?
+					validatorMid := jSONValidator(lineErrs, handlers.schema, widgProps.FullName)
+					Han = chain([]func(Handler) Handler{validatorMid}, Han)
+
+				}()
 
 				// RUN the widget
 				Han.Handle(&resp, &req)
-
-				// do some handling here based on response for saving
-				fmt.Println(resp.status, resp.message)
 
 				// wait until it is the widgets turn
 				zPosLock.Lock()
@@ -425,11 +447,13 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, frameNo 
 					zPosLock.Unlock()
 				}
 
-				// if resp.Code == 200
-				// else skip
-				canvasLock.Lock()
-				colour.DrawMask(canvas, gridcanvas.Bounds().Add(imgLocation), gridcanvas, image.Point{}, mask, image.Point{}, draw.Over)
-				canvasLock.Unlock()
+				// only draw the image if
+				// no errors occurred running the handler
+				if resp.status == 200 {
+					canvasLock.Lock()
+					colour.DrawMask(canvas, gridcanvas.Bounds().Add(imgLocation), gridcanvas, image.Point{}, mask, image.Point{}, draw.Over)
+					canvasLock.Unlock()
+				}
 				// calculate some response stuff
 			} else {
 				// don't skip the widget stuff

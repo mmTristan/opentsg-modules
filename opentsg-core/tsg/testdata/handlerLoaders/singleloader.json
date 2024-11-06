@@ -1,0 +1,16 @@
+{
+    "include": [
+ 
+      {
+        "uri": "base.json",
+        "name": "canvas"
+      },
+      {
+        "uri": "blue.json",
+        "name": "blue"
+    }
+    ],
+  "create":[{
+    "canvas":{},
+    "blue":{}}]
+}

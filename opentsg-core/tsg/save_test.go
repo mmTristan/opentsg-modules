@@ -27,7 +27,7 @@ func TestBadFile(t *testing.T) {
 		Convey("Checking that incorrect extensions are not sent through", t, func() {
 			Convey(fmt.Sprintf("using an a name of %s ", badNames[i]), func() {
 				Convey("An error is returned describing it is not a valid format", func() {
-					So(badExt[i], ShouldResemble, fmt.Errorf("%s is not a valid file format, please choose one of the following: tiff, png, dpx,exr,7th or csv", badNames[i]))
+					So(badExt[i], ShouldResemble, fmt.Errorf("%s is not a valid file format, please choose one of the following: tiff, png, dpx,exr or csv", badNames[i]))
 				})
 			})
 
