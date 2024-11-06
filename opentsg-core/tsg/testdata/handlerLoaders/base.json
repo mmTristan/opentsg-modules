@@ -1,0 +1,16 @@
+{
+    "type": "builtin.canvasoptions",
+    "name": [
+        "./testdata/handlerLoaders/racer.png"
+    ],
+    "frameSize": {
+        "w": 1920,
+        "h": 1080
+    },
+    "linewidth": 1,
+    "filedepth": 16,
+    "gridColumns" : 16,
+    "gridRows":9, 
+    "backgroundFillColor":"rgb12(1656,1656,1656)" ,
+    "lineColor":"#000000"
+}

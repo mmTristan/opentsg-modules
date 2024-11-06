@@ -9,6 +9,7 @@ import (
 
 	_ "embed"
 
+	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/validator"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/credentials"
 )
@@ -75,21 +76,23 @@ type base struct {
 
 // widgetContents is the content of each widget within a frame and its position in the run order
 type widgetContents struct {
-	Data     json.RawMessage
-	Pos      int
-	arrayPos []int
-	Tag      string
-	Location string
-	Alias    string
+	Data        json.RawMessage
+	Pos         int
+	arrayPos    []int
+	Tag         string
+	Location    string
+	Alias       string
+	ColourSpace colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
 }
 
 // AliasIdentity is the name and zposition of a widget. Where zposition is the widgets position in the global array of widgets
 type AliasIdentity struct {
-	FullName  string
-	ZPos      int
-	WType     string
-	Location  string
-	GridAlias string
+	FullName    string
+	ZPos        int
+	WType       string
+	Location    string
+	GridAlias   string
+	ColourSpace colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
 }
 
 // SyncMap  is a map with a sync.Mutex to prevent concurrent writes.

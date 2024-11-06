@@ -1,0 +1,15 @@
+{
+    "include": [
+      {
+        "uri": "orderloader.json",
+        "name": "cs"
+      },
+      {
+        "uri": "base.json",
+        "name": "canvas"
+      }
+    ],
+  "create":[{
+    "canvas":{},
+    "cs":{}}]
+}

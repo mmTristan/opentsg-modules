@@ -1,0 +1,17 @@
+
+{
+    "include": [
+      {
+        "uri": "testLegacy.json",
+        "name": "leg"
+      },
+      {
+        "uri": "testCanvas.json",
+        "name": "canvas"
+      }
+    ],
+  "create":[{
+    "canvas":{},
+    "leg":{}}
+   ]
+}

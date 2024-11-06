@@ -11,6 +11,7 @@ import (
 
 	"github.com/cbroglie/mustache"
 	gonanoid "github.com/matoous/go-nanoid"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/internal/get"
 	"github.com/peterbourgon/mergemap"
 	"gopkg.in/yaml.v3"
@@ -175,8 +176,9 @@ type jsonUpdate struct {
 
 // each json has factory has a tag that defines the widget it represents
 type widgetEssentials struct {
-	WType   string `json:"type,omitempty" yaml:"type,omitempty"`
-	GridLoc Grid   `json:"grid,omitempty" yaml:"grid,omitempty"`
+	WType       string            `json:"type,omitempty" yaml:"type,omitempty"`
+	GridLoc     Grid              `json:"grid,omitempty" yaml:"grid,omitempty"`
+	ColourSpace colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
 }
 
 // Grid gives the grid system with the coordinates and an alias
@@ -465,7 +467,7 @@ func (b *base) frameBytesAdder(createUpdate map[string]any, widgetBase json.RawM
 			id.WType, _ = gonanoid.Nanoid() // generate a random id so widgets can't pick it up with delibrate names
 		}
 		b.generatedFrameWidgets[dotPath] = widgetContents{Data: raw, Pos: *zPos, arrayPos: positions, Tag: id.WType,
-			Location: id.GridLoc.Location, Alias: id.GridLoc.Alias,
+			Location: id.GridLoc.Location, Alias: id.GridLoc.Alias, ColourSpace: id.ColourSpace,
 		}
 		*zPos++
 	}

@@ -38,10 +38,19 @@ func (f HandlerFunc) Handle(resp Response, req *Request) {
 func (o openTSG) HandleFunc(wType string, handler HandlerFunc) {
 	// set up router here
 
-	o.handler[wType] = hand{schema: []byte("{}"), handler: handler}
+	o.Handle(wType, []byte("{}"), handler)
+	// o.handler[wType] = hand{schema: []byte("{}"), handler: handler}
 }
 
 func (o openTSG) Handle(wType string, schema []byte, handler Handler) {
+
+	if _, ok := o.handler[wType]; ok {
+		panic(fmt.Sprintf("The widget type %s has already been declared", wType))
+	}
+
+	// do some checking for invalid characters, if there
+	// are any
+
 	o.handler[wType] = hand{schema: schema, handler: handler}
 }
 
@@ -243,7 +252,7 @@ func (tsg *openTSG) Run(debug bool, mnt, logType string) {
 			}
 
 			// generate all the widgets
-			tsg.widgetHandle(frameContext, debug, canvas, frameLog, frameNo)
+			tsg.widgetHandle(frameContext, canvas, frameNo)
 			// frameWait.Done()
 
 			// get the metadata and add it onto the map for this frame
@@ -292,9 +301,11 @@ func (tsg *openTSG) Run(debug bool, mnt, logType string) {
 }
 
 // // update widgetHandle to make the choices for me
-func (tsg *openTSG) widgetHandle(c *context.Context, debug bool, canvas draw.Image, logs *errhandle.Logger, frameNo int) {
+func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, frameNo int) {
 
 	allWidgets := widgets.ExtractAllWidgets(c)
+	// add the validator last
+	lineErrs := core.GetJSONLines(*c)
 
 	allWidgetsArr := make([]core.AliasIdentity, len(allWidgets))
 	for alias := range allWidgets {
@@ -307,39 +318,68 @@ func (tsg *openTSG) widgetHandle(c *context.Context, debug bool, canvas draw.Ima
 
 	fp := FrameProperties{WorkingDir: core.GetDir(*c), FrameNumber: frameNo}
 
-	runPool := Pool{AvailableMemeory: 1}
+	runPool := Pool{AvailableMemeory: 3}
 	var wg sync.WaitGroup
 	wg.Add(len(allWidgets))
+	zpos := 0
+	zPos := &zpos
+	var zPosLock sync.Mutex
+	var canvasLock sync.Mutex
 
 	for i := 0; i < len(allWidgets); i++ {
+
 		runner, available := runPool.GetRunner()
 		for !available {
-			fmt.Println(i, "wait")
+
 			time.Sleep(10 * time.Millisecond)
 			runner, available = runPool.GetRunner()
 		}
 
 		go func() {
+			position := i
+			/*var gridcanvas, mask draw.Image
+			var imgLocation image.Point
 
+			defer func() {
+				zPosLock.Lock()
+				widgePos := *zPos
+				zPosLock.Unlock()
+				for widgePos != position {
+					time.Sleep(time.Millisecond * 10)
+					zPosLock.Lock()
+					widgePos = *zPos
+					zPosLock.Unlock()
+				}
+
+				// if resp.Code == 200
+				// else skip
+				canvasLock.Lock()
+				colour.DrawMask(canvas, gridcanvas.Bounds().Add(imgLocation), gridcanvas, image.Point{}, mask, image.Point{}, draw.Over)
+				canvasLock.Unlock()
+			}() */
 			defer runPool.PutRunner(runner)
 			defer wg.Done()
 
 			widg := allWidgets[allWidgetsArr[i]]
 			widgProps := allWidgetsArr[i]
-			if widgProps.WType != "builtin.canvasoptions" {
-				handlers, ok := tsg.handler[allWidgetsArr[i].WType]
-				fmt.Println(ok)
+
+			if widgProps.WType != "builtin.canvasoptions" && widgProps.WType != "" {
+				handlers := tsg.handler[allWidgetsArr[i].WType]
+
+				// @TODO skip the handler and come back to it later
+
 				var Han Handler
+				var err error
 				switch hdler := handlers.handler.(type) {
 				// don't parse, as it will break
 				// just run the function
 				case HandlerFunc:
 					Han = hdler
 				default:
-					var err error
 					Han, err = Unmarshal(handlers.handler)(widg)
-					fmt.Println(err)
 				}
+
+				// @TODO  handle the error in a sensible manner
 
 				gridcanvas, imgLocation, mask, err := gridgen.GridSquareLocatorAndGenerator(widgProps.Location, widgProps.GridAlias, c)
 
@@ -350,12 +390,14 @@ func (tsg *openTSG) widgetHandle(c *context.Context, debug bool, canvas draw.Ima
 						r.Write(400, err.Error())
 					})
 				}
-				fmt.Println(err, widgProps)
-				fmt.Println(canvas.At(0, 0))
 
 				flats, err := gridgen.GetGridGeometry(c, widgProps.Location)
+
+				// @TODO handle error
+
 				pp := PatchProperties{WidgetType: widgProps.WType, Dimensions: gridcanvas.Bounds(),
-					TSGLocation: imgLocation, Geomtetry: flats}
+					TSGLocation: imgLocation, Geomtetry: flats,
+					ColourSpace: widgProps.ColourSpace}
 				//	Han, err := Unmarshal(handlers.handler)(widg)
 				resp := response{baseImg: gridcanvas}
 				req := Request{FrameProperties: fp, RawWidgetYAML: widg,
@@ -363,20 +405,59 @@ func (tsg *openTSG) widgetHandle(c *context.Context, debug bool, canvas draw.Ima
 				}
 
 				// chain that middleware at the last second?
-				Han = chain(tsg.middlewares, Han)
+				validatorMid := jSONValidator(lineErrs, handlers.schema, widgProps.FullName)
+				Han = chain(append(tsg.middlewares, validatorMid), Han)
 
-				// @TODO include the middleware
+				// RUN the widget
 				Han.Handle(&resp, &req)
+
 				// do some handling here based on response for saving
 				fmt.Println(resp.status, resp.message)
-				colour.DrawMask(canvas, gridcanvas.Bounds().Add(imgLocation), gridcanvas, image.Point{}, mask, image.Point{}, draw.Over)
 
+				// wait until it is the widgets turn
+				zPosLock.Lock()
+				widgePos := *zPos
+				zPosLock.Unlock()
+				for widgePos != position {
+					time.Sleep(time.Millisecond * 10)
+					zPosLock.Lock()
+					widgePos = *zPos
+					zPosLock.Unlock()
+				}
+
+				// if resp.Code == 200
+				// else skip
+				canvasLock.Lock()
+				colour.DrawMask(canvas, gridcanvas.Bounds().Add(imgLocation), gridcanvas, image.Point{}, mask, image.Point{}, draw.Over)
+				canvasLock.Unlock()
 				// calculate some response stuff
+			} else {
+				// don't skip the widget stuff
+				zPosLock.Lock()
+				widgePos := *zPos
+				zPosLock.Unlock()
+				for widgePos != position {
+					time.Sleep(time.Millisecond * 10)
+					zPosLock.Lock()
+					widgePos = *zPos
+					zPosLock.Unlock()
+				}
 			}
+
+			zPosLock.Lock()
+			// update zpos regardless
+			*zPos++
+			zPosLock.Unlock()
 		}()
 	}
 
 	wg.Wait()
+}
+
+func GenErrorHandler(code int, errMessage string) Handler {
+	return HandlerFunc(func(r Response, _ *Request) {
+		r.Write(code, errMessage)
+	})
 }
 
 type Pool struct {
