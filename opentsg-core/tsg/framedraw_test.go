@@ -3,10 +3,12 @@ package tsg
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"image"
 	"image/draw"
+	"image/png"
 	"log/slog"
 	"os"
 	"reflect"
@@ -38,28 +40,11 @@ func TestXxx(t *testing.T) {
 */
 
 func TestLegacy(t *testing.T) {
-	otsg, err := BuildOpenTSG("./testdata/testloader.json", "", true)
-
-	first := func(next Handler) Handler {
-		return HandlerFunc(func(r1 Response, r2 *Request) {
-			fmt.Println("fitrst")
-
-			next.Handle(r1, r2)
-		})
-	}
-
-	mid := func(next Handler) Handler {
-		return HandlerFunc(func(r1 Response, r2 *Request) {
-			fmt.Println("SOME THING FROM CUSTOM MIDDLEWARE")
-
-			next.Handle(r1, r2)
-		})
-	}
-	otsg.Use(first, mid)
+	otsg, err := BuildOpenTSG("./testdata/testloader.json", "", true, nil)
 	otsg.Handle("builtin.legacy", []byte("{}"), Legacy{})
 	otsg.HandleFunc("builtin.canvasoptions", func(r1 Response, r2 *Request) { fmt.Println("ring a ding") })
 	fmt.Println(err)
-	otsg.Run(true, "", "stdout")
+	otsg.Run("")
 
 }
 
@@ -76,7 +61,7 @@ get one that proves the order runs in a certain way
 func TestHandlerAdditions(t *testing.T) {
 	//	So(Ipanic, cv.ShouldPanic)
 
-	otsg, err := BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true)
+	otsg, err := BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true, nil)
 	otsg.Handle("test.fill", []byte("{}"), Filler{})
 
 	Convey("Checking the handler panics when handles are redeclared", t, func() {
@@ -88,29 +73,74 @@ func TestHandlerAdditions(t *testing.T) {
 			})
 		})
 	})
+
+	otsgEncoder, err := BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true, nil)
+	AddBaseEncoders(otsgEncoder)
+
+	Convey("Checking the tsg encoder handler panics when encoders are redeclared", t, func() {
+		Convey("duplicating the encoders, with AddBaseEncoders", func() {
+			Convey("the additions should panic", func() {
+				So(err, ShouldBeNil)
+				So(func() { AddBaseEncoders(otsgEncoder) }, ShouldPanic)
+			})
+		})
+	})
+}
+
+func TestMethodFunctions(t *testing.T) {
+
 }
 
 func TestRaceConditions(t *testing.T) {
-	otsg, _ := BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true)
+	otsg, buildErr := BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true, &RunnerConfiguration{5})
 	otsg.Handle("test.fill", []byte("{}"), Filler{})
+	jSlog := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{})
+	AddBaseEncoders(otsg)
+	otsg.Use(Logger(slog.New(jSlog), "TestRaceConditions"))
+	otsg.Run("")
 
-	fmt.Println(otsg.handlers)
-	otsg.Run(true, "", "stdout")
-	// run with -race without the old code
-	/*
-		check the run
-	*/
+	genFile, _ := os.Open("./testdata/handlerLoaders/racer.png")
+	// Decode to get the colour values
+	baseVals, _ := png.Decode(genFile)
+	// Assign the colour to the correct type of image NGRBA64 and replace the colour values
+	genImage := image.NewNRGBA64(baseVals.Bounds())
+	colour.Draw(genImage, genImage.Bounds(), baseVals, image.Point{0, 0}, draw.Over)
+
+	// Open the image to compare to
+	controlFile, _ := os.Open("./testdata/handlerLoaders/expectedRace.png")
+	// Decode to get the colour values
+	controlVals, _ := png.Decode(controlFile)
+
+	// Assign the colour to the correct type of image NGRBA64 and replace the colour values
+	controlImage := image.NewNRGBA64(controlVals.Bounds())
+	colour.Draw(controlImage, controlImage.Bounds(), baseVals, image.Point{0, 0}, draw.Over)
+
+	// Make a hash of the pixels of each image
+	hnormal := sha256.New()
+	htest := sha256.New()
+	hnormal.Write(controlImage.Pix)
+	htest.Write(genImage.Pix)
+
+	Convey("Checking for race conditions", t, func() {
+		Convey("running boxes on top of each other, that should alway layer red, green then blue", func() {
+			Convey("No races occur and the picture matches the expected", func() {
+				So(buildErr, ShouldBeNil)
+				So(htest.Sum(nil), ShouldResemble, hnormal.Sum(nil))
+			})
+		})
+	})
 }
 
 func TestMiddlewares(t *testing.T) {
 
-	otsg, err := BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true)
+	otsg, err := BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true, nil)
 	otsg.Handle("test.fill", []byte("{}"), Filler{})
+	AddBaseEncoders(otsg)
 	buf := bytes.NewBuffer([]byte{})
 	jSlog := slog.NewJSONHandler(buf, &slog.HandlerOptions{})
-	otsg.Use(Logger(slog.New(jSlog)))
+	otsg.Use(Logger(slog.New(jSlog), "TestMiddlewares"))
 
-	otsg.Run(true, "", "stdout")
+	otsg.Run("")
 
 	// convert to count log entries
 	logEntries := strings.Split(buf.String(), "\n")
@@ -125,14 +155,15 @@ func TestMiddlewares(t *testing.T) {
 		Convey("3 logs should be returned", func() {
 			Convey("3 logs are returned denoting a successful run", func() {
 				So(err, ShouldBeNil)
-				So(len(logEntries), ShouldEqual, 3)
-				So(validLogs, ShouldBeTrue)
+				So(len(logEntries), ShouldEqual, 4)
+				So(validLogs, ShouldResemble, []string{})
 			})
 		})
 	})
 
 	// set up the order
-	otsg, err = BuildOpenTSG("./testdata/handlerLoaders/singleloader.json", "", true)
+	otsg, err = BuildOpenTSG("./testdata/handlerLoaders/singleloader.json", "", true, nil)
+	AddBaseEncoders(otsg)
 	otsg.Handle("test.fill", []byte(`{
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -157,15 +188,17 @@ func TestMiddlewares(t *testing.T) {
 		})
 	}
 	orderLog := &testSlog{logs: make([]string, 0)}
-	otsg.Use(Logger(slog.New(orderLog)), first, second)
-	otsg.Run(true, "", "stdout")
+	otsg.Use(Logger(slog.New(orderLog), "TestMiddlewares"), first, second)
+	otsg.Run("")
 
 	Convey("Checking the middleware runs in the oder it is called", t, func() {
 		Convey("the return of the logs are 3 messages in the order of, first, second and validator", func() {
 			Convey("the logs match that order", func() {
 				So(err, ShouldBeNil)
 				So(orderLog.logs, ShouldResemble, []string{"0:first", "0:second",
-					"400:0027 fail is required in unknown files please check your files for the fail property in the name blue,"})
+					"400:0027 fail is required in unknown files please check your files for the fail property in the name blue,",
+					"0:first", "0:second", "200:generating frame 0/0, gen: 000525.0 ms, save: 000408.8ms, errors:1",
+				})
 			})
 		})
 	})
@@ -182,7 +215,8 @@ func TestMiddlewares(t *testing.T) {
 
 	*/
 
-	otsg, err = BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true)
+	otsg, err = BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true, nil)
+	AddBaseEncoders(otsg)
 	otsg.Handle("test.fill", []byte(`{
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -194,9 +228,9 @@ func TestMiddlewares(t *testing.T) {
 }`), Filler{})
 
 	logArr := testSlog{logs: make([]string, 0)}
-	otsg.Use(Logger(slog.New(&logArr)))
+	otsg.Use(Logger(slog.New(&logArr), "TestMiddlewares"))
 
-	otsg.Run(true, "", "stdout")
+	otsg.Run("")
 
 	// convert to count log entries
 	logEntries = strings.Split(buf.String(), "\n")
@@ -212,7 +246,8 @@ func TestMiddlewares(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(logArr.logs, ShouldResemble, []string{"400:0027 fail is required in unknown files please check your files for the fail property in the name cs.blue,",
 					"400:0027 fail is required in unknown files please check your files for the fail property in the name cs.green,",
-					"400:0027 fail is required in unknown files please check your files for the fail property in the name cs.red,"})
+					"400:0027 fail is required in unknown files please check your files for the fail property in the name cs.red,",
+					"200:generating frame 0/0, gen: 000619.6 ms, save: 000475.6ms, errors:3"})
 
 			})
 		})
@@ -304,19 +339,20 @@ func TestErrors(t *testing.T) {
 }`,
 	}
 
-	expectedErrs := []string{"400:no handler found for widgets of type \"test.fills\" for widget path  \"err\"",
+	expectedErrs := []string{"400:No handler found for widgets of type \"test.fills\" for widget path \"err\"",
 		"400:0046 a is not a valid grid alias"}
 
 	for i, e := range errors {
 		f, fErr := os.Create("./testdata/handlerLoaders/err.json")
 		_, wErr := f.Write([]byte(e))
 
-		otsg, err := BuildOpenTSG("./testdata/handlerLoaders/errLoader.json", "", true)
+		otsg, err := BuildOpenTSG("./testdata/handlerLoaders/errLoader.json", "", true, nil)
 		otsg.Handle("test.fill", []byte(`{}`), Filler{})
 
 		orderLog := &testSlog{logs: make([]string, 0)}
-		otsg.Use(Logger(slog.New(orderLog)))
-		otsg.Run(true, "", "stdout")
+		otsg.Use(Logger(slog.New(orderLog), "TestErrors"))
+		AddBaseEncoders(otsg)
+		otsg.Run("")
 
 		Convey("Calling openTSG with a widget that deliberately fails", t, func() {
 			Convey(fmt.Sprintf("using a json of \"%s\"", e), func() {
@@ -324,7 +360,7 @@ func TestErrors(t *testing.T) {
 					So(fErr, ShouldBeNil)
 					So(wErr, ShouldBeNil)
 					So(err, ShouldBeNil)
-					So(orderLog.logs, ShouldResemble, []string{expectedErrs[i]})
+					So(orderLog.logs, ShouldResemble, []string{expectedErrs[i], "200:generating frame 0/0, gen: 000463.4 ms, save: 000378.1ms, errors:1"})
 				})
 			})
 		})

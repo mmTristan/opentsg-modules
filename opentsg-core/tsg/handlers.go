@@ -7,7 +7,6 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -16,10 +15,8 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/widgets"
-	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
-	"gopkg.in/yaml.v3"
 )
 
 type Handler interface {
@@ -89,7 +86,8 @@ func GenerateSubImage(baseImg draw.Image, bounds image.Rectangle) draw.Image {
 }
 
 type PatchProperties struct {
-	WidgetType string
+	WidgetType   string
+	WidgetFullID string
 	// only do max xy as min is always 0
 	Dimensions  image.Rectangle
 	TSGLocation image.Point
@@ -152,7 +150,7 @@ type Legacy struct {
 
 func (l Legacy) Handle(resp Response, req *Request) {
 
-	otsg, err := BuildOpenTSG(l.FileLocation, "", true)
+	otsg, err := BuildOpenTSG(l.FileLocation, "", true, nil)
 
 	if err != nil {
 
@@ -166,43 +164,33 @@ func (l Legacy) Handle(resp Response, req *Request) {
 	resp.Write(200, "")
 }
 
-func (tsg *openTSG) initErrorHandler() {
-
+func (tsg *openTSG) logErrors(code, frameNumer int, errors ...error) {
 	errHan := HandlerFunc(func(resp Response, req *Request) {
-		resp.Write(400, string(req.RawWidgetYAML))
+		resp.Write(code, string(req.RawWidgetYAML))
 	})
-	tsg.errHandler = chain(tsg.middlewares, errHan)
-}
-
-func (tsg *openTSG) logErrors(errors ...error) {
-	if tsg.errHandler == nil {
-		panic("tsg internal error handler not set, please call initErrorHandler() first")
-	}
-
+	errs := chain(tsg.middlewares, errHan)
 	// call all errors so they are just logged
 	for _, err := range errors {
-		tsg.errHandler.Handle(&response{}, &Request{RawWidgetYAML: json.RawMessage(err.Error())})
+		errs.Handle(&response{}, &Request{RawWidgetYAML: json.RawMessage(err.Error()),
+			PatchProperties: PatchProperties{WidgetFullID: "core.tsg"},
+			FrameProperties: FrameProperties{FrameNumber: frameNumer},
+		})
 	}
 }
 
 // Draw generates the images for each array section of the json array and applies it to the test card grid.
-func (tsg *openTSG) Run(debug bool, mnt, logType string) {
+func (tsg *openTSG) Run(mnt string) {
 	imageNo := tsg.framcount
-
-	// set the error handler in stone
-	tsg.initErrorHandler()
 
 	// wait for every frame to run before exiting the lopp
 	var wg sync.WaitGroup
 	wg.Add(tsg.framcount)
 
-	logs := make(chan *errhandle.Logger, imageNo)
-
 	// hookdata is a large map that contains all the metadata across the run.
 	var locker sync.Mutex
 	hookdata := syncmap{&locker, make(map[string]any)}
 
-	runFile := time.Now().Format("2006-01-02T15:04:05")
+	// runFile := time.Now().Format("2006-01-02T15:04:05")
 
 	for frameLoopNo := 0; frameLoopNo < imageNo; frameLoopNo++ {
 		// make an internal function
@@ -215,52 +203,59 @@ func (tsg *openTSG) Run(debug bool, mnt, logType string) {
 			defer wg.Done()
 			defer frameWait.Done()
 
+			monit := monitor{frameNo: frameNo}
 			genMeasure := time.Now()
 			saveTime := int64(0)
 			// new log here for each frame
-			frameLog := errhandle.LogInit(logType, mnt)
+
 			// defer the progress bar message to use the values at the end of the "function"
 			// the idea is for them to auto update
 			defer func() {
-				fmt.Printf("\rGenerating frame %v/%v, gen: %v ms, save: %sms, errors:%v\n", frameNo, imageNo-1, microToMili(int64(time.Since(genMeasure).Microseconds())), microToMili(saveTime), frameLog.ErrorCount())
+				tsg.logErrors(200, frameNo,
+					fmt.Errorf("generating frame %v/%v, gen: %v ms, save: %sms, errors:%v", frameNo, imageNo-1,
+						microToMili(int64(time.Since(genMeasure).Microseconds())), microToMili(saveTime), monit.ErrorCount),
+				)
 				// add the log to the cache channel
-				logs <- frameLog
+
 			}()
 
-			// change the log prefix for each image we generate, make a logger for each one for concurrency at a later date
-			i4 := intToLength(frameNo, 4)
-			frameLog.SetPrefix(fmt.Sprintf("%v_", i4)) // update prefix to just be frame number
 			// update metadata to be included in the frame context
-			frameConfigCont, errs := core.FrameWidgetsGenerator(tsg.internal, frameNo, debug)
+			frameConfigCont, errs := core.FrameWidgetsGenerator(tsg.internal, frameNo)
 
 			// this is important for showing missed widget updates
 			// log the errors
-			tsg.logErrors(errs...)
+			if len(errs) > 0 {
+				tsg.logErrors(404, frameNo, errs...)
+				monit.incrementError(len(errs))
+			}
 
 			frameContext := widgethandler.MetaDataInit(frameConfigCont)
 			errs = canvaswidget.LoopInit(frameContext)
 
 			if len(errs) > 0 {
 				// log.Fatal
-				tsg.logErrors(errs...)
+				tsg.logErrors(500, frameNo, errs...)
+				monit.incrementError(len(errs))
 				// frameWait.Done() //the frame weight is returned when the programs exit, or the frame has been generated
 				return // continue // skip to the next frame number
 			}
 			// generate the canvas of type image.Image
 			canvas, err := gridgen.GridGen(frameContext)
 			if err != nil {
-				frameLog.PrintErrorMessage("F_CORE_opentsg_", err, debug)
+				tsg.logErrors(500, frameNo, err)
+				monit.incrementError(1)
 				// frameWait.Done()
 				return // continue // skip to the next frame number
 			}
 
 			// generate all the widgets
-			tsg.widgetHandle(frameContext, canvas, frameNo)
+			tsg.widgetHandle(frameContext, canvas, &monit)
 			// frameWait.Done()
 
 			// get the metadata and add it onto the map for this frame
-			md, _ := metaHook(canvas, frameContext, debug)
+			md, _ := metaHook(canvas, frameContext)
 			if len(md) != 0 { // only save if there actually is metadata
+				i4 := intToLength(frameNo, 4)
 				hookdata.syncer.Lock()
 				hookdata.data[fmt.Sprintf("frame %s", i4)] = md
 				hookdata.syncer.Unlock()
@@ -273,7 +268,7 @@ func (tsg *openTSG) Run(debug bool, mnt, logType string) {
 			carves := gridgen.Carve(frameContext, canvas, canvaswidget.GetFileName(*frameContext))
 			for _, carvers := range carves {
 				// save.CanvasSave(canvas, canvaswidget.GetFileName(*frameContext), canvaswidget.GetFileDepth(*frameContext), mnt, i4, debug, frameLog)
-				tsg.canvasSave2(carvers.Image, carvers.Location, canvaswidget.GetFileDepth(*frameContext), mnt, i4, debug, frameLog)
+				tsg.canvasSave2(carvers.Image, carvers.Location, canvaswidget.GetFileDepth(*frameContext), mnt, &monit)
 			}
 			saveTime = time.Since(saveMeasure).Microseconds()
 
@@ -284,44 +279,56 @@ func (tsg *openTSG) Run(debug bool, mnt, logType string) {
 	wg.Wait()
 	fmt.Println("")
 
-	if debug {
-		// generate the metadata folder, if it has had any generated data
-		if len(hookdata.data) != 0 {
-			// write a better name for identfying
-			metaLocation, _ := filepath.Abs(mnt + "./" + runFile + ".yaml")
-			md, _ := os.Create(metaLocation)
-			b, _ := yaml.Marshal(hookdata.data)
-			md.Write(b)
-		}
-	}
+	/*
 
-	// flush the logs in the order they were cached in the channel
-	// logs are flushed in batches of their frames
-	for len(logs) > 0 {
-		l := <-logs
-		l.LogFlush()
-	}
+		move to a metadatahandler function
+			if debug {
+				// generate the metadata folder, if it has had any generated data
+				if len(hookdata.data) != 0 {
+					// write a better name for identfying
+					metaLocation, _ := filepath.Abs(mnt + "./" + runFile + ".yaml")
+					md, _ := os.Create(metaLocation)
+					b, _ := yaml.Marshal(hookdata.data)
+					md.Write(b)
+				}
+			}
+
+	*/
 }
 
 // CanvasSave saves the file according to the extensions provided
 // the name add is for debug to allow to identify images
-func (tsg *openTSG) canvasSave2(canvas draw.Image, filename []string, bitdeph int, mnt, framenumber string, debug bool, logs *errhandle.Logger) {
+func (tsg *openTSG) canvasSave2(canvas draw.Image, filename []string, bitdeph int, mnt string, monit *monitor) {
 	for _, name := range filename {
 		truepath, err := filepath.Abs(filepath.Join(mnt, name))
 		if err != nil {
-			logs.PrintErrorMessage("E_opentsg_SAVE_", err, debug)
+			monit.incrementError(1)
+			tsg.logErrors(700, monit.frameNo, err)
 
 			continue
 		}
-		err = tsg.encodeFrame(truepath, framenumber, canvas, bitdeph)
+		err = tsg.encodeFrame(truepath, canvas, bitdeph)
 		if err != nil {
-			logs.PrintErrorMessage("E_opentsg_SAVE_", err, debug)
+			monit.incrementError(1)
+			tsg.logErrors(700, monit.frameNo, err)
 		}
 	}
 }
 
+type monitor struct {
+	frameNo    int
+	ErrorCount int
+	sync.Mutex
+}
+
+func (m *monitor) incrementError(count int) {
+	m.Lock()
+	m.ErrorCount += count
+	m.Unlock()
+}
+
 // // update widgetHandle to make the choices for me
-func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, frameNo int) {
+func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *monitor) {
 
 	// set up the core context functions
 	allWidgets := widgets.ExtractAllWidgets(c)
@@ -340,10 +347,10 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, frameNo 
 	}
 
 	// set up the properties for all requests
-	fp := FrameProperties{WorkingDir: core.GetDir(*c), FrameNumber: frameNo}
+	fp := FrameProperties{WorkingDir: core.GetDir(*c), FrameNumber: monit.frameNo}
 
 	// sync tools for running the widgets async
-	runPool := Pool{AvailableMemeory: 3}
+	runPool := Pool{AvailableMemeory: tsg.ruunerConf.RunnerCount}
 	// wg for each widget
 	var wg sync.WaitGroup
 	wg.Add(len(allWidgets))
@@ -431,8 +438,10 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, frameNo 
 					// set up the requests
 					// and chain the middleware for the handler
 
-					pp := PatchProperties{WidgetType: widgProps.WType, Dimensions: gridcanvas.Bounds(),
-						TSGLocation: imgLocation, Geomtetry: flats,
+					pp := PatchProperties{WidgetType: widgProps.WType,
+						WidgetFullID: widgProps.FullName,
+						Dimensions:   gridcanvas.Bounds(),
+						TSGLocation:  imgLocation, Geomtetry: flats,
 						ColourSpace: widgProps.ColourSpace}
 					//	Han, err := Unmarshal(handlers.handler)(widg)
 					resp = response{baseImg: gridcanvas}
@@ -466,6 +475,9 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, frameNo 
 					canvasLock.Lock()
 					colour.DrawMask(canvas, gridcanvas.Bounds().Add(imgLocation), gridcanvas, image.Point{}, mask, image.Point{}, draw.Over)
 					canvasLock.Unlock()
+				} else {
+					// error of some sort from somewhere
+					monit.incrementError(1)
 				}
 				// calculate some response stuff
 			} else {

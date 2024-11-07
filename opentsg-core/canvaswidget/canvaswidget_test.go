@@ -57,7 +57,7 @@ func TestStructExtraction(t *testing.T) {
 
 func TestInitStage(t *testing.T) {
 	cIn, _, _ := core.FileImport("testdata/baseloader.json", "", false)
-	cFrame, _ := core.FrameWidgetsGenerator(cIn, 0, false)
+	cFrame, _ := core.FrameWidgetsGenerator(cIn, 0)
 	LoopInit(&cFrame)
 	f := config.Framesize{W: 4096, H: 2160}
 	expected := ConfigVals{Name: []string{"testname.png"}, FileDepth: 16, Framesize: f, GridRows: 16,
@@ -74,7 +74,7 @@ func TestInitStage(t *testing.T) {
 	})
 
 	cIn, _, _ = core.FileImport("testdata/doubleloader.json", "", false)
-	cDouble, _ := core.FrameWidgetsGenerator(cIn, 0, false)
+	cDouble, _ := core.FrameWidgetsGenerator(cIn, 0)
 	err := LoopInit(&cDouble)
 	expectedDoubleErr := []error{fmt.Errorf("0061 too many \"builtin.canvasoptions\" widgets have been loaded (Got 2 wanted 1), can not configure openTSG")}
 

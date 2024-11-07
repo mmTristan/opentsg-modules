@@ -57,6 +57,13 @@ type openTSG struct {
 	encoders    map[string]Encoder
 	//
 	errHandler Handler
+	// runner configuration
+	ruunerConf RunnerConfiguration
+}
+
+// RunnerConfiguration
+type RunnerConfiguration struct {
+	RunnerCount int
 }
 
 type hand struct {
@@ -66,13 +73,26 @@ type hand struct {
 
 // BuildOpenTSG creates the OpenTSG engine.
 // It is configured by an input json file and any profile set up information.
-func BuildOpenTSG(inputFile string, profile string, debug bool, httpsKeys ...string) (*openTSG, error) {
+func BuildOpenTSG(inputFile string, profile string, debug bool, runnerConf *RunnerConfiguration, httpsKeys ...string) (*openTSG, error) {
 	cont, framenumber, configErr := core.FileImport(inputFile, profile, debug, httpsKeys...)
+
+	var rc RunnerConfiguration
+	if runnerConf == nil {
+		rc = RunnerConfiguration{RunnerCount: 1}
+	}
+
+	// stop negative runners appearing
+	// and just locking everything up
+	if rc.RunnerCount < 1 {
+		rc.RunnerCount = 1
+	}
 
 	return &openTSG{internal: cont, framcount: framenumber,
 			customWidgets: baseWidgets(),
 			handlers:      map[string]hand{},
-			customSaves:   baseSaves()},
+			encoders:      map[string]Encoder{},
+			customSaves:   baseSaves(),
+			ruunerConf:    rc},
 		configErr
 }
 
@@ -156,7 +176,7 @@ func (tsg *openTSG) Draw(debug bool, mnt, logType string) {
 			i4 := intToLength(frameNo, 4)
 			frameLog.SetPrefix(fmt.Sprintf("%v_", i4)) // update prefix to just be frame number
 			// update metadata to be included in the frame context
-			frameConfigCont, errs := core.FrameWidgetsGenerator(tsg.internal, frameNo, debug)
+			frameConfigCont, errs := core.FrameWidgetsGenerator(tsg.internal, frameNo)
 
 			// this is important for showing missed widget updates
 			for _, e := range errs {
@@ -189,7 +209,7 @@ func (tsg *openTSG) Draw(debug bool, mnt, logType string) {
 			// frameWait.Done()
 
 			// get the metadata and add it onto the map for this frame
-			md, _ := metaHook(canvas, frameContext, debug)
+			md, _ := metaHook(canvas, frameContext)
 			if len(md) != 0 { // only save if there actually is metadata
 				hookdata.syncer.Lock()
 				hookdata.data[fmt.Sprintf("frame %s", i4)] = md
@@ -306,11 +326,8 @@ func microToMili(duration int64) string {
 }
 
 // metaHook extracts all the user chosen metadata from a frame and its context.
-func metaHook(input draw.Image, c *context.Context, debug bool) (map[string]any, error) {
+func metaHook(input draw.Image, c *context.Context) (map[string]any, error) {
 	metaDataMap := make(map[string]any)
-	if !debug {
-		return metaDataMap, nil
-	}
 
 	// assign all the generated metadata here straight onto the map
 	// wrap that as a function https://github.com/corona10/goimagehash

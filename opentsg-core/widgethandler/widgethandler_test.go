@@ -56,7 +56,7 @@ func contMocker(file, target, extra string) (*context.Context, draw.Image) {
 
 	c, _, _ := core.FileImport(file, "", false)
 
-	cFrame, _ := core.FrameWidgetsGenerator(c, 0, false)
+	cFrame, _ := core.FrameWidgetsGenerator(c, 0)
 
 	mockC := MetaDataInit(cFrame)
 	canvaswidget.LoopInit(mockC)

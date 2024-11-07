@@ -20,7 +20,7 @@ func TestGenerateAndCreateMethods(t *testing.T) {
 	predictedValuesCreate := []string{"./testdata/frame_generate/create/blue_create.yaml"}
 
 	for i, pv := range predictedValuesCreate {
-		n, _ := FrameWidgetsGenerator(cCreate, i, false)
+		n, _ := FrameWidgetsGenerator(cCreate, i)
 
 		expec, got := genHash(n, pv)
 
@@ -39,7 +39,7 @@ func TestGenerateAndCreateMethods(t *testing.T) {
 	predictedValuesGen := []string{"./testdata/frame_generate/generate/blue_gen.yaml"}
 
 	for i, pv := range predictedValuesGen {
-		n, _ := FrameWidgetsGenerator(cGen, i, false)
+		n, _ := FrameWidgetsGenerator(cGen, i)
 		expec, got := genHash(n, pv)
 
 		Convey("Checking arguments are parsed in only generate", t, func() {
@@ -60,7 +60,7 @@ func TestFactoryUpdates(t *testing.T) {
 	predictedValues := []string{"./testdata/frame_generate/factory_update/blue_factory.yaml"}
 
 	for i, pv := range predictedValues {
-		n, _ := FrameWidgetsGenerator(c, i, false)
+		n, _ := FrameWidgetsGenerator(c, i)
 		expec, got := genHash(n, pv)
 
 		//	p, _ := os.Create(fmt.Sprintf("nameup%v.json", i))
@@ -84,7 +84,7 @@ func TestSubstitutions(t *testing.T) {
 	predictedValues := []string{"./testdata/frame_generate/substitution/result_green.yaml"}
 
 	for i, pv := range predictedValues {
-		n, _ := FrameWidgetsGenerator(c, i, false)
+		n, _ := FrameWidgetsGenerator(c, i)
 
 		expec, got := genHash(n, pv)
 
@@ -105,7 +105,7 @@ func TestSubstitutions(t *testing.T) {
 
 	for i, pv := range predictedValuesErr {
 
-		_, err := FrameWidgetsGenerator(cErr, i, false)
+		_, err := FrameWidgetsGenerator(cErr, i)
 
 		Convey("Checking mustache errors are caught and returned", t, func() {
 			Convey(fmt.Sprintf("using ./testdata/frame_generate/substitution/sequence_internal.json as the input at frame %v", i), func() {
@@ -131,7 +131,7 @@ func TestArraysAndDot(t *testing.T) {
 
 		for j, pv := range predictedValues[i] {
 
-			n, err := FrameWidgetsGenerator(c, j, false)
+			n, err := FrameWidgetsGenerator(c, j)
 
 			expec, got := genHash(n, pv)
 
@@ -214,7 +214,7 @@ func TestErrors(t *testing.T) {
 		_, _ = f.Write([]byte(mid))
 
 		c, _, _ := FileImport(inputFile, "", false)
-		_, err := FrameWidgetsGenerator(c, 0, false)
+		_, err := FrameWidgetsGenerator(c, 0)
 
 		Convey("Checking that errors are caught within the dotpaths", t, func() {
 			Convey(fmt.Sprintf("using %s as an additional input in the json", bad), func() {
@@ -233,7 +233,7 @@ func TestErrors(t *testing.T) {
 	for i, inputFile := range inputFiles {
 		c, _, e := FileImport(inputFile, "", false)
 		fmt.Println(e)
-		_, errs := FrameWidgetsGenerator(c, i, false)
+		_, errs := FrameWidgetsGenerator(c, i)
 
 		Convey("Checking arguments generated sequences are repeated", t, func() {
 			Convey("using ./testdata/frame_generate/errors/sequence_repeat.json as the input with one repeated item in the generated section", func() {
@@ -258,7 +258,7 @@ func TestCreateErrors(t *testing.T) {
 
 		c, _, _ := FileImport(inputFile, "", false)
 
-		_, err := FrameWidgetsGenerator(c, i, false)
+		_, err := FrameWidgetsGenerator(c, i)
 		//	bar := n.Value(frameHolders).(base)
 
 		Convey("Checking that errors are caught within the dotpaths", t, func() {
@@ -340,7 +340,7 @@ func contMocker(file, target, extra string) (context.Context, any) {
 	if err != nil {
 		return c, err
 	}
-	cFrame, er := FrameWidgetsGenerator(c, 0, false)
+	cFrame, er := FrameWidgetsGenerator(c, 0)
 
 	return cFrame, er
 }

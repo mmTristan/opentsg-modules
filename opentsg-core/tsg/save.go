@@ -291,6 +291,15 @@ func EncodeCSVFile(w io.Writer, toDraw image.Image, _ EncodeOptions) error {
 	// return csvsave.Encode(filename, img.(*image.NRGBA64))
 }
 
+/*
+Add base encoders adds the following file encoders to an OpenTSG object:
+
+- dpx
+- csv
+- png
+- exr
+- tiff (as tiff and tif)
+*/
 func AddBaseEncoders(tsg *openTSG) {
 
 	tsg.EncoderFunc("dpx", EncodeDPXFile)
@@ -302,15 +311,7 @@ func AddBaseEncoders(tsg *openTSG) {
 
 }
 
-func (tsg *openTSG) encodeFrame(filename, framenumber string, base draw.Image, bitdepth int) error {
-	// regTIFF := regexp.MustCompile(`^[\w\W]{1,255}\.[tT][iI][fF]{1,2}$`)
-	// regPNG := regexp.MustCompile(`^[\w\W]{1,255}\.[pP][nN][gG]$`)
-	// regCSV := regexp.MustCompile(`^[\w\W]{1,255}\.[cC][sS][Vv]$`)
-	// regDPX := regexp.MustCompile(`^[\w\W]{1,255}\.[dD][pP][xX]$`)
-	// regEXR := regexp.MustCompile(`^[\w\W]{1,255}\.[eE][xX][rR]$`)
-
-	// @TODO remove speciality and include at the metadata substitution phase
-	filename, _ = mustache.Render(filename, map[string]string{"framenumber": framenumber})
+func (tsg *openTSG) encodeFrame(filename string, base draw.Image, bitdepth int) error {
 
 	extensions := strings.Split(filename, ".")
 	ext := extensions[len(extensions)-1]

@@ -37,7 +37,7 @@ This means each include statement is searched when it is found and the order wid
 are declared in this format, is the order they are run.
 
 */
-func FrameWidgetsGenerator(c context.Context, framePos int, debug bool) (context.Context, []error) {
+func FrameWidgetsGenerator(c context.Context, framePos int) (context.Context, []error) {
 	var allError []error
 
 	// generate a frameContext context to be returned

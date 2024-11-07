@@ -29,7 +29,7 @@ var types = all{6, 6.01, map[string]any{"some": "map"}, []any{3, 4, "5"}}
 func TestExtract(t *testing.T) {
 
 	fc, _, _ := core.FileImport("./testdata/types_loader.json", "", true)
-	c, _ := core.FrameWidgetsGenerator(fc, 0, false)
+	c, _ := core.FrameWidgetsGenerator(fc, 0)
 	// fill the struct with predicted values
 
 	// generate the results of the struct
@@ -47,7 +47,7 @@ func TestExtract(t *testing.T) {
 func TestMissed(t *testing.T) {
 
 	fc, _, _ := core.FileImport("./testdata/types_loader.json", "", true)
-	c2, _ := core.FrameWidgetsGenerator(fc, 0, false)
+	c2, _ := core.FrameWidgetsGenerator(fc, 0)
 	typeWrapper(c2, types, "missed")
 	missed := MissingWidgetCheck(c2)
 	actualMiss := map[core.AliasIdentity]string{{FullName: "types", ZPos: 0}: "types"}
