@@ -8,7 +8,7 @@ frame.canvas:
     gridRows: 540
     linewidth: 0.5
     name:
-        - 000-blue-{{framenumber}}.json
+        - 000-blue-0000.json
     type: builtin.canvasoptions
 frame.swatch:
     backgroundcolor: '#000000'

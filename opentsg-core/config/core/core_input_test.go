@@ -160,11 +160,10 @@ func TestYamlRead(t *testing.T) {
 	newDesignRoot := "./testdata/frame_generate2/sequenceRootMustache.json"
 	cYamlRoot, _, e := FileImport(newDesignRoot, "", false)
 	predictedValuesRoot := []string{"./testdata/frame_generate2/results/resRoot.yaml", "./testdata/frame_generate2/results/resRootNoMustache.yaml"}
-	fmt.Println(e, "input error")
 
 	for i, pv := range predictedValuesRoot {
 		n, es := FrameWidgetsGenerator(cYamlRoot, i, false)
-		fmt.Println(es, "second erro")
+
 		expec, got := genHash(n, pv)
 		bar := n.Value(baseKey).(map[string]widgetContents)
 
@@ -188,6 +187,8 @@ func TestYamlRead(t *testing.T) {
 		Convey("Checking arguments are parsed correctly into base widgets, so widgets with declared args are updated", t, func() {
 			Convey(fmt.Sprintf("Using frame %v ./testdata/frame_generate2/sequenceRootMustache.json as the input ", i), func() {
 				Convey("The generated widget map as a json body matches "+pv, func() {
+					So(e, ShouldBeNil)
+					So(es, ShouldBeNil)
 					So(expec.Sum(nil), ShouldResemble, got.Sum(nil))
 				})
 			})

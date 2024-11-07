@@ -108,6 +108,7 @@ type Response interface {
 	// the end of the widget and to handle any errors.
 	// This is not vital
 	Write(status int, message string)
+	// Write(logLevel slog.Level ,status int, message string)
 
 	// just draw the image as standard
 	// import it as our own in case it needs
@@ -119,11 +120,6 @@ type response struct {
 	baseImg draw.Image
 	status  int
 	message string
-}
-
-func newResponse(r image.Rectangle) response {
-
-	return response{baseImg: colour.NewNRGBA64(colour.ColorSpace{}, r)}
 }
 
 func (r *response) Write(status int, message string) {
@@ -170,9 +166,31 @@ func (l Legacy) Handle(resp Response, req *Request) {
 	resp.Write(200, "")
 }
 
+func (tsg *openTSG) initErrorHandler() {
+
+	errHan := HandlerFunc(func(resp Response, req *Request) {
+		resp.Write(400, string(req.RawWidgetYAML))
+	})
+	tsg.errHandler = chain(tsg.middlewares, errHan)
+}
+
+func (tsg *openTSG) logErrors(errors ...error) {
+	if tsg.errHandler == nil {
+		panic("tsg internal error handler not set, please call initErrorHandler() first")
+	}
+
+	// call all errors so they are just logged
+	for _, err := range errors {
+		tsg.errHandler.Handle(&response{}, &Request{RawWidgetYAML: json.RawMessage(err.Error())})
+	}
+}
+
 // Draw generates the images for each array section of the json array and applies it to the test card grid.
 func (tsg *openTSG) Run(debug bool, mnt, logType string) {
 	imageNo := tsg.framcount
+
+	// set the error handler in stone
+	tsg.initErrorHandler()
 
 	// wait for every frame to run before exiting the lopp
 	var wg sync.WaitGroup
@@ -216,21 +234,16 @@ func (tsg *openTSG) Run(debug bool, mnt, logType string) {
 			frameConfigCont, errs := core.FrameWidgetsGenerator(tsg.internal, frameNo, debug)
 
 			// this is important for showing missed widget updates
-			for _, e := range errs {
-				frameLog.PrintErrorMessage("W_CORE_opentsg_", e, true)
-			}
+			// log the errors
+			tsg.logErrors(errs...)
 
 			frameContext := widgethandler.MetaDataInit(frameConfigCont)
 			errs = canvaswidget.LoopInit(frameContext)
 
 			if len(errs) > 0 {
-
-				// print all the errors
-				for _, e := range errs {
-					frameLog.PrintErrorMessage("F_CORE_opentsg_", e, debug)
-				}
+				// log.Fatal
+				tsg.logErrors(errs...)
 				// frameWait.Done() //the frame weight is returned when the programs exit, or the frame has been generated
-
 				return // continue // skip to the next frame number
 			}
 			// generate the canvas of type image.Image
@@ -382,7 +395,7 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, frameNo 
 
 					if !handlerExists {
 						Han = GenErrorHandler(400,
-							fmt.Sprintf("no handler found for widgets of type \"%s\" for widget path  \"%s\"", widgProps.WType, widgProps.FullName))
+							fmt.Sprintf("No handler found for widgets of type \"%s\" for widget path \"%s\"", widgProps.WType, widgProps.FullName))
 						return
 					}
 

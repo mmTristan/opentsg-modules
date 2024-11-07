@@ -8,17 +8,17 @@ canvas:
     gridRows: 540
     linewidth: 0.5
     name:
-        - x{{framenumber}}-test.png
+        - x0001-test.png
     type: builtin.canvasoptions
-mid.dummy:
+dummy:
     backgroundcolor: '#000000'
     bordercolor: '#333333'
     bordersize: 0
     font: body
     grid:
-        alias: '{{Title}}'
+        alias: test
         location: a0
     text:
-        - '{{Title}}'
+        - test
     textcolor: '#f2e2eb'
     type: builtin.textbox

@@ -50,9 +50,13 @@ type openTSG struct {
 	framcount     int
 	customWidgets []func(chan draw.Image, bool, *context.Context, *sync.WaitGroup, *sync.WaitGroup, *errhandle.Logger)
 	customSaves   map[string]func(io.Writer, draw.Image, int) error
-	handlers      map[string]hand
-	middlewares   []func(Handler) Handler
-	encoders      map[string]Encoder
+
+	// New Wave of handlers
+	handlers    map[string]hand
+	middlewares []func(Handler) Handler
+	encoders    map[string]Encoder
+	//
+	errHandler Handler
 }
 
 type hand struct {

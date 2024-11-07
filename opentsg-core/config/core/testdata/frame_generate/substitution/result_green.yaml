@@ -9,7 +9,7 @@ frame.green:
     gridRows: 540
     linewidth: 199
     name:
-        - green-{{framenumber}}.png
+        - green-0000.png
     type: builtin.canvasoptions
 frame.swatch.greenR0.CD0.B0:
     backgroundcolor: rgb12(0,0,0)

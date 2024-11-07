@@ -8,7 +8,7 @@ canvas:
     gridRows: 540
     linewidth: 0.5
     name:
-        - x{{framenumber}}-test.png
+        - x0000-test.png
     type: builtin.canvasoptions
 dummy:
     backgroundcolor: '#000000'

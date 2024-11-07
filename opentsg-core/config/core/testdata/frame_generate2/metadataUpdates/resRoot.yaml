@@ -8,5 +8,5 @@ frame.canvas:
     gridRows: 540
     linewidth: 0.5
     name:
-        - sequence-TestTitle-{{framenumber}}.png
+        - sequence-TestTitle-0000.png
     type: builtin.canvasoptions
