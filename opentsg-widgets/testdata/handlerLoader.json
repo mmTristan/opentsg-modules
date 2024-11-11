@@ -1,0 +1,40 @@
+
+{
+    "include": [
+        {
+            "uri": "legacyLoaders/bars.json",
+            "name": "bars"
+          },
+          {
+            "uri": "legacyLoaders/sat.json",
+            "name": "saturation"
+          },
+          {
+            "uri": "legacyLoaders/twosi.json",
+            "name": "twosi"
+          },
+          {
+            "uri": "legacyLoaders/nb.json",
+            "name": "black"
+          },
+          {
+            "uri": "legacyLoaders/luma.json",
+            "name": "lum"
+          },
+      {
+        "uri": "legacyLoaders/base.json",
+        "name": "canvas"
+      }
+    ],
+  "create":[{
+    
+        "canvas":{    "name": [
+            "./testdata/legacyLoaders/ebuHandler{{framenumber}}.png"
+        ]},
+        "bars":{},
+        "saturation":{},
+        "lum":{},
+        "black":{},
+        "twosi" :{}}
+   ]
+}

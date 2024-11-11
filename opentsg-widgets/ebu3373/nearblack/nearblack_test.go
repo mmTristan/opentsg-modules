@@ -16,8 +16,8 @@ import (
 
 func TestDemo(t *testing.T) {
 	// base example
-	nbDemo := nearblackJSON{}
-	examplejson.SaveExampleJson(nbDemo, widgetType, "base", true)
+	nbDemo := Config{}
+	examplejson.SaveExampleJson(nbDemo, WidgetType, "base", true)
 }
 
 func TestNearBlack(t *testing.T) {
@@ -26,9 +26,9 @@ func TestNearBlack(t *testing.T) {
 	explanation := []string{"uhd", "hd", "obtuse"}
 
 	for i, size := range sizes {
-		mock := nearblackJSON{}
+		mock := Config{}
 		myImage := image.NewNRGBA64(image.Rect(0, 0, size[0], size[1]))
-		examplejson.SaveExampleJson(mock, widgetType, explanation[i], false)
+		examplejson.SaveExampleJson(mock, WidgetType, explanation[i], false)
 		// Generate the ramp image
 		genErr := mock.Generate(myImage)
 		// Open the image to compare to

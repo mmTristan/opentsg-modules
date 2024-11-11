@@ -23,9 +23,9 @@ func TestDemo(t *testing.T) {
 		return nil, image.Point{}, nil, nil
 	}
 	// base example
-	twosiDemo := twosiJSON{}
+	twosiDemo := Config{}
 	twosiDemo.GridLoc = &config.Grid{Alias: "testlocation"}
-	examplejson.SaveExampleJson(twosiDemo, widgetType, "base", true)
+	examplejson.SaveExampleJson(twosiDemo, WidgetType, "base", true)
 
 	getPostion = gridgen.GridSquareLocatorAndGenerator
 
@@ -38,10 +38,10 @@ func TestChannels(t *testing.T) {
 	explanation := []string{"uhd", "hd", "obtuse"}
 
 	for i, size := range sizes {
-		mock := twosiJSON{}
+		mock := Config{}
 		mock.GridLoc = &config.Grid{Alias: "testlocation"}
 		myImage := image.NewNRGBA64(image.Rect(0, 0, size[0], size[1]))
-		examplejson.SaveExampleJson(mock, widgetType, explanation[i], false)
+		examplejson.SaveExampleJson(mock, WidgetType, explanation[i], false)
 		// Generate the ramp image
 		_ = mock.Generate(myImage)
 

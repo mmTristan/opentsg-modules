@@ -10,6 +10,7 @@
         },		"colorSpace" : {
 			"type" : "object"
 		},
+
         "type": {
             "type": "string",
             "enum": [

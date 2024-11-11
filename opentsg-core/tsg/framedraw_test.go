@@ -96,7 +96,7 @@ func TestRaceConditions(t *testing.T) {
 	otsg.Handle("test.fill", []byte("{}"), Filler{})
 	jSlog := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{})
 	AddBaseEncoders(otsg)
-	otsg.Use(Logger(slog.New(jSlog), "TestRaceConditions"))
+	otsg.Use(Logger(slog.New(jSlog)))
 	otsg.Run("")
 
 	genFile, _ := os.Open("./testdata/handlerLoaders/racer.png")
@@ -138,7 +138,7 @@ func TestMiddlewares(t *testing.T) {
 	AddBaseEncoders(otsg)
 	buf := bytes.NewBuffer([]byte{})
 	jSlog := slog.NewJSONHandler(buf, &slog.HandlerOptions{})
-	otsg.Use(Logger(slog.New(jSlog), "TestMiddlewares"))
+	otsg.Use(Logger(slog.New(jSlog)))
 
 	otsg.Run("")
 
@@ -188,7 +188,7 @@ func TestMiddlewares(t *testing.T) {
 		})
 	}
 	orderLog := &testSlog{logs: make([]string, 0)}
-	otsg.Use(Logger(slog.New(orderLog), "TestMiddlewares"), first, second)
+	otsg.Use(Logger(slog.New(orderLog)), first, second)
 	otsg.Run("")
 
 	Convey("Checking the middleware runs in the oder it is called", t, func() {
@@ -228,7 +228,7 @@ func TestMiddlewares(t *testing.T) {
 }`), Filler{})
 
 	logArr := testSlog{logs: make([]string, 0)}
-	otsg.Use(Logger(slog.New(&logArr), "TestMiddlewares"))
+	otsg.Use(Logger(slog.New(&logArr)))
 
 	otsg.Run("")
 
@@ -254,6 +254,47 @@ func TestMiddlewares(t *testing.T) {
 	})
 }
 
+func TestMetadata(t *testing.T) {
+
+	otsg, _ := BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true, nil)
+	otsg.Handle("test.fill", []byte("{}"), Filler{})
+	AddBaseEncoders(otsg)
+
+	search := []string{"cs.blue", "cs.red", "cs.green"}
+	fields := []string{"type", "grid", "mdObject"}
+	expected := []any{"test.fill", map[string]any{"location": "a0:d3"}, 400.003}
+
+	for i, salias := range search {
+
+		var result any
+
+		extractor := func(next Handler) Handler {
+			return HandlerFunc(func(r Response, req *Request) {
+
+				// for this middleware only run on the searched widget
+				// to ignore other results which we may not want
+				if req.PatchProperties.WidgetFullID == salias {
+					result = req.GetWidgetMetadata(salias, fields[i])
+
+				}
+				next.Handle(r, req)
+			})
+		}
+
+		otsg.Use(extractor)
+		otsg.Run("")
+
+		// @TODO check the messages are correct
+		Convey("Checking the log handle runs the logs", t, func() {
+			Convey("3 logs should be returned", func() {
+				Convey("3 logs are returned denoting a successful run", func() {
+					So(result, ShouldResemble, expected[i])
+				})
+			})
+		})
+	}
+}
+
 func messageValidator(messages []string, expectedMess string) any {
 
 	type record struct {
@@ -277,7 +318,7 @@ type Filler struct {
 func (f Filler) Handle(r Response, _ *Request) {
 
 	fill := colourgen.HexToColour(f.Fill, colour.ColorSpace{})
-	colour.Draw(r, r.Bounds(), &image.Uniform{fill}, image.Point{}, draw.Over)
+	colour.Draw(r.BaseImage(), r.BaseImage().Bounds(), &image.Uniform{fill}, image.Point{}, draw.Over)
 
 	r.Write(200, "success")
 }
@@ -350,7 +391,7 @@ func TestErrors(t *testing.T) {
 		otsg.Handle("test.fill", []byte(`{}`), Filler{})
 
 		orderLog := &testSlog{logs: make([]string, 0)}
-		otsg.Use(Logger(slog.New(orderLog), "TestErrors"))
+		otsg.Use(Logger(slog.New(orderLog)))
 		AddBaseEncoders(otsg)
 		otsg.Run("")
 

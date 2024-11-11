@@ -143,7 +143,7 @@ func DrawMask(dest draw.Image, r image.Rectangle, src image.Image, sp image.Poin
 					} else if cspace, ok := src.At(sx, sy).(*CNRGBA64); ok {
 
 						// transform the colour before applying it
-						tCol := transform(cspace.ColorSpace, dst.space, src.At(sx, sy))
+						tCol := transform(cspace.ColorSpace, dst.ColourSpace, src.At(sx, sy))
 						ncol := tCol.(*CNRGBA64)
 						// making sure to cut out alpha multiplied values
 						//	atc := tCol.(*CNRGBA64)

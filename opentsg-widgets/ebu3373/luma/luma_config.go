@@ -7,14 +7,14 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
 )
 
-type lumaJSON struct {
+type LumaJSON struct {
 	// Type    string      `json:"type" yaml:"type"`
 	ColourSpace       colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
 	config.WidgetGrid `yaml:",inline"`
 }
 
 //go:embed jsonschema/lumaschema.json
-var schemaInit []byte
+var Schema []byte
 
 /*
 func (l lumaJSON) Alias() string {

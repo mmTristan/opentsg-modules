@@ -10,16 +10,17 @@ import (
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
 )
 
 const (
-	widgetType = "builtin.ebu3373/saturation"
+	WidgetType = "builtin.ebu3373/saturation"
 )
 
 func SatGen(canvasChan chan draw.Image, debug bool, c *context.Context, wg, wgc *sync.WaitGroup, logs *errhandle.Logger) {
 	defer wg.Done()
-	conf := widgethandler.GenConf[saturationJSON]{Debug: debug, Schema: schemaInit, WidgetType: widgetType}
+	conf := widgethandler.GenConf[Config]{Debug: debug, Schema: Schema, WidgetType: WidgetType}
 	widgethandler.WidgetRunner(canvasChan, conf, c, logs, wgc) // Update this to pass an error which is then formatted afterwards
 }
 
@@ -69,7 +70,7 @@ var (
 	satBlue10 = colour.CNRGBA64{R: 64 << 6, G: 64 << 6, B: 940 << 6, A: 0xffff}
 )
 
-func (s saturationJSON) Generate(canvas draw.Image, opt ...any) error {
+func (s Config) Generate(canvas draw.Image, opt ...any) error {
 	b := canvas.Bounds().Max
 
 	// Use a map to match the keys up etc
@@ -128,4 +129,66 @@ func (s saturationJSON) Generate(canvas draw.Image, opt ...any) error {
 	}
 
 	return nil
+}
+
+func (s Config) Handle(resp tsg.Response, req *tsg.Request) {
+	b := resp.BaseImage().Bounds().Max
+
+	// Use a map to match the keys up etc
+	reds := []colour.CNRGBA64{satRed0, satRed1, satRed2, satRed3, satRed4, satRed5, satRed6, satRed7, satRed8, satRed9, satRed10}
+	greens := []colour.CNRGBA64{satGreen0, satGreen1, satGreen2, satGreen3, satGreen4, satGreen5, satGreen6, satGreen7, satGreen8, satGreen9, satGreen10}
+	blues := []colour.CNRGBA64{satBlue0, satBlue1, satBlue2, satBlue3, satBlue4, satBlue5, satBlue6, satBlue7, satBlue8, satBlue9, satBlue10}
+	colours := make(map[string][]colour.CNRGBA64)
+	cs := [][]colour.CNRGBA64{reds, greens, blues}
+	names := []string{"red", "green", "blue"}
+	for i, c := range cs {
+		colours[names[i]] = c
+	}
+	var inputC []string
+	// Assign the basic colour order if none are chosen
+	if len(s.Colours) == 0 {
+		inputC = names
+	} else {
+		inputC = s.Colours
+	}
+
+	wScale := (float64(b.X) / 2330.0)
+	hScale := (float64(b.Y) / 600.0)
+
+	height := 0.0
+	// Scale the height offset to the number of colours called (max 3)
+	hOff := hScale * 200 * (3.0 / float64(len(inputC)))
+
+	colour.Draw(resp.BaseImage(), resp.BaseImage().Bounds(), &image.Uniform{&grey}, image.Point{}, draw.Src)
+
+	wOff := wScale * 200 // 200 is the width at 3840
+	for _, cname := range inputC {
+		fillColour := colours[cname]
+		if fillColour == nil {
+			// Blow the doors of etc
+			resp.Write(400, fmt.Sprintf("The colour %v is not an available colour", cname))
+			return
+		}
+		// Draw the narrow box
+		width := wScale * 100
+		start := fillColour[0]
+		start.UpdateColorSpace(s.ColourSpace)
+		colour.Draw(resp.BaseImage(), image.Rect(int(0), int(height), int(width), int(height+hOff)), &image.Uniform{&start}, image.Point{}, draw.Over)
+		// Draw the smaller boxes at a smaller fill
+		for _, c := range fillColour[1:] {
+			offx := 50 * wScale
+			offy := 50 * hScale
+			fill := c
+			fill.UpdateColorSpace(s.ColourSpace)
+			colour.Draw(resp.BaseImage(), image.Rect(int(width+offx), int(height+offy), int(width+wOff-offx), int(height+hOff-offy)), &image.Uniform{&fill}, image.Point{}, draw.Over)
+			width += wOff
+		}
+		// Draw the final large box
+		end := fillColour[len(fillColour)-1]
+		end.UpdateColorSpace(s.ColourSpace)
+		colour.Draw(resp.BaseImage(), image.Rect(int(width), int(height), b.X, int(height+hOff)), &image.Uniform{&end}, image.Point{}, draw.Over)
+		height += hOff
+	}
+
+	resp.Write(200, "success")
 }

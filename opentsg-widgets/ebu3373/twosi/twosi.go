@@ -13,17 +13,18 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/text"
 )
 
 const (
-	widgetType = "builtin.ebu3373/twosi"
+	WidgetType = "builtin.ebu3373/twosi"
 )
 
 func SIGenerate(canvasChan chan draw.Image, debug bool, c *context.Context, wg, wgc *sync.WaitGroup, logs *errhandle.Logger) {
 	defer wg.Done()
-	conf := widgethandler.GenConf[twosiJSON]{Debug: debug, Schema: schemaInit, WidgetType: widgetType, ExtraOpt: []any{c}}
+	conf := widgethandler.GenConf[Config]{Debug: debug, Schema: Schema, WidgetType: WidgetType, ExtraOpt: []any{c}}
 	widgethandler.WidgetRunner(canvasChan, conf, c, logs, wgc)
 
 }
@@ -43,7 +44,7 @@ type channel struct {
 
 var getPostion = gridgen.GridSquareLocatorAndGenerator
 
-func (t twosiJSON) Generate(canvas draw.Image, opt ...any) error {
+func (t Config) Generate(canvas draw.Image, opt ...any) error {
 	// Kick off with filling it all in as grey
 	backFill := grey
 	backFill.UpdateColorSpace(t.ColourSpace)
@@ -152,6 +153,101 @@ func (t twosiJSON) Generate(canvas draw.Image, opt ...any) error {
 	letterProperties.letterDrawer(canvas, letterColour, letterOrder, connections, letterGap, channelGap, yStart)
 
 	return nil
+}
+
+func (t Config) Handle(resp tsg.Response, req *tsg.Request) {
+	// Kick off with filling it all in as grey
+	backFill := grey
+	backFill.UpdateColorSpace(t.ColourSpace)
+	colour.Draw(resp.BaseImage(), resp.BaseImage().Bounds(), &image.Uniform{&backFill}, image.Point{}, draw.Src)
+
+	// Flexible option to get figure out where the image is to be placed
+	// this then adds an offset to the genertaed image so it all lines up.
+
+	canvasLocation := req.PatchProperties.TSGLocation
+
+	// Apply the offset
+	xOff := 4 - canvasLocation.X%4
+	yOff := 4 - canvasLocation.Y%4
+
+	b := resp.BaseImage().Bounds().Max
+
+	if b.In(image.Rect(0, 0, 600, 300)) { // Minimum size box we are going with
+		resp.Write(400, fmt.Sprintf("0171 the minimum size is 600 by 300, received an image of %v by %v", b.X, b.Y))
+		return
+	}
+
+	// Calculate relevant scale here
+	// Relevant to 1510 and 600 (the size of ebu 3373)
+	xScale := float64(b.X) / 1510.0
+	yScale := float64(b.Y) / 600.0
+
+	letterSize := aPos(int(math.Round(72 * xScale)))
+
+	// Get the title font to be used
+
+	connections := make(map[string]channel)
+	connections["A"] = channel{yOff: 0, xOff: 0, Letter: "A"}
+	connections["B"] = channel{yOff: 0, xOff: 2, Letter: "B"}
+	connections["C"] = channel{yOff: 1, xOff: 0, Letter: "C"}
+	connections["D"] = channel{yOff: 1, xOff: 2, Letter: "D"}
+
+	letterColour := letterFill
+	letterColour.UpdateColorSpace(t.ColourSpace)
+
+	// Generate the letter that is only relevant to its channel
+	for k, v := range connections {
+		// Generate the mask and the canvas
+		mid := mask(letterSize, letterSize, v.xOff, v.yOff)
+		v.mask = req.GenerateSubImage(resp.BaseImage(), image.Rect(0, 0, letterSize, letterSize))
+
+		// generate a textbox of A
+		txtBox := text.NewTextboxer(t.ColourSpace,
+			text.WithFont(text.FontTitle),
+			text.WithFill(text.FillTypeFull),
+			text.WithTextColour(&letterFill),
+		)
+
+		txtBox.DrawString(v.mask, nil, v.Letter)
+
+		colour.DrawMask(v.mask, v.mask.Bounds(), v.mask, image.Point{}, mid, image.Point{}, draw.Src)
+		connections[k] = v
+	}
+
+	letterOrder := [][2]string{{"A", "B"}, {"A", "C"}, {"A", "D"}, {"B", "C"}, {"B", "D"}, {"C", "D"}}
+
+	xLength := aPos(int(164 * xScale))
+	yDepth := aPos(int(164 * yScale))
+
+	lineOff := 24
+
+	letterGap := aPos(int(24 * xScale))
+	channelGap := aPos(int(48 * xScale))
+	objectWidth := (letterSize*2+letterGap)*6 + 5*channelGap
+	startPoint := (b.X - objectWidth) / 2
+
+	// Check start point for being in a  "A" channel start position and configure the numbers so everything lines up
+
+	objectHeight := (letterSize + lineOff + yDepth)
+	yStart := aPos((b.Y-objectHeight)/2) + yOff
+
+	if yStart < 0 || startPoint < 0 { // 0 means they're outside the box
+		resp.Write(400, fmt.Sprintf("0172 irregular sized box, the two sample interleave pattern will not fit within the constraints of %v, %v", b.X, b.Y))
+		return
+	}
+
+	// If either of these are negative just error and leave the or return a gray canvas? Consult Bruce
+	/*	letterSize, startPoint,
+		lineOff, xOff, yOff,
+		yDepth, xLength int
+		yScale float64*/
+
+	letterProperties := letterMetrics{letterSize: letterSize, startPoint: startPoint,
+		yOff: yOff, yScale: yScale, yDepth: yDepth,
+		xOff: xOff, xLength: xLength, lineOff: lineOff}
+	letterProperties.letterDrawer(resp.BaseImage(), letterColour, letterOrder, connections, letterGap, channelGap, yStart)
+
+	resp.Write(200, "success")
 }
 
 type letterMetrics struct {

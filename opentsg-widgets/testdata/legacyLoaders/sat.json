@@ -1,0 +1,11 @@
+{
+    "type": "builtin.ebu3373/saturation",
+    "colors": [
+        "red",
+        "green",
+        "blue"
+    ],
+    "grid": {
+        "location": "ev146:nt205"
+    }
+}

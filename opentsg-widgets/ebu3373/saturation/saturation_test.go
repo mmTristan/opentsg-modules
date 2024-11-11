@@ -16,27 +16,27 @@ import (
 
 func TestDemo(t *testing.T) {
 	// base example
-	satDemo := saturationJSON{}
-	examplejson.SaveExampleJson(satDemo, widgetType, "minimum", true)
+	satDemo := Config{}
+	examplejson.SaveExampleJson(satDemo, WidgetType, "minimum", true)
 
-	satDemoMax := saturationJSON{Colours: []string{"red", "green", "blue"}}
-	examplejson.SaveExampleJson(satDemoMax, widgetType, "maximum", true)
+	satDemoMax := Config{Colours: []string{"red", "green", "blue"}}
+	examplejson.SaveExampleJson(satDemoMax, WidgetType, "maximum", true)
 
-	satDemoDiff := saturationJSON{Colours: []string{"blue", "red", "green"}}
-	examplejson.SaveExampleJson(satDemoDiff, widgetType, "diff", true)
+	satDemoDiff := Config{Colours: []string{"blue", "red", "green"}}
+	examplejson.SaveExampleJson(satDemoDiff, WidgetType, "diff", true)
 
 }
 
 func TestBars(t *testing.T) {
 	myImage := image.NewNRGBA64(image.Rect(0, 0, 2330, 600))
-	s := saturationJSON{}
+	s := Config{}
 	colours := [][]string{{"red", "green", "blue"}, {"red", "blue"}, {"blue"}, {}}
 	explanation := []string{"redGreenBlue", "redBlue", "blue", "defualt"}
 
 	for i, c := range colours {
 		s.Colours = c
 		genErr := s.Generate(myImage)
-		examplejson.SaveExampleJson(s, widgetType, explanation[i], false)
+		examplejson.SaveExampleJson(s, WidgetType, explanation[i], false)
 
 		f, _ := os.Open(fmt.Sprintf("./testdata/ordertest%v.png", i))
 

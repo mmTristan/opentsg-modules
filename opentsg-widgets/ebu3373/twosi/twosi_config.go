@@ -7,14 +7,14 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
 )
 
-type twosiJSON struct {
+type Config struct {
 	//	Type    string      `json:"type" yaml:"type"`
 	config.WidgetGrid `yaml:",inline"`
 	ColourSpace       colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
 }
 
 //go:embed jsonschema/twoschema.json
-var schemaInit []byte
+var Schema []byte
 
 /*
 func (t twosiJSON) Alias() string {

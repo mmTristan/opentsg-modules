@@ -3,24 +3,14 @@ package tsg
 import (
 	"context"
 	"fmt"
-	"image"
-	"image/color"
+	"image/draw"
 	"log/slog"
 
-	gonanoid "github.com/matoous/go-nanoid"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/validator"
 )
 
-/*
-
-
-need
-- logger
-- validator
-- metadata substituions
-*/
-
-// jsonValidator validates the input json request, against a schema
+// jsonValidator validates the input json request, against a schema.
+// It is designed to be the last middleware put on the handler stack.
 func jSONValidator(loggedJson validator.JSONLines, schema []byte, id string) func(Handler) Handler {
 
 	return func(h Handler) Handler {
@@ -45,23 +35,20 @@ func jSONValidator(loggedJson validator.JSONLines, schema []byte, id string) fun
 	}
 }
 
-// Logger initialises a slogger wrapper of any writes that
-// occur during the TSG run
-func Logger(logger *slog.Logger, runID any) func(Handler) Handler {
-
-	if runID == nil {
-		runID = gonanoid.MustID(18)
-	}
+// Logger initialises a slogger wrapper,
+// records every write() call during the tsg run.
+func Logger(logger *slog.Logger) func(Handler) Handler {
 
 	return func(h Handler) Handler {
 		return HandlerFunc(func(resp Response, req *Request) {
 			// wrap the writer in the slogger body
-			slg := slogger{log: logger, r: resp, runID: runID, frameNo: req.FrameProperties.FrameNumber, alias: req.PatchProperties.WidgetFullID}
+			slg := slogger{log: logger, r: resp, runID: req.JobID, frameNo: req.FrameProperties.FrameNumber, alias: req.PatchProperties.WidgetFullID}
 			h.Handle(&slg, req)
 		})
 	}
 }
 
+// the slogger body for each request
 type slogger struct {
 	log     *slog.Logger
 	r       Response
@@ -71,9 +58,12 @@ type slogger struct {
 	alias   string
 }
 
-func (s *slogger) Write(status int, message string) {
-	// switch the code here to find an appropriate error level
-	s.log.Log(s.c, slog.LevelError, fmt.Sprintf("%v:%s", status, message),
+func (s *slogger) Write(status StatusCode, message string) {
+
+	// search code here to find an appropriate error level
+	level := getLogLevel(status)
+
+	s.log.Log(s.c, level, fmt.Sprintf("%v:%s", status, message),
 		"RunID", s.runID,
 		"WidgetID", s.alias,
 		"FrameNumber", s.frameNo,
@@ -82,6 +72,29 @@ func (s *slogger) Write(status int, message string) {
 	s.r.Write(status, message)
 }
 
+// getLogLevel converts the status code into and error level for slog.
+func getLogLevel(status StatusCode) slog.Level {
+	switch status {
+	case WidgetSuccess, 200:
+		return slog.LevelDebug
+	case FrameSuccess:
+		return slog.LevelInfo
+	case 600, WidgetNotFound:
+		return slog.LevelWarn
+	case 400, 500, EncoderNotFound:
+		return slog.LevelError
+
+	default:
+		return slog.LevelError
+
+	}
+}
+
+func (s *slogger) BaseImage() draw.Image {
+	return s.r.BaseImage()
+}
+
+/*
 func (s *slogger) At(x int, y int) color.Color {
 	return s.r.At(x, y)
 }
@@ -94,3 +107,8 @@ func (s *slogger) ColorModel() color.Model {
 func (s *slogger) Set(x int, y int, c color.Color) {
 	s.r.Set(x, y, c)
 }
+
+func (s *slogger) Space() colour.ColorSpace {
+	return s.r.Space()
+}
+*/

@@ -8,29 +8,35 @@ import (
 	"image/color"
 	"image/draw"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
+	gonanoid "github.com/matoous/go-nanoid"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/canvaswidget"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/widgets"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
+	"gopkg.in/yaml.v3"
 )
 
+// Handler is the OpenTSG interface for generating widgets
 type Handler interface {
 	Handle(Response, *Request)
 }
 
+// HandleFunc implements the Handler interface as a standalone functions
 type HandlerFunc func(Response, *Request)
 
+// Handle
 func (f HandlerFunc) Handle(resp Response, req *Request) {
 	f(resp, req)
 }
 
-// HandleFunc registers the handler function for the given pattern in [DefaultServeMux].
-// The documentation for [ServeMux] explains how patterns are matched.
+// HandleFunc registers the handler function for the given pattern in the
+// openTSG engine
 func (o openTSG) HandleFunc(wType string, handler HandlerFunc) {
 	// set up router here
 
@@ -38,6 +44,9 @@ func (o openTSG) HandleFunc(wType string, handler HandlerFunc) {
 
 }
 
+// Handle adds a handler to the openTSG engine,
+// every widgetType (wType) needs to be unique.
+// The schema is used for passing any bytes into that handler object.
 func (o openTSG) Handle(wType string, schema []byte, handler Handler) {
 
 	if _, ok := o.handlers[wType]; ok {
@@ -54,9 +63,15 @@ func (o *openTSG) Use(middlewares ...func(Handler) Handler) {
 	o.middlewares = append(o.middlewares, middlewares...)
 }
 
+// Request contains all the information sent to a handler
+// for generating an image.
+//
+// It has methods for interacting with the core of openTSG.
+// As well as set up for the image
 type Request struct {
 	// For http handlers etc
 	RawWidgetYAML json.RawMessage
+	JobID         string
 	// the properties of the patch to be made
 	PatchProperties PatchProperties
 	FrameProperties FrameProperties
@@ -68,12 +83,18 @@ type Request struct {
 	// offer a default for the text box search
 
 	searchWithCredentials func(URI string) ([]byte, error)
+	getWidgetMetadata     func(alias, dotpath string) any
 	// generate an image of smaller dimensions
 	// Not really needed? Look through
 	// IMG(image.Rect)Draw.Image
 	// GetWidgetMetadata()
+	// generateSubImage func(baseImg draw.Image, bounds image.Rectangle) draw.Image
 }
 
+// SearchWithCredentials searches a URI utilising any login credentials used
+// when setting up openTSG.
+//
+// If the URI does not require any credentials then they are not used.
 func (r Request) SearchWithCredentials(URI string) ([]byte, error) {
 	if r.searchWithCredentials == nil {
 		return core.GetWebBytes(nil, URI)
@@ -81,10 +102,36 @@ func (r Request) SearchWithCredentials(URI string) ([]byte, error) {
 	return r.searchWithCredentials(URI)
 }
 
-func GenerateSubImage(baseImg draw.Image, bounds image.Rectangle) draw.Image {
-	return nil
+//	GenerateSubImage generates an image of bounds, that matches the type of image given to it.
+//
+// Note it will not work with custom draw.Image types
+func (r Request) GenerateSubImage(baseImg draw.Image, bounds image.Rectangle) draw.Image {
+
+	if resp, ok := baseImg.(*response); ok {
+		baseImg = resp.baseImg
+	}
+	switch img := baseImg.(type) {
+	case *colour.NRGBA64:
+		return colour.NewNRGBA64(img.Space(), bounds)
+	default:
+
+		return image.NewNRGBA64(bounds)
+	}
 }
 
+// GetWidget searches the metadata of a frame run for an alias and then recursivley searches through the keys to find nested values.
+// The keys are a dotpath, if rhe key is invalid a nil value is returned.
+// if the alias is "" then all the metadata is returned.
+func (r Request) GetWidgetMetadata(alias, metadataField string) any {
+	if r.getWidgetMetadata == nil {
+		return nil
+	}
+
+	return r.getWidgetMetadata(alias, metadataField)
+}
+
+// PatchProperties contains the unique properties for
+// the patch the widget is generating.
 type PatchProperties struct {
 	WidgetType   string
 	WidgetFullID string
@@ -96,6 +143,8 @@ type PatchProperties struct {
 	ColourSpace colour.ColorSpace
 }
 
+// FrameProperties contains the overall properties for the
+// frame that is currently being generated.
 type FrameProperties struct {
 	FrameNumber int
 	WorkingDir  string
@@ -105,25 +154,30 @@ type Response interface {
 	// Write a response to signal
 	// the end of the widget and to handle any errors.
 	// This is not vital
-	Write(status int, message string)
+	Write(status StatusCode, message string)
 	// Write(logLevel slog.Level ,status int, message string)
 
+	BaseImage() draw.Image
 	// just draw the image as standard
 	// import it as our own in case it needs
 	// to be extended later
-	draw.Image
+	// draw.Image
 }
 
 type response struct {
 	baseImg draw.Image
-	status  int
+	status  StatusCode
 	message string
 }
 
-func (r *response) Write(status int, message string) {
+func (r *response) Write(status StatusCode, message string) {
 	// nothing is written at the moment
 	r.status = status
 	r.message = message
+}
+
+func (r *response) BaseImage() draw.Image {
+	return r.baseImg
 }
 
 func (r *response) At(x int, y int) color.Color {
@@ -139,6 +193,20 @@ func (r *response) ColorModel() color.Model {
 
 func (r *response) Set(x, y int, c color.Color) {
 	r.baseImg.Set(x, y, c)
+}
+
+type StatusCode float64
+
+const (
+	FrameSuccess    = StatusCode(200.003)
+	WidgetSuccess   = StatusCode(200.001)
+	SaveSuccess     = StatusCode(200.002)
+	WidgetNotFound  = StatusCode(404.001)
+	EncoderNotFound = StatusCode(404.002)
+)
+
+func (s StatusCode) String() string {
+	return fmt.Sprintf("%.3f", s)
 }
 
 type Legacy struct {
@@ -164,7 +232,7 @@ func (l Legacy) Handle(resp Response, req *Request) {
 	resp.Write(200, "")
 }
 
-func (tsg *openTSG) logErrors(code, frameNumer int, errors ...error) {
+func (tsg *openTSG) logErrors(code StatusCode, frameNumber int, jobId string, errors ...error) {
 	errHan := HandlerFunc(func(resp Response, req *Request) {
 		resp.Write(code, string(req.RawWidgetYAML))
 	})
@@ -172,8 +240,9 @@ func (tsg *openTSG) logErrors(code, frameNumer int, errors ...error) {
 	// call all errors so they are just logged
 	for _, err := range errors {
 		errs.Handle(&response{}, &Request{RawWidgetYAML: json.RawMessage(err.Error()),
+			JobID:           jobId,
 			PatchProperties: PatchProperties{WidgetFullID: "core.tsg"},
-			FrameProperties: FrameProperties{FrameNumber: frameNumer},
+			FrameProperties: FrameProperties{FrameNumber: frameNumber},
 		})
 	}
 }
@@ -202,8 +271,8 @@ func (tsg *openTSG) Run(mnt string) {
 		go func() {
 			defer wg.Done()
 			defer frameWait.Done()
-
-			monit := monitor{frameNo: frameNo}
+			jobID := gonanoid.MustID(16)
+			monit := monitor{frameNo: frameNo, jobID: jobID}
 			genMeasure := time.Now()
 			saveTime := int64(0)
 			// new log here for each frame
@@ -211,7 +280,7 @@ func (tsg *openTSG) Run(mnt string) {
 			// defer the progress bar message to use the values at the end of the "function"
 			// the idea is for them to auto update
 			defer func() {
-				tsg.logErrors(200, frameNo,
+				tsg.logErrors(FrameSuccess, frameNo, jobID,
 					fmt.Errorf("generating frame %v/%v, gen: %v ms, save: %sms, errors:%v", frameNo, imageNo-1,
 						microToMili(int64(time.Since(genMeasure).Microseconds())), microToMili(saveTime), monit.ErrorCount),
 				)
@@ -225,7 +294,7 @@ func (tsg *openTSG) Run(mnt string) {
 			// this is important for showing missed widget updates
 			// log the errors
 			if len(errs) > 0 {
-				tsg.logErrors(404, frameNo, errs...)
+				tsg.logErrors(404, frameNo, jobID, errs...)
 				monit.incrementError(len(errs))
 			}
 
@@ -234,7 +303,7 @@ func (tsg *openTSG) Run(mnt string) {
 
 			if len(errs) > 0 {
 				// log.Fatal
-				tsg.logErrors(500, frameNo, errs...)
+				tsg.logErrors(500, frameNo, jobID, errs...)
 				monit.incrementError(len(errs))
 				// frameWait.Done() //the frame weight is returned when the programs exit, or the frame has been generated
 				return // continue // skip to the next frame number
@@ -242,7 +311,7 @@ func (tsg *openTSG) Run(mnt string) {
 			// generate the canvas of type image.Image
 			canvas, err := gridgen.GridGen(frameContext)
 			if err != nil {
-				tsg.logErrors(500, frameNo, err)
+				tsg.logErrors(500, frameNo, jobID, err)
 				monit.incrementError(1)
 				// frameWait.Done()
 				return // continue // skip to the next frame number
@@ -303,14 +372,14 @@ func (tsg *openTSG) canvasSave2(canvas draw.Image, filename []string, bitdeph in
 		truepath, err := filepath.Abs(filepath.Join(mnt, name))
 		if err != nil {
 			monit.incrementError(1)
-			tsg.logErrors(700, monit.frameNo, err)
+			tsg.logErrors(700, monit.frameNo, monit.jobID, err)
 
 			continue
 		}
 		err = tsg.encodeFrame(truepath, canvas, bitdeph)
 		if err != nil {
 			monit.incrementError(1)
-			tsg.logErrors(700, monit.frameNo, err)
+			tsg.logErrors(700, monit.frameNo, monit.jobID, err)
 		}
 	}
 }
@@ -318,6 +387,7 @@ func (tsg *openTSG) canvasSave2(canvas draw.Image, filename []string, bitdeph in
 type monitor struct {
 	frameNo    int
 	ErrorCount int
+	jobID      string
 	sync.Mutex
 }
 
@@ -332,6 +402,7 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 
 	// set up the core context functions
 	allWidgets := widgets.ExtractAllWidgets(c)
+	c = MetaDataInit(*c)
 	// add the validator last
 	lineErrs := core.GetJSONLines(*c)
 	webSearch := func(URI string) ([]byte, error) {
@@ -339,10 +410,17 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 	}
 
 	// get the widgtes to be used
+	// and intialiae the metadata
 	allWidgetsArr := make([]core.AliasIdentity, len(allWidgets))
-	for alias := range allWidgets {
+	for alias, data := range allWidgets {
 
 		allWidgetsArr[alias.ZPos] = alias
+		put(c, alias.FullName, data)
+
+	}
+
+	extractFunc := func(alias, field string) any {
+		return extractMetadata(c, alias, field)
 
 	}
 
@@ -388,8 +466,8 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 
 				var Han Handler
 				var resp response
-				var req Request
-				var gridcanvas, mask draw.Image
+				req := Request{JobID: gonanoid.MustID(16), getWidgetMetadata: extractFunc}
+				var gridCanvas, mask draw.Image
 				var imgLocation image.Point
 
 				// run a set up function that can return early
@@ -401,7 +479,7 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 					}()
 
 					if !handlerExists {
-						Han = GenErrorHandler(400,
+						Han = GenErrorHandler(WidgetNotFound,
 							fmt.Sprintf("No handler found for widgets of type \"%s\" for widget path \"%s\"", widgProps.WType, widgProps.FullName))
 						return
 					}
@@ -421,7 +499,7 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 						return
 					}
 
-					gridcanvas, imgLocation, mask, err = gridgen.GridSquareLocatorAndGenerator(widgProps.Location, widgProps.GridAlias, c)
+					gridCanvas, imgLocation, mask, err = gridgen.GridSquareLocatorAndGenerator(widgProps.Location, widgProps.GridAlias, c)
 					// when the function am error is returned,
 					// the function just becomes return an error
 					if err != nil {
@@ -435,19 +513,22 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 						return
 					}
 
+					// do some colour stuff here
+
 					// set up the requests
 					// and chain the middleware for the handler
 
 					pp := PatchProperties{WidgetType: widgProps.WType,
 						WidgetFullID: widgProps.FullName,
-						Dimensions:   gridcanvas.Bounds(),
+						Dimensions:   gridCanvas.Bounds(),
 						TSGLocation:  imgLocation, Geomtetry: flats,
 						ColourSpace: widgProps.ColourSpace}
 					//	Han, err := Unmarshal(handlers.handler)(widg)
-					resp = response{baseImg: gridcanvas}
-					req = Request{FrameProperties: fp, RawWidgetYAML: widg,
-						searchWithCredentials: webSearch, PatchProperties: pp,
-					}
+					resp = response{baseImg: gridCanvas}
+					req.FrameProperties = fp
+					req.RawWidgetYAML = widg
+					req.searchWithCredentials = webSearch
+					req.PatchProperties = pp
 
 					// chain that middleware at the last second?
 					validatorMid := jSONValidator(lineErrs, handlers.schema, widgProps.FullName)
@@ -473,7 +554,7 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 				// no errors occurred running the handler
 				if resp.status == 200 {
 					canvasLock.Lock()
-					colour.DrawMask(canvas, gridcanvas.Bounds().Add(imgLocation), gridcanvas, image.Point{}, mask, image.Point{}, draw.Over)
+					colour.DrawMask(canvas, gridCanvas.Bounds().Add(imgLocation), gridCanvas, image.Point{}, mask, image.Point{}, draw.Over)
 					canvasLock.Unlock()
 				} else {
 					// error of some sort from somewhere
@@ -481,6 +562,7 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 				}
 				// calculate some response stuff
 			} else {
+
 				// don't skip the widget stuff
 				zPosLock.Lock()
 				widgePos := *zPos
@@ -503,7 +585,7 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 	wg.Wait()
 }
 
-func GenErrorHandler(code int, errMessage string) Handler {
+func GenErrorHandler(code StatusCode, errMessage string) Handler {
 	return HandlerFunc(func(r Response, _ *Request) {
 		r.Write(code, errMessage)
 	})
@@ -570,4 +652,107 @@ func chain(middlewares []func(Handler) Handler, endpoint Handler) Handler {
 	}
 
 	return h
+}
+
+type contextKey string
+
+const (
+	metaKey contextKey = "metadataKey"
+)
+
+///////////////////////
+// Metadata Handling //
+//////////////////////
+
+// metadata is a map with a mutex to prevent concurrent read write to maps
+type metadata struct {
+	data map[string]map[string]interface{}
+	mu   *sync.Mutex
+}
+
+// Put adds the information used to generate widget to the metadata
+// is unexported to keep the information immutable
+func put(c *context.Context, alias string, rawYaml []byte) error {
+
+	// prevent concurrent writes
+	imageGeneration := (*c).Value(metaKey).(metadata)
+	imageGeneration.mu.Lock()
+	defer imageGeneration.mu.Unlock()
+	// map[string]map[string]map[string]interface{})
+
+	var md map[string]any
+	err := yaml.Unmarshal(rawYaml, &md)
+
+	if err != nil {
+
+		return fmt.Errorf("0201 Error inserting metadata %v", err)
+	}
+	imageGeneration.data[alias] = md
+
+	// imageGeneration.data[widget] = alias
+
+	return nil
+}
+
+// metaDataInit adds the metadata to the global context for that frame. This needs to be called
+// before the widgets are run so that metadata can be stored.
+func MetaDataInit(c context.Context) *context.Context {
+	// MD is the metadata context of widget - alias - json(map[string] interface{})
+	md := metadata{make(map[string]map[string]interface{}), &sync.Mutex{}}
+	valC := context.WithValue(c, metaKey, md)
+	return &valC
+}
+
+// Extract searches the metadata for an alias and then recursivley searches through the keys to find nested values.
+// The keys are treated as a dotpath and will follow the path of any previous keys.
+// if the alias is "" then all the metadata is returned.
+func extractMetadata(c *context.Context, alias string, key string) interface{} {
+	// order is widget type, alias map of json information
+	imageGeneration := (*c).Value(metaKey).(metadata)
+	// map[string]map[string]map[string]interface{})
+	if alias == "" {
+
+		return imageGeneration.data
+	}
+	start := imageGeneration.data[alias]
+
+	keys := strings.Split(key, ".")
+	if len(keys) != 0 {
+
+		return mapToFace(start, keys...)
+	}
+
+	return start
+}
+
+func mapToFace(find map[string]any, keys ...string) interface{} {
+
+	if find == nil {
+
+		return find
+	}
+
+	if len(keys) == 0 {
+
+		return find
+	}
+	if find[keys[0]] == nil {
+
+		return find[keys[0]]
+	}
+
+	switch found := find[keys[0]].(type) {
+	case map[string]interface{}:
+		if len(keys) == 1 {
+
+			return found
+		}
+
+		// loop through until all the keys are found or they aren't an interface
+		return mapToFace(found, keys[1:]...)
+
+	default:
+		return found
+	}
+
 }

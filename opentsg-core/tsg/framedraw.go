@@ -17,11 +17,6 @@ import (
 
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/addimage"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/bowtie"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/ebu3373/bars"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/ebu3373/luma"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/ebu3373/nearblack"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/ebu3373/saturation"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/ebu3373/twosi"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/fourcolour"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/framecount"
 	geometrytext "github.com/mrmxf/opentsg-modules/opentsg-widgets/geometryText"
@@ -46,8 +41,9 @@ type syncmap struct {
 }
 
 type openTSG struct {
-	internal      context.Context
-	framcount     int
+	internal  context.Context
+	framcount int
+	// to be trimmed
 	customWidgets []func(chan draw.Image, bool, *context.Context, *sync.WaitGroup, *sync.WaitGroup, *errhandle.Logger)
 	customSaves   map[string]func(io.Writer, draw.Image, int) error
 
@@ -55,14 +51,15 @@ type openTSG struct {
 	handlers    map[string]hand
 	middlewares []func(Handler) Handler
 	encoders    map[string]Encoder
-	//
-	errHandler Handler
 	// runner configuration
 	ruunerConf RunnerConfiguration
 }
 
-// RunnerConfiguration
+// RunnerConfiguration is the set up for the internal runners
+// of openTSG
 type RunnerConfiguration struct {
+	// RunnerCount is the amount of runners (go routines)
+	// that openTSG can use at anyone time
 	RunnerCount int
 }
 
@@ -256,9 +253,9 @@ func (tsg *openTSG) Draw(debug bool, mnt, logType string) {
 func baseWidgets() []func(chan draw.Image, bool, *context.Context, *sync.WaitGroup, *sync.WaitGroup, *errhandle.Logger) {
 	return []func(chan draw.Image, bool, *context.Context, *sync.WaitGroup, *sync.WaitGroup, *errhandle.Logger){
 		ramps.RampGenerate, zoneplate.ZoneGen, noise.NGenerator, widgethandler.MockCanvasGen,
-		addimage.ImageGen, textbox.TBGenerate, bars.BarGen, saturation.SatGen,
-		framecount.CountGen, qrgen.QrGen, twosi.SIGenerate, nearblack.NBGenerate,
-		luma.Generate, fourcolour.FourColourGenerator, geometrytext.LabelGenerator,
+		addimage.ImageGen, textbox.TBGenerate, //  bars.BarGen, saturation.SatGen,
+		framecount.CountGen, qrgen.QrGen, //  twosi.SIGenerate, nearblack.NBGenerate,luma.Generate,
+		fourcolour.FourColourGenerator, geometrytext.LabelGenerator,
 		bowtie.SwirlGen, resize.Gen,
 		// This one should be placed last as it is checking for missed names,
 		// however order doesn't matter for concurrent functions with the wait groups.
@@ -384,20 +381,7 @@ func averageCalc(targetImg draw.Image) any {
 
 }
 
-// Generator contains the method for running widgets to generate segments of the test chart.
-type Generator interface {
-	Generate(draw.Image) error
-}
-
-/*
-// run some tests to check how the unmarshalling works
-func (tsg *openTSG) AddWidget(wType string, schema []byte, Gen Generator) {
-	//@TODO add panics if things are overwritten
-	// the Generator is nil
-	tsg.widgets[wType] = Unmarshal(Gen)
-
-}*/
-
+// Unmarshal se
 func Unmarshal(Han Handler) func(input []byte) (Handler, error) {
 
 	return func(input []byte) (Handler, error) {
@@ -410,9 +394,9 @@ func Unmarshal(Han Handler) func(input []byte) (Handler, error) {
 			yaml.Unmarshal([]byte("{\"input\":\"yes\"}"), v.Interface())
 			fmt.Println(x, reflect.TypeOf(x), "HERES", v.Elem().Interface())*/
 
-		//copy the underlying type to generate a new value
-		// that points to the type of generator and not
-		// just the generator
+		// copy the underlying type to generate a new value
+		// that points to the type that implements the handler method and not
+		// just the handler method itself
 		v := reflect.New(reflect.TypeOf(Han))
 		err := yaml.Unmarshal(input, v.Interface())
 

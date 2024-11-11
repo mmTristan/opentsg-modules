@@ -7,7 +7,7 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
 )
 
-type saturationJSON struct {
+type Config struct {
 	// Type    string       `json:"type" yaml:"type"`
 	Colours           []string          `json:"colors,omitempty" yaml:"colors,omitempty"`
 	ColourSpace       colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
@@ -15,7 +15,7 @@ type saturationJSON struct {
 }
 
 //go:embed jsonschema/satschema.json
-var schemaInit []byte
+var Schema []byte
 
 /*
 func (s saturationJSON) Alias() string {

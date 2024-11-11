@@ -1,0 +1,8 @@
+{
+    "type" : "builtin.legacy",
+    "fileLocation" : "./testdata/legacyLoaders/loadergrid.json",
+    "mnt":"./testdata",
+    "grid": {
+        "location": "a1"
+    }
+}

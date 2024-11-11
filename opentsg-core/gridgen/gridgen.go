@@ -99,7 +99,7 @@ func ImageGenerator(c context.Context, canvasSize image.Rectangle) draw.Image {
 	space := colourSpaceType(c)
 	switch space {
 	case colour.ColorSpace{}:
-		// if there's no colour space jsut use the base go images for performance
+		// if there's no colour space just use the base go images for performance
 		return image.NewNRGBA64(canvasSize)
 	default:
 		return colour.NewNRGBA64(space, canvasSize)

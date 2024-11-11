@@ -7,14 +7,14 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
 )
 
-type barJSON struct {
+type BarJSON struct {
 	//	Type    string      `json:"type" yaml:"type"`
 	ColourSpace       *colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
 	config.WidgetGrid `yaml:",inline"`
 }
 
 //go:embed jsonschema/barschema.json
-var schemaInit []byte
+var Schema []byte
 
 /*
 	func (b barJSON) Alias() string {
@@ -25,6 +25,6 @@ var schemaInit []byte
 		return b.GridLoc.Location
 	}
 */
-func (b barJSON) Wait() (bool, []string) {
+func (b BarJSON) Wait() (bool, []string) {
 	return false, []string{}
 }

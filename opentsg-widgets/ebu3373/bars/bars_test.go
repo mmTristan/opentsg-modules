@@ -17,8 +17,8 @@ import (
 
 func TestDemo(t *testing.T) {
 	// base example
-	barsDemo := barJSON{}
-	examplejson.SaveExampleJson(barsDemo, widgetType, "base", true)
+	barsDemo := BarJSON{}
+	examplejson.SaveExampleJson(barsDemo, WidgetType, "base", true)
 }
 
 func TestBars(t *testing.T) {
@@ -28,11 +28,11 @@ func TestBars(t *testing.T) {
 	explanation := []string{"uhd", "hd", "obtuse"}
 
 	for i, size := range sizes {
-		mock := barJSON{}
+		mock := BarJSON{}
 		mock.GridLoc = &config.Grid{Alias: "testlocation"}
 		myImage := image.NewNRGBA64(image.Rect(0, 0, size[0], size[1]))
 
-		examplejson.SaveExampleJson(mock, widgetType, explanation[i], false)
+		examplejson.SaveExampleJson(mock, WidgetType, explanation[i], false)
 		// Generate the ramp image
 		genErr := mock.Generate(myImage)
 		// Open the image to compare to

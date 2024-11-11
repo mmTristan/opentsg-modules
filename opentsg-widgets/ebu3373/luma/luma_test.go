@@ -16,8 +16,8 @@ import (
 
 func TestDemo(t *testing.T) {
 	// base example
-	lumaDemo := lumaJSON{}
-	examplejson.SaveExampleJson(lumaDemo, widgetType, "base", true)
+	lumaDemo := LumaJSON{}
+	examplejson.SaveExampleJson(lumaDemo, WidgetType, "base", true)
 }
 
 func TestLuma(t *testing.T) {
@@ -26,9 +26,9 @@ func TestLuma(t *testing.T) {
 	explanation := []string{"uhd", "hd", "obtuse"}
 
 	for i, size := range sizes {
-		mock := lumaJSON{}
+		mock := LumaJSON{}
 		myImage := image.NewNRGBA64(image.Rect(0, 0, size[0], size[1]))
-		examplejson.SaveExampleJson(mock, widgetType, explanation[i], false)
+		examplejson.SaveExampleJson(mock, WidgetType, explanation[i], false)
 		// Generate the ramp image
 		genErr := mock.Generate(myImage)
 		// Open the image to compare to

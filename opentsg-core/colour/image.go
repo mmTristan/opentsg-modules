@@ -47,8 +47,8 @@ type Image interface {
 
 // NRGBA64 is a wrapped *image.NRGBA64 with a colorspace
 type NRGBA64 struct {
-	base  *image.NRGBA64
-	space ColorSpace
+	BaseImg     *image.NRGBA64
+	ColourSpace ColorSpace
 }
 
 // Generate a new NRGBA64 imagethat is wrapped with a colour space
@@ -56,22 +56,22 @@ func NewNRGBA64(s ColorSpace, r image.Rectangle) *NRGBA64 {
 
 	base := image.NewNRGBA64(r)
 
-	return &NRGBA64{base: base, space: s}
+	return &NRGBA64{BaseImg: base, ColourSpace: s}
 
 }
 
 func (n NRGBA64) Bounds() image.Rectangle {
-	return n.base.Bounds()
+	return n.BaseImg.Bounds()
 }
 
 // Space returns the ColorSpace of the Image
 func (n NRGBA64) Space() ColorSpace {
-	return n.space
+	return n.ColourSpace
 }
 
 // return the pixels of the base image
 func (n NRGBA64) Pix() []uint8 {
-	return n.base.Pix
+	return n.BaseImg.Pix
 }
 
 func (n NRGBA64) At(x, y int) color.Color {
@@ -82,21 +82,21 @@ func (n NRGBA64) At(x, y int) color.Color {
 
 	*/
 
-	baseCol := n.base.NRGBA64At(x, y)
+	baseCol := n.BaseImg.NRGBA64At(x, y)
 	// return a colour space aware colour
-	return &CNRGBA64{R: baseCol.R, G: baseCol.G, B: baseCol.B, A: baseCol.A, ColorSpace: n.space}
+	return &CNRGBA64{R: baseCol.R, G: baseCol.G, B: baseCol.B, A: baseCol.A, ColorSpace: n.ColourSpace}
 
 }
 
 // ColorModel retruns the *image.NRGBA64 colorModel
 func (n NRGBA64) ColorModel() color.Model {
-	return n.base.ColorModel()
+	return n.BaseImg.ColorModel()
 }
 
 // BaseImage returns the *image.NRGBA64
 // so it can be used with the go library
 func (n NRGBA64) BaseImage() *image.NRGBA64 {
-	return n.base
+	return n.BaseImg
 }
 
 // Set is the same as image.NRGBA64.Set(), but with
@@ -105,19 +105,19 @@ func (n NRGBA64) Set(x int, y int, c color.Color) {
 
 	// update the colour if it has an explicit colour space
 	// and the base image is using colour spaces
-	if cmid, ok := c.(Color); ok && (n.space != ColorSpace{}) {
-		c = transform(cmid.GetColorSpace(), n.space, c)
+	if cmid, ok := c.(Color); ok && (n.ColourSpace != ColorSpace{}) {
+		c = transform(cmid.GetColorSpace(), n.ColourSpace, c)
 	}
 
 	// use SetNRGBA64 where possible to preserve colour
 	switch convert := c.(type) {
 	case color.NRGBA64:
-		n.base.SetNRGBA64(x, y, convert)
+		n.BaseImg.SetNRGBA64(x, y, convert)
 	case *CNRGBA64:
 
-		n.base.SetNRGBA64(x, y, color.NRGBA64{R: convert.R, G: convert.G, B: convert.B, A: convert.A})
+		n.BaseImg.SetNRGBA64(x, y, color.NRGBA64{R: convert.R, G: convert.G, B: convert.B, A: convert.A})
 	default:
-		n.base.Set(x, y, convert)
+		n.BaseImg.Set(x, y, convert)
 	}
 	//	n.base.SetNRGBA64(x, y, color.NRGBA64{R: uint16(R), G: uint16(G), B: uint16(B), A: uint16(A)})
 	//
@@ -133,7 +133,7 @@ func PngEncode(w io.Writer, m image.Image) error {
 	// doesn't know how to handle it correctly
 	// and it changes the expected values when alpha is not 0xffff
 	if mid, ok := m.(*NRGBA64); ok {
-		m = mid.base
+		m = mid.BaseImg
 	}
 
 	return png.Encode(w, m)
@@ -148,7 +148,7 @@ func TiffEncode(w io.Writer, m image.Image, opt *tiff.Options) error {
 	// doesn't know how to handle it correctly
 	// and it changes the expected values when alpha is not 0xffff
 	if mid, ok := m.(*NRGBA64); ok {
-		m = mid.base
+		m = mid.BaseImg
 	}
 
 	return tiff.Encode(w, m, opt)
