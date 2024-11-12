@@ -12,7 +12,6 @@ import (
 	"log/slog"
 	"os"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
@@ -20,44 +19,16 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-/*
-func TestXxx(t *testing.T) {
-
-		otsg := openTSG{widgets: map[string]func([]byte) (Generator, error){}} // map[string]func([]byte) (Generator, error){}}
-		otsg.AddWidget("test", []byte("{}"), testWidget{})
-		otsg.AddWidget("test2", []byte("{}"), testWidget2{})
-
-		bs := []byte("{\"input\":\"yes\"}")
-		//var x any
-		x, err := otsg.widgets["test"](bs)
-
-		fmt.Println(err)
-		x.Generate(nil)
-
-		x2, _ := otsg.widgets["test2"](bs)
-		x2.Generate(nil)
-	}
-*/
-
 func TestLegacy(t *testing.T) {
 	otsg, err := BuildOpenTSG("./testdata/testloader.json", "", true, nil)
 	otsg.Handle("builtin.legacy", []byte("{}"), Legacy{})
-	otsg.HandleFunc("builtin.canvasoptions", func(r1 Response, r2 *Request) { fmt.Println("ring a ding") })
 	fmt.Println(err)
 	otsg.Run("")
 
 }
 
-/*
-testMiddleware
-
-run one that just ticks I am middleware that has run.
-e.g. send to a log file
-
-get one that proves the order runs in a certain way
-
-*/
-
+// TestHandlerAdditions checks the handler addition methods to
+// catch the panics
 func TestHandlerAdditions(t *testing.T) {
 	//	So(Ipanic, cv.ShouldPanic)
 
@@ -88,11 +59,13 @@ func TestHandlerAdditions(t *testing.T) {
 }
 
 func TestMethodFunctions(t *testing.T) {
-
+	// @TODO test the response and request methods
 }
 
+// Run with the -race flag to ensure no shenanigans occur
 func TestRaceConditions(t *testing.T) {
-	otsg, buildErr := BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true, &RunnerConfiguration{5})
+	// run with plenty of runners to ensure all the go routines are running at once
+	otsg, buildErr := BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true, &RunnerConfiguration{RunnerCount: 5})
 	otsg.Handle("test.fill", []byte("{}"), Filler{})
 	jSlog := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{})
 	AddBaseEncoders(otsg)
@@ -131,6 +104,13 @@ func TestRaceConditions(t *testing.T) {
 	})
 }
 
+// JSONLog is the key fields of the json slogger
+// for testing against.
+type JSONLog struct {
+	StatusCode string `json:"StatusCode"`
+	WidgetID   string `json:"WidgetID"`
+}
+
 func TestMiddlewares(t *testing.T) {
 
 	otsg, err := BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true, nil)
@@ -139,24 +119,18 @@ func TestMiddlewares(t *testing.T) {
 	buf := bytes.NewBuffer([]byte{})
 	jSlog := slog.NewJSONHandler(buf, &slog.HandlerOptions{})
 	otsg.Use(Logger(slog.New(jSlog)))
-
 	otsg.Run("")
 
-	// convert to count log entries
-	logEntries := strings.Split(buf.String(), "\n")
-	if logEntries[len(logEntries)-1] == "" {
-		logEntries = logEntries[:len(logEntries)-1]
-	}
-
-	validLogs := messageValidator(logEntries, "200:success")
+	var outMessage JSONLog
+	jErr := json.Unmarshal(buf.Bytes(), &outMessage)
 
 	// @TODO check the messages are correct
-	Convey("Checking the log handle runs the logs", t, func() {
-		Convey("3 logs should be returned", func() {
-			Convey("3 logs are returned denoting a successful run", func() {
+	Convey("Checking the log handler actually logs", t, func() {
+		Convey("making a run at the log level info", func() {
+			Convey("one log is returned denoting a successful run", func() {
 				So(err, ShouldBeNil)
-				So(len(logEntries), ShouldEqual, 4)
-				So(validLogs, ShouldResemble, []string{})
+				So(jErr, ShouldBeNil)
+				So(outMessage, ShouldResemble, JSONLog{WidgetID: "core.tsg", StatusCode: FrameSuccess.String()})
 			})
 		})
 	})
@@ -176,18 +150,18 @@ func TestMiddlewares(t *testing.T) {
 
 	first := func(next Handler) Handler {
 		return HandlerFunc(func(r1 Response, r2 *Request) {
-			r1.Write(0, "first")
+			r1.Write(500, "first")
 			next.Handle(r1, r2)
 		})
 	}
 
 	second := func(next Handler) Handler {
 		return HandlerFunc(func(r1 Response, r2 *Request) {
-			r1.Write(0, "second")
+			r1.Write(500, "second")
 			next.Handle(r1, r2)
 		})
 	}
-	orderLog := &testSlog{logs: make([]string, 0)}
+	orderLog := &testSlog{logs: make([]string, 0), level: slog.LevelError}
 	otsg.Use(Logger(slog.New(orderLog)), first, second)
 	otsg.Run("")
 
@@ -195,25 +169,13 @@ func TestMiddlewares(t *testing.T) {
 		Convey("the return of the logs are 3 messages in the order of, first, second and validator", func() {
 			Convey("the logs match that order", func() {
 				So(err, ShouldBeNil)
-				So(orderLog.logs, ShouldResemble, []string{"0:first", "0:second",
-					"400:0027 fail is required in unknown files please check your files for the fail property in the name blue,",
-					"0:first", "0:second", "200:generating frame 0/0, gen: 000525.0 ms, save: 000408.8ms, errors:1",
+				So(orderLog.logs, ShouldResemble, []string{"first", "second",
+					"0027 fail is required in unknown files please check your files for the fail property in the name blue,",
+					"first", "second",
 				})
 			})
 		})
 	})
-
-	/*
-
-	   test run order
-
-	*/
-
-	/*
-
-		utilise the slogger to extract data points
-
-	*/
 
 	otsg, err = BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true, nil)
 	AddBaseEncoders(otsg)
@@ -227,27 +189,18 @@ func TestMiddlewares(t *testing.T) {
     ]
 }`), Filler{})
 
-	logArr := testSlog{logs: make([]string, 0)}
+	logArr := testSlog{logs: make([]string, 0), level: slog.LevelError}
 	otsg.Use(Logger(slog.New(&logArr)))
 
 	otsg.Run("")
 
-	// convert to count log entries
-	logEntries = strings.Split(buf.String(), "\n")
-	if logEntries[len(logEntries)-1] == "" {
-		logEntries = logEntries[:len(logEntries)-1]
-	}
-	//valid := messageValidator(logEntries, "400:0027 fail is required in unknown files please check your files for the fail property in the name cs.red\n")
-	//fmt.Println(logEntries)
-
-	Convey("Checking the log handle runs the logs", t, func() {
-		Convey("3 logs should be returned", func() {
-			Convey("3 logs are returned denoting a successful run", func() {
+	Convey("Checking the validator middleware returns errors", t, func() {
+		Convey("running the json with a schema that will fail", func() {
+			Convey("3 logs are returned denoting, each denoting a schema failure", func() {
 				So(err, ShouldBeNil)
-				So(logArr.logs, ShouldResemble, []string{"400:0027 fail is required in unknown files please check your files for the fail property in the name cs.blue,",
-					"400:0027 fail is required in unknown files please check your files for the fail property in the name cs.green,",
-					"400:0027 fail is required in unknown files please check your files for the fail property in the name cs.red,",
-					"200:generating frame 0/0, gen: 000619.6 ms, save: 000475.6ms, errors:3"})
+				So(logArr.logs, ShouldResemble, []string{"0027 fail is required in unknown files please check your files for the fail property in the name cs.blue,",
+					"0027 fail is required in unknown files please check your files for the fail property in the name cs.green,",
+					"0027 fail is required in unknown files please check your files for the fail property in the name cs.red,"})
 
 			})
 		})
@@ -260,9 +213,9 @@ func TestMetadata(t *testing.T) {
 	otsg.Handle("test.fill", []byte("{}"), Filler{})
 	AddBaseEncoders(otsg)
 
-	search := []string{"cs.blue", "cs.red", "cs.green"}
-	fields := []string{"type", "grid", "mdObject"}
-	expected := []any{"test.fill", map[string]any{"location": "a0:d3"}, 400.003}
+	search := []string{"cs.blue", "cs.red", "cs.green", "cs.green"}
+	fields := []string{"type", "grid", "mdObject", "grid.location"}
+	expected := []any{"test.fill", map[string]any{"location": "a0:d3"}, 400.003, "a0:e4"}
 
 	for i, salias := range search {
 
@@ -285,30 +238,14 @@ func TestMetadata(t *testing.T) {
 		otsg.Run("")
 
 		// @TODO check the messages are correct
-		Convey("Checking the log handle runs the logs", t, func() {
-			Convey("3 logs should be returned", func() {
-				Convey("3 logs are returned denoting a successful run", func() {
+		Convey("Checking the metadata extraction function runs", t, func() {
+			Convey(fmt.Sprintf("Searching the metadata for the field of \"%s\"", fields[i]), func() {
+				Convey("The expected value is returned", func() {
 					So(result, ShouldResemble, expected[i])
 				})
 			})
 		})
 	}
-}
-
-func messageValidator(messages []string, expectedMess string) any {
-
-	type record struct {
-		Message string `json:"msg"`
-	}
-
-	for _, mess := range messages {
-		var r record
-		json.Unmarshal([]byte(mess), &r)
-		if r.Message != expectedMess {
-			return fmt.Sprintf("Got message %s expected %s", r.Message, expectedMess)
-		}
-	}
-	return true
 }
 
 type Filler struct {
@@ -355,14 +292,6 @@ func TestMarshallHandler(t *testing.T) {
 
 func TestErrors(t *testing.T) {
 
-	// have a set of jsons inserted into a runner
-	/*
-		these consist of bad json
-		bad coordinates
-		invalid gridgen for tsg? - maybe laters
-
-	*/
-
 	errors := []string{
 		`{
     "type": "test.fills",
@@ -377,11 +306,10 @@ func TestErrors(t *testing.T) {
         "location": "a"
     },
     "fill":"#0000ff"
-}`,
-	}
+}`}
 
-	expectedErrs := []string{"400:No handler found for widgets of type \"test.fills\" for widget path \"err\"",
-		"400:0046 a is not a valid grid alias"}
+	expectedErrs := []string{"No handler found for widgets of type \"test.fills\" for widget path \"err\"",
+		"0046 a is not a valid grid alias"}
 
 	for i, e := range errors {
 		f, fErr := os.Create("./testdata/handlerLoaders/err.json")
@@ -390,23 +318,90 @@ func TestErrors(t *testing.T) {
 		otsg, err := BuildOpenTSG("./testdata/handlerLoaders/errLoader.json", "", true, nil)
 		otsg.Handle("test.fill", []byte(`{}`), Filler{})
 
-		orderLog := &testSlog{logs: make([]string, 0)}
+		orderLog := &testSlog{logs: make([]string, 0), level: slog.LevelWarn}
 		otsg.Use(Logger(slog.New(orderLog)))
 		AddBaseEncoders(otsg)
 		otsg.Run("")
 
 		Convey("Calling openTSG with a widget that deliberately fails", t, func() {
 			Convey(fmt.Sprintf("using a json of \"%s\"", e), func() {
-				Convey(fmt.Sprintf("An error of \"%s\" is returned", expectedErrs[i]), func() {
+				Convey(fmt.Sprintf("An error of message \"%s\" is returned", expectedErrs[i]), func() {
 					So(fErr, ShouldBeNil)
 					So(wErr, ShouldBeNil)
 					So(err, ShouldBeNil)
-					So(orderLog.logs, ShouldResemble, []string{expectedErrs[i], "200:generating frame 0/0, gen: 000463.4 ms, save: 000378.1ms, errors:1"})
+					So(orderLog.logs, ShouldResemble, []string{expectedErrs[i]})
+				})
+			})
+		})
+	}
+}
+
+func TestQueue(t *testing.T) {
+
+	areas := []image.Rectangle{
+		image.Rect(0, 0, 10, 10),
+		image.Rect(50, 50, 60, 60),
+	}
+	firstRun := []bool{
+		true, false,
+	}
+	message := []string{
+		"running a check, before the first widget entry has been recorded. Pausing all future widgets",
+		"running a widget that overlaps an area, that has not been drawn to",
+	}
+
+	for i, ba := range areas {
+		out := setUpPoolRunner(0, firstRun[i], false)
+
+		pass := out.c.check(3, ba)
+		fmt.Println(out.c.composits)
+		Convey("Checking the z order handler stops premature widgets", t, func() {
+			Convey(message[i], func() {
+				Convey("A false value is returned stating it is not the widgets turn", func() {
+					So(pass, ShouldBeFalse)
 				})
 			})
 		})
 	}
 
+	runStatus := []bool{
+		true, false,
+	}
+
+	message = []string{
+		"running the next when all previous widgets have been written to.",
+		"running a widget that has no overlap",
+	}
+
+	for i, ba := range areas {
+		out := setUpPoolRunner(0, true, runStatus[i])
+
+		pass := out.c.check(3, ba)
+		fmt.Println(out.c.composits)
+		Convey("Checking the z order handler allows widgets that do not clash", t, func() {
+			Convey(message[i], func() {
+				Convey("A true value is returned stating it is the widgets turn", func() {
+					So(pass, ShouldBeTrue)
+				})
+			})
+		})
+	}
+
+}
+
+func setUpPoolRunner(zPos int, firstWidgetPresent, runStatus bool) *Pool {
+
+	layers := map[int]compositeQueue{
+
+		1: {composited: runStatus, area: image.Rect(10, 10, 20, 20)},
+		2: {composited: runStatus, area: image.Rect(20, 20, 30, 30)},
+	}
+
+	if firstWidgetPresent {
+		layers[0] = compositeQueue{composited: runStatus, area: image.Rect(0, 0, 10, 10)}
+	}
+
+	return &Pool{c: &composit{currentZ: &zPos, composits: layers}}
 }
 
 type dummyHandler struct {
@@ -427,7 +422,8 @@ func (d secondDummyHandler) Handle(resp Response, req *Request) {
 // an array.
 // not thread safe and just something dumb for tests
 type testSlog struct {
-	logs []string
+	logs  []string
+	level slog.Level
 }
 
 func (ts *testSlog) Enabled(context.Context, slog.Level) bool {
@@ -436,7 +432,9 @@ func (ts *testSlog) Enabled(context.Context, slog.Level) bool {
 
 func (ts *testSlog) Handle(_ context.Context, rec slog.Record) error {
 
-	ts.logs = append(ts.logs, rec.Message)
+	if rec.Level >= ts.level {
+		ts.logs = append(ts.logs, rec.Message)
+	}
 
 	return nil
 }

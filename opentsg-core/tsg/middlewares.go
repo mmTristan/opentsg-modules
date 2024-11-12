@@ -63,7 +63,8 @@ func (s *slogger) Write(status StatusCode, message string) {
 	// search code here to find an appropriate error level
 	level := getLogLevel(status)
 
-	s.log.Log(s.c, level, fmt.Sprintf("%v:%s", status, message),
+	s.log.Log(s.c, level, message,
+		"StatusCode", status.String(),
 		"RunID", s.runID,
 		"WidgetID", s.alias,
 		"FrameNumber", s.frameNo,

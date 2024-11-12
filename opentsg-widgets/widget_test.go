@@ -23,7 +23,7 @@ type Legacy struct {
 
 func (l Legacy) Handle(resp tsg.Response, req *tsg.Request) {
 
-	otsg, err := tsg.BuildOpenTSG(l.FileLocation, "", true, nil)
+	otsg, err := tsg.BuildOpenTSG(l.FileLocation, "", true, &tsg.RunnerConfiguration{RunnerCount: 6, ProfilerEnabled: true})
 	otsg.AddCustomWidgets(twosi.SIGenerate, nearblack.NBGenerate, bars.BarGen, saturation.SatGen, luma.Generate)
 	if err != nil {
 
@@ -40,14 +40,14 @@ func (l Legacy) Handle(resp tsg.Response, req *tsg.Request) {
 func TestXxx(t *testing.T) {
 
 	// Run the legacy handler
-	otsg, _ := tsg.BuildOpenTSG("./testdata/legacyloader.json", "", true, nil)
+	otsg, _ := tsg.BuildOpenTSG("./testdata/legacyloader.json", "", true, &tsg.RunnerConfiguration{RunnerCount: 6, ProfilerEnabled: true})
 	otsg.AddCustomWidgets(twosi.SIGenerate, nearblack.NBGenerate, bars.BarGen, saturation.SatGen, luma.Generate)
 	otsg.Handle("builtin.legacy", []byte("{}"), Legacy{})
-	//	otsg.HandleFunc("builtin.canvasoptions", func(r1 tsg.Response, r2 *tsg.Request) { fmt.Println("ring a ding") })
+	//otsg.HandleFunc("builtin.canvasoptions", func(r1 tsg.Response, r2 *tsg.Request) { fmt.Println("ring a ding") })
 	otsg.Run("")
 
 	// run the current handler methods
-	otsgh, err := tsg.BuildOpenTSG("./testdata/handlerLoader.json", "", true, &tsg.RunnerConfiguration{RunnerCount: 8})
+	otsgh, err := tsg.BuildOpenTSG("./testdata/handlerLoader.json", "", true, &tsg.RunnerConfiguration{RunnerCount: 6, ProfilerEnabled: true})
 	fmt.Println(err)
 	//	otsgh.HandleFunc("builtin.canvasoptions", func(r1 tsg.Response, r2 *tsg.Request) { fmt.Println("ring a ding") })
 	otsgh.Handle(bars.WidgetType, bars.Schema, bars.BarJSON{})

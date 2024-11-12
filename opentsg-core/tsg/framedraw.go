@@ -52,7 +52,7 @@ type openTSG struct {
 	middlewares []func(Handler) Handler
 	encoders    map[string]Encoder
 	// runner configuration
-	ruunerConf RunnerConfiguration
+	runnerConf RunnerConfiguration
 }
 
 // RunnerConfiguration is the set up for the internal runners
@@ -61,6 +61,8 @@ type RunnerConfiguration struct {
 	// RunnerCount is the amount of runners (go routines)
 	// that openTSG can use at anyone time
 	RunnerCount int
+	//
+	ProfilerEnabled bool
 }
 
 type hand struct {
@@ -73,24 +75,31 @@ type hand struct {
 func BuildOpenTSG(inputFile string, profile string, debug bool, runnerConf *RunnerConfiguration, httpsKeys ...string) (*openTSG, error) {
 	cont, framenumber, configErr := core.FileImport(inputFile, profile, debug, httpsKeys...)
 
-	var rc RunnerConfiguration
+	if configErr != nil {
+		return nil, configErr
+	}
+
 	if runnerConf == nil {
-		rc = RunnerConfiguration{RunnerCount: 1}
+		runnerConf = &RunnerConfiguration{RunnerCount: 1}
 	}
 
 	// stop negative runners appearing
 	// and just locking everything up
-	if rc.RunnerCount < 1 {
-		rc.RunnerCount = 1
+	if runnerConf.RunnerCount < 1 {
+		runnerConf.RunnerCount = 1
 	}
 
-	return &openTSG{internal: cont, framcount: framenumber,
-			customWidgets: baseWidgets(),
-			handlers:      map[string]hand{},
-			encoders:      map[string]Encoder{},
-			customSaves:   baseSaves(),
-			ruunerConf:    rc},
-		configErr
+	opentsg := &openTSG{internal: cont, framcount: framenumber,
+		customWidgets: baseWidgets(),
+		handlers:      map[string]hand{},
+		encoders:      map[string]Encoder{},
+		customSaves:   baseSaves(),
+		runnerConf:    *runnerConf}
+
+	// set up a canvaswidget handler, that runs empty
+	opentsg.HandleFunc(canvaswidget.WType, HandlerFunc(func(_ Response, _ *Request) {}))
+
+	return opentsg, nil
 }
 
 // NameSave is the extensions and encode function struct

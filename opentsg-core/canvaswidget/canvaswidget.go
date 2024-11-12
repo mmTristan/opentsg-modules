@@ -71,11 +71,13 @@ func (c ConfigVals) Generate(canvas draw.Image, opts ...any) error {
 //go:embed jsonschema/baseschema.json
 var baseschema []byte
 
+const WType = "builtin.canvasoptions"
+
 // Loop init extracts and applies the canvas properties for each frame.
 // This is to be run as the first step after generating the frame widgets,
 // because other modules rely on this information for generating their own structs.
 func LoopInit(frameContext *context.Context) []error {
-	conf, errs := widgets.ExtractWidgetStructs[ConfigVals]("builtin.canvasoptions", baseschema, frameContext)
+	conf, errs := widgets.ExtractWidgetStructs[ConfigVals](WType, baseschema, frameContext)
 
 	if errs != nil {
 		return errs
@@ -88,11 +90,11 @@ func LoopInit(frameContext *context.Context) []error {
 			globParams = v
 		}
 	case 0:
-		return []error{fmt.Errorf("0061 no \"%s\" widget has been loaded, can not configure openTSG", "builtin.canvasoptions")}
+		return []error{fmt.Errorf("0061 no \"%s\" widget has been loaded, can not configure openTSG", WType)}
 
 	default:
 
-		return []error{fmt.Errorf("0061 too many \"%s\" widgets have been loaded (Got %v wanted 1), can not configure openTSG", "builtin.canvasoptions", len(conf))}
+		return []error{fmt.Errorf("0061 too many \"%s\" widgets have been loaded (Got %v wanted 1), can not configure openTSG", WType, len(conf))}
 	}
 
 	midC := context.WithValue(*frameContext, generatedConfig, globParams)

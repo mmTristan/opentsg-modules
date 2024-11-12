@@ -397,6 +397,16 @@ func (m *monitor) incrementError(count int) {
 	m.Unlock()
 }
 
+type profile struct {
+	SetUp     time.Duration `json:"SetUpTime(ns)"`
+	Handler   time.Duration `json:"WidgetRunTime(ns)"`
+	Queue     time.Duration `json:"QueueTime(ns)"`
+	Composite time.Duration `json:"CompositeTime(ns)"`
+	Wtype     string        `json:"type"`
+	WID       string        `json:"widgetID"`
+	ZPosition int           `json:"ZPosition"`
+}
+
 // // update widgetHandle to make the choices for me
 func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *monitor) {
 
@@ -427,17 +437,18 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 	// set up the properties for all requests
 	fp := FrameProperties{WorkingDir: core.GetDir(*c), FrameNumber: monit.frameNo}
 
+	zPos := 0
 	// sync tools for running the widgets async
-	runPool := Pool{AvailableMemeory: tsg.ruunerConf.RunnerCount}
+	runPool := Pool{AvailableMemeory: tsg.runnerConf.RunnerCount, c: &composit{composits: make(map[int]compositeQueue), currentZ: &zPos}}
 	// wg for each widget
 	var wg sync.WaitGroup
 	wg.Add(len(allWidgets))
 	// ensure z order
 	// prevent race conditions writing to the canvas
-	zpos := 0
-	zPos := &zpos
-	var zPosLock sync.Mutex
-	var canvasLock sync.Mutex
+	// zpos := 0
+	// zPos := &zpos
+	// var zPosLock sync.Mutex
+	//	var canvasLock sync.Mutex
 
 	for i := 0; i < len(allWidgets); i++ {
 
@@ -448,141 +459,192 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 			time.Sleep(10 * time.Millisecond)
 			runner, available = runPool.GetRunner()
 		}
-
+		p := profile{ZPosition: i}
+		setUpStart := time.Now()
 		// run the widget async
 		go func() {
+
 			position := i
 			defer runPool.PutRunner(runner)
 			defer wg.Done()
 
 			widg := allWidgets[allWidgetsArr[i]]
 			widgProps := allWidgetsArr[i]
+			p.WID = widgProps.FullName
+			p.Wtype = widgProps.WType
 
-			if widgProps.WType != "builtin.canvasoptions" && widgProps.WType != "" {
-
-				handlers, handlerExists := tsg.handlers[allWidgetsArr[i].WType]
-				// make a function so the handler is returned
-				// @TODO skip the handler and come back to it later
-
-				var Han Handler
-				var resp response
-				req := Request{JobID: gonanoid.MustID(16), getWidgetMetadata: extractFunc}
-				var gridCanvas, mask draw.Image
-				var imgLocation image.Point
-
-				// run a set up function that can return early
-				// to make the handler just spit out the error
-				func() {
-					// ensure the chain is always kept
-					defer func() {
-						Han = chain(tsg.middlewares, Han)
-					}()
-
-					if !handlerExists {
-						Han = GenErrorHandler(WidgetNotFound,
-							fmt.Sprintf("No handler found for widgets of type \"%s\" for widget path \"%s\"", widgProps.WType, widgProps.FullName))
-						return
-					}
-
-					var err error
-					switch hdler := handlers.handler.(type) {
-					// don't parse, as it will break
-					// just run the function
-					case HandlerFunc:
-						Han = hdler
-					default:
-						Han, err = Unmarshal(handlers.handler)(widg)
-					}
-
-					if err != nil {
-						Han = GenErrorHandler(400, err.Error())
-						return
-					}
-
-					gridCanvas, imgLocation, mask, err = gridgen.GridSquareLocatorAndGenerator(widgProps.Location, widgProps.GridAlias, c)
-					// when the function am error is returned,
-					// the function just becomes return an error
-					if err != nil {
-						Han = GenErrorHandler(400, err.Error())
-						return
-					}
-
-					flats, err := gridgen.GetGridGeometry(c, widgProps.Location)
-					if err != nil {
-						Han = GenErrorHandler(400, err.Error())
-						return
-					}
-
-					// do some colour stuff here
-
-					// set up the requests
-					// and chain the middleware for the handler
-
-					pp := PatchProperties{WidgetType: widgProps.WType,
-						WidgetFullID: widgProps.FullName,
-						Dimensions:   gridCanvas.Bounds(),
-						TSGLocation:  imgLocation, Geomtetry: flats,
-						ColourSpace: widgProps.ColourSpace}
-					//	Han, err := Unmarshal(handlers.handler)(widg)
-					resp = response{baseImg: gridCanvas}
-					req.FrameProperties = fp
-					req.RawWidgetYAML = widg
-					req.searchWithCredentials = webSearch
-					req.PatchProperties = pp
-
-					// chain that middleware at the last second?
-					validatorMid := jSONValidator(lineErrs, handlers.schema, widgProps.FullName)
-					Han = chain([]func(Handler) Handler{validatorMid}, Han)
-
-				}()
-
-				// RUN the widget
-				Han.Handle(&resp, &req)
-
-				// wait until it is the widgets turn
-				zPosLock.Lock()
-				widgePos := *zPos
-				zPosLock.Unlock()
-				for widgePos != position {
-					time.Sleep(time.Millisecond * 10)
-					zPosLock.Lock()
-					widgePos = *zPos
-					zPosLock.Unlock()
-				}
-
-				// only draw the image if
-				// no errors occurred running the handler
-				if resp.status == 200 {
-					canvasLock.Lock()
-					colour.DrawMask(canvas, gridCanvas.Bounds().Add(imgLocation), gridCanvas, image.Point{}, mask, image.Point{}, draw.Over)
-					canvasLock.Unlock()
-				} else {
-					// error of some sort from somewhere
-					monit.incrementError(1)
-				}
-				// calculate some response stuff
-			} else {
-
-				// don't skip the widget stuff
-				zPosLock.Lock()
-				widgePos := *zPos
-				zPosLock.Unlock()
-				for widgePos != position {
-					time.Sleep(time.Millisecond * 10)
-					zPosLock.Lock()
-					widgePos = *zPos
-					zPosLock.Unlock()
-				}
+			if widgProps.WType == "" {
+				// end middle widgets that are not part of the z order
+				return
 			}
 
-			zPosLock.Lock()
-			// update zpos regardless
-			*zPos++
-			zPosLock.Unlock()
+			handlers, handlerExists := tsg.handlers[allWidgetsArr[i].WType]
+			// make a function so the handler is returned
+			// @TODO skip the handler and come back to it later
+
+			var Han Handler
+			var resp response
+			req := Request{JobID: gonanoid.MustID(16), getWidgetMetadata: extractFunc}
+			var gridCanvas, mask draw.Image
+			var imgLocation image.Point
+
+			defer func() {
+
+				// @TODO improve the handling of the object
+				if tsg.runnerConf.ProfilerEnabled {
+
+					if req.PatchProperties.WidgetType == "" {
+						req.PatchProperties.WidgetType = widgProps.WType
+						req.PatchProperties.WidgetFullID = widgProps.FullName
+					}
+
+					profiler := chain(tsg.middlewares, HandlerFunc(func(r1 Response, r2 *Request) {
+						out, _ := json.Marshal(p)
+						r1.Write(999, string(out))
+					}))
+					profiler.Handle(&resp, &req)
+				}
+			}()
+
+			// run a set up function that can return early
+			// to make the handler just spit out the error
+			func() {
+				// ensure the chain is always kept
+				defer func() {
+					Han = chain(tsg.middlewares, Han)
+					p.SetUp = time.Since(setUpStart)
+				}()
+
+				if !handlerExists {
+					Han = GenErrorHandler(WidgetNotFound,
+						fmt.Sprintf("No handler found for widgets of type \"%s\" for widget path \"%s\"", widgProps.WType, widgProps.FullName))
+					return
+				}
+
+				var err error
+				switch hdler := handlers.handler.(type) {
+				// don't parse, as it will break
+				// just run the function
+				case HandlerFunc:
+					Han = hdler
+				default:
+					Han, err = Unmarshal(handlers.handler)(widg)
+				}
+
+				if err != nil {
+					Han = GenErrorHandler(400, err.Error())
+					return
+				}
+
+				gridCanvas, imgLocation, mask, err = gridgen.GridSquareLocatorAndGenerator(widgProps.Location, widgProps.GridAlias, c)
+				// when the function am error is returned,
+				// the function just becomes return an error
+				if err != nil {
+					Han = GenErrorHandler(400, err.Error())
+					return
+				}
+
+				flats, err := gridgen.GetGridGeometry(c, widgProps.Location)
+				if err != nil {
+					Han = GenErrorHandler(400, err.Error())
+					return
+				}
+
+				// do some colour stuff here
+
+				// set up the requests
+				// and chain the middleware for the handler
+
+				pp := PatchProperties{WidgetType: widgProps.WType,
+					WidgetFullID: widgProps.FullName,
+					Dimensions:   gridCanvas.Bounds(),
+					TSGLocation:  imgLocation, Geomtetry: flats,
+					ColourSpace: widgProps.ColourSpace}
+				//	Han, err := Unmarshal(handlers.handler)(widg)
+				resp = response{baseImg: gridCanvas}
+				req.FrameProperties = fp
+				req.RawWidgetYAML = widg
+				req.searchWithCredentials = webSearch
+				req.PatchProperties = pp
+
+				// chain that middleware at the last second?
+				validatorMid := jSONValidator(lineErrs, handlers.schema, widgProps.FullName)
+				Han = chain([]func(Handler) Handler{validatorMid}, Han)
+
+			}()
+
+			var canvasArea image.Rectangle
+			if gridCanvas != nil {
+				canvasArea = gridCanvas.Bounds().Add(imgLocation)
+			}
+
+			// log the area so other widgets can go while
+			// the handler is running
+			runPool.LogDrawArea(position, canvasArea)
+
+			handleStart := time.Now()
+			if widgProps.WType != "builtin.canvasoptions" {
+				// RUN the widget
+				Han.Handle(&resp, &req)
+			}
+			p.Handler = time.Since(handleStart)
+
+			// wait until it is the widgets turn
+
+			queue := time.Now()
+			/*
+				zPosLock.Lock()
+				widgePos := *zPos
+				zPosLock.Unlock()
+				for widgePos != position {
+					time.Sleep(time.Millisecond * 10)
+					zPosLock.Lock()
+					widgePos = *zPos
+					zPosLock.Unlock()
+				}
+			*/
+			// queue until the widget can run
+			runPool.queue(runner, position, canvasArea)
+			p.Queue = time.Since(queue)
+
+			// only draw the image if
+			// no errors occurred running the handler
+			if resp.status == 200 || resp.status == WidgetSuccess {
+				compostion := time.Now()
+				//	canvasLock.Lock()
+				colour.DrawMask(canvas, canvasArea, gridCanvas, image.Point{}, mask, image.Point{}, draw.Over)
+				//	canvasLock.Unlock()
+				p.Composite = time.Since(compostion)
+				// else if there's been an error
+			} else if widgProps.WType != canvaswidget.WType {
+				// error of some sort from somewhere
+				monit.incrementError(1)
+			}
+
+			// signal that the widget has finished
+			runPool.CompleteZ(position)
+			/*
+				zPosLock.Lock()
+				// update zpos regardless
+				*zPos++
+				zPosLock.Unlock()
+			*/
+
 		}()
 	}
 
 	wg.Wait()
+}
+
+type compositeQueue struct {
+	composited bool
+	area       image.Rectangle
+}
+
+type composit struct {
+	currentZ *int
+	sync.Mutex
+	composits map[int]compositeQueue
 }
 
 func GenErrorHandler(code StatusCode, errMessage string) Handler {
@@ -591,10 +653,95 @@ func GenErrorHandler(code StatusCode, errMessage string) Handler {
 	})
 }
 
+func (p *Pool) CompleteZ(z int) {
+	p.c.Lock()
+	// @TODO check for doubles
+	mid := p.c.composits[z]
+	mid.composited = true
+	p.c.composits[z] = mid
+
+	if z == *p.c.currentZ {
+		// increment x amount of times until
+		// the next undrawn widget is reached
+		for p.c.composits[*p.c.currentZ].composited {
+			*p.c.currentZ++
+		}
+	}
+	p.c.Unlock()
+
+}
+
+func (p *Pool) LogDrawArea(position int, area image.Rectangle) {
+	p.c.Lock()
+	// @TODO check for doubles
+	p.c.composits[position] = compositeQueue{area: area}
+	p.c.Unlock()
+}
+
+func (p *Pool) queue(runner poolRunner, position int, area image.Rectangle) {
+
+	// put the runner in the pool while queueing
+	p.PutRunner(runner)
+	// get it back out at the end
+	defer func() {
+		var available bool
+		runner, available = p.GetRunner()
+		for !available {
+
+			time.Sleep(1 * time.Millisecond)
+			runner, available = p.GetRunner()
+		}
+	}()
+	// put the runner back with no memory
+	// so the cache is still useable?
+	clearPath := p.c.check(position, area)
+
+	for !clearPath {
+		time.Sleep(time.Millisecond * 1)
+		clearPath = p.c.check(position, area)
+	}
+
+}
+
+func (c *composit) check(position int, area image.Rectangle) bool {
+	c.Lock()
+	widgePos := *c.currentZ
+	c.Unlock()
+
+	// do not bother checking areas underneath
+	if widgePos == position {
+		return true
+	}
+
+	clearPath := true
+	// do not check against its own area
+	for i := widgePos; i < position; i++ {
+		c.Lock()
+		under, ok := c.composits[i]
+		c.Unlock()
+		if !ok {
+			clearPath = false
+			break
+		}
+
+		// already been drawn so doesn't matter
+		if under.composited {
+			continue
+		}
+
+		if area.Overlaps(under.area) {
+			clearPath = false
+			break
+		}
+	}
+	return clearPath
+}
+
 type Pool struct {
 	// keep at 1 at the moment
 	AvailableMemeory int
 	sync.Mutex
+	c *composit
 }
 
 func (p *Pool) GetRunner() (runner poolRunner, available bool) {
