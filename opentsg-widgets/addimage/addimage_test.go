@@ -22,12 +22,12 @@ import (
 
 func TestDemo(t *testing.T) {
 	// minimum example
-	ai := addimageJSON{Image: "https://opentsg.studio/blog/2023/09/13/2023-09-13-coming-soon/featured-logo-otsg.png"}
-	examplejson.SaveExampleJson(ai, widgetType, "minimum", true)
+	ai := Config{Image: "https://opentsg.studio/blog/2023/09/13/2023-09-13-coming-soon/featured-logo-otsg.png"}
+	examplejson.SaveExampleJson(ai, WidgetType, "minimum", true)
 
 	// maximum example
-	aiMax := addimageJSON{Image: "https://opentsg.studio/blog/2023/09/13/2023-09-13-coming-soon/featured-logo-otsg.png", ImgFill: "y scale"}
-	examplejson.SaveExampleJson(aiMax, widgetType, "maximum", true)
+	aiMax := Config{Image: "https://opentsg.studio/blog/2023/09/13/2023-09-13-coming-soon/featured-logo-otsg.png", ImgFill: "y scale"}
+	examplejson.SaveExampleJson(aiMax, WidgetType, "maximum", true)
 }
 
 func TestBadStrings(t *testing.T) {
@@ -46,7 +46,7 @@ func TestBadStrings(t *testing.T) {
 		fmt.Sprintf("0163 %s%stestdata%sbad.dpx is an invalid file type", location, sep, sep)}
 
 	for i, bad := range badString {
-		mockImg := addimageJSON{Image: bad}
+		mockImg := Config{Image: bad}
 		genErr := mockImg.Generate(nil, &mockContext)
 		Convey("Checking the regex fence is working", t, func() {
 			Convey(fmt.Sprintf("using a %s as the file to open %s", bad, location), func() {
@@ -89,7 +89,7 @@ func Test8files(t *testing.T) {
 		_, _, genErr := fToImg(tfile, name)
 
 		canvas := image.NewNRGBA64(image.Rect(0, 0, 1000, 1000))
-		mockImg := addimageJSON{Image: name}
+		mockImg := Config{Image: name}
 		_ = mockImg.Generate(canvas, &mockContext)
 
 		//	f, _ := os.Create(fmt.Sprintf("file%v.png", i))
@@ -111,7 +111,7 @@ func TestWebsites(t *testing.T) {
 	validSite := []string{"https://opentsg.studio/blog/2023/09/13/2023-09-13-coming-soon/featured-logo-otsg.png"}
 	expec := []string{"1c9e781fb1ac14c8b292f8fcf68d95a00dd0ee96f1443627e322b4fe7ad9e809"}
 	for i, imgToAdd := range validSite {
-		ai := addimageJSON{Image: imgToAdd}
+		ai := Config{Image: imgToAdd}
 		// Ai.Image = imgToAdd
 		genImg := image.NewNRGBA64(image.Rect(0, 0, 4096, 2160))
 		genErr := ai.Generate(genImg, &mockContext)
@@ -137,7 +137,7 @@ func TestZoneGenMask(t *testing.T) {
 	bi, _ := debug.ReadBuildInfo()
 	// Keep this in the background unti it runs
 	if bi.GoVersion[:6] != "go1.18" {
-		var imgMock addimageJSON
+		var imgMock Config
 		var pos config.Position
 		pos.X = 0
 		pos.Y = 0
@@ -155,7 +155,7 @@ func TestZoneGenMask(t *testing.T) {
 
 			// generate the ramp image
 			genErr := imgMock.Generate(myImage, &mockContext)
-			examplejson.SaveExampleJson(imgMock, widgetType, explanation[i], false)
+			examplejson.SaveExampleJson(imgMock, WidgetType, explanation[i], false)
 
 			file, _ := os.Open(testF[i])
 			defer file.Close()
@@ -192,7 +192,7 @@ func TestZoneGenMask(t *testing.T) {
 func TestFillTypes(t *testing.T) {
 	mockContext := context.Background()
 
-	var imgMock addimageJSON
+	var imgMock Config
 
 	// imgMock.Imgpos = &c
 
@@ -209,7 +209,7 @@ func TestFillTypes(t *testing.T) {
 		myImage := image.NewNRGBA64(image.Rectangle{image.Point{0, 0}, image.Point{1000, 900}})
 		genErr := imgMock.Generate(myImage, &mockContext)
 
-		examplejson.SaveExampleJson(imgMock, widgetType, explanation[i], false)
+		examplejson.SaveExampleJson(imgMock, WidgetType, explanation[i], false)
 		// Open the image to compare to
 
 		file, _ := os.Open(fmt.Sprintf("./testdata/fill%v.png", i))
@@ -255,7 +255,7 @@ func TestFillTypes(t *testing.T) {
 func TestOffsets(t *testing.T) {
 	mockContext := context.Background()
 
-	var imgMock = addimageJSON{Image: "./testdata/squares.png", ImgFill: "fill"}
+	var imgMock = Config{Image: "./testdata/squares.png", ImgFill: "fill"}
 	// imgMock.Imgpos = &c
 
 	//	sizeDummies := [][]int{{0, 0}, {1000, 500}}
@@ -269,7 +269,7 @@ func TestOffsets(t *testing.T) {
 		myImage := image.NewNRGBA64(image.Rectangle{image.Point{0, 0}, image.Point{1000, 1000}})
 		genErr := imgMock.Generate(myImage, &mockContext)
 
-		examplejson.SaveExampleJson(imgMock, widgetType, explanation[i], true)
+		examplejson.SaveExampleJson(imgMock, WidgetType, explanation[i], true)
 		// Open the image to compare to
 
 		file, _ := os.Open(fmt.Sprintf("./testdata/offset%v.png", i))

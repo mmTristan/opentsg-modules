@@ -12,37 +12,16 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/ebu3373/nearblack"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/ebu3373/saturation"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/ebu3373/twosi"
+	"github.com/mrmxf/opentsg-modules/opentsg-widgets/legacy"
+	"github.com/mrmxf/opentsg-modules/opentsg-widgets/zoneplate"
 )
-
-type Legacy struct {
-	// the location of the loader
-	FileLocation string `json:"fileLocation" yaml:"fileLocation"`
-	// mnt is the mount point of the folder
-	MNT string `json:"mnt" yaml:"mnt"`
-}
-
-func (l Legacy) Handle(resp tsg.Response, req *tsg.Request) {
-
-	otsg, err := tsg.BuildOpenTSG(l.FileLocation, "", true, &tsg.RunnerConfiguration{RunnerCount: 6, ProfilerEnabled: true})
-	otsg.AddCustomWidgets(twosi.SIGenerate, nearblack.NBGenerate, bars.BarGen, saturation.SatGen, luma.Generate)
-	if err != nil {
-
-		resp.Write(500, err.Error())
-		return
-	}
-
-	// run the old program as normal
-	otsg.Draw(true, l.MNT, "stdout")
-
-	resp.Write(200, "")
-}
 
 func TestXxx(t *testing.T) {
 
 	// Run the legacy handler
 	otsg, _ := tsg.BuildOpenTSG("./testdata/legacyloader.json", "", true, &tsg.RunnerConfiguration{RunnerCount: 6, ProfilerEnabled: true})
-	otsg.AddCustomWidgets(twosi.SIGenerate, nearblack.NBGenerate, bars.BarGen, saturation.SatGen, luma.Generate)
-	otsg.Handle("builtin.legacy", []byte("{}"), Legacy{})
+	otsg.AddCustomWidgets(twosi.SIGenerate, nearblack.NBGenerate, bars.BarGen, saturation.SatGen, luma.Generate, zoneplate.ZoneGen)
+	otsg.Handle("builtin.legacy", []byte("{}"), legacy.Legacy{})
 	//otsg.HandleFunc("builtin.canvasoptions", func(r1 tsg.Response, r2 *tsg.Request) { fmt.Println("ring a ding") })
 	otsg.Run("")
 

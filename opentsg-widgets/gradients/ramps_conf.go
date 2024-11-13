@@ -86,7 +86,7 @@ type control struct {
 }
 
 //go:embed jsonschema/gradientSchema.json
-var textBoxSchema []byte
+var Schema []byte
 
 /*
 func (r Ramp) Alias() string {

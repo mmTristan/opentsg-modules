@@ -95,5 +95,5 @@ func (nb Config) Handle(resp tsg.Response, req *tsg.Request) {
 		startPoint += off
 	}
 
-	resp.Write(200, "success")
+	resp.Write(tsg.WidgetSuccess, "success")
 }

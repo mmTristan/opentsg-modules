@@ -5,13 +5,13 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
 )
 
-type fourJSON struct {
+type Config struct {
 	Colourpallette    []string          `json:"colors" yaml:"colors"`
 	ColourSpace       colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
 	config.WidgetGrid `yaml:",inline"`
 }
 
-var schemaInit = []byte(`{
+var Schema = []byte(`{
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://example.com/product.schema.json",
 	"title": "Allow anything through for tests",

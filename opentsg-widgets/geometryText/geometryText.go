@@ -18,14 +18,14 @@ import (
 func LabelGenerator(canvasChan chan draw.Image, debug bool, c *context.Context, wg, wgc *sync.WaitGroup, logs *errhandle.Logger) {
 	defer wg.Done()
 	opts := []any{c}
-	conf := widgethandler.GenConf[geomTextJSON]{Debug: debug, Schema: schemaInit, WidgetType: "builtin.geometrytext", ExtraOpt: opts}
+	conf := widgethandler.GenConf[Config]{Debug: debug, Schema: Schema, WidgetType: "builtin.geometrytext", ExtraOpt: opts}
 	widgethandler.WidgetRunner(canvasChan, conf, c, logs, wgc) // Update this to pass an error which is then formatted afterwards
 }
 
 var getGeometry = gridgen.GetGridGeometry
 
 // amend so that the number of colours is based off of the input, can be upgraded to 5 or 6 for performance
-func (gt geomTextJSON) Generate(canvas draw.Image, opt ...any) error {
+func (gt Config) Generate(canvas draw.Image, opt ...any) error {
 	var c *context.Context
 
 	if len(opt) != 0 {

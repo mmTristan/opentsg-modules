@@ -19,17 +19,17 @@ import (
 func TestDemo(t *testing.T) {
 	// base example
 	tbDemo := ZConfig{PlateType: circlePattern}
-	examplejson.SaveExampleJson(tbDemo, widgetType, "minimum", true)
+	examplejson.SaveExampleJson(tbDemo, WidgetType, "minimum", true)
 
 	tbDemoMaximum := ZConfig{PlateType: verticalSweep, Startcolour: "white"}
 	tbDemoMaximum.CwRotation = "π*34/53"
-	examplejson.SaveExampleJson(tbDemoMaximum, widgetType, "maximum", true)
+	examplejson.SaveExampleJson(tbDemoMaximum, WidgetType, "maximum", true)
 
 	tbDemoNoAngle := ZConfig{PlateType: horizontalSweep, Startcolour: "black"}
-	examplejson.SaveExampleJson(tbDemoNoAngle, widgetType, "noangle", true)
+	examplejson.SaveExampleJson(tbDemoNoAngle, WidgetType, "noangle", true)
 
 	tbDemoFre := ZConfig{Frequency: parameters.AngleField{Ang: "π*13/200"}, Offset: parameters.Offset{parameters.XYOffset{X: "20%", Y: "-25"}}}
-	examplejson.SaveExampleJson(tbDemoFre, widgetType, "slowFrequency", true)
+	examplejson.SaveExampleJson(tbDemoFre, WidgetType, "slowFrequency", true)
 
 }
 
@@ -46,7 +46,7 @@ func TestZoneGenAngle(t *testing.T) {
 		myImage := image.NewNRGBA64(image.Rectangle{image.Point{0, 0}, image.Point{1000, 1000}})
 		mockZone.CwRotation = angleDummies[i]
 
-		examplejson.SaveExampleJson(mockZone, widgetType, explanation[i], false)
+		examplejson.SaveExampleJson(mockZone, WidgetType, explanation[i], false)
 		// Generate the ramp image
 		genErr := mockZone.Generate(myImage)
 
@@ -123,7 +123,7 @@ func TestZoneGenWaveType(t *testing.T) {
 		myImage := image.NewNRGBA64(image.Rectangle{image.Point{0, 0}, image.Point{1000, 1000}})
 		mockZone.WaveType = w
 
-		examplejson.SaveExampleJson(mockZone, widgetType, w, false)
+		examplejson.SaveExampleJson(mockZone, WidgetType, w, false)
 		// Generate the ramp image
 		genErr := mockZone.Generate(myImage)
 		f, _ := os.Create(testF[i])
@@ -166,7 +166,7 @@ func TestZoneGenMask(t *testing.T) {
 	for i := range testF {
 		myImage := image.NewNRGBA64(image.Rectangle{image.Point{0, 0}, image.Point{1000, 1000}})
 
-		examplejson.SaveExampleJson(mockZone, widgetType, explanation[i], false)
+		examplejson.SaveExampleJson(mockZone, WidgetType, explanation[i], false)
 		// Generate the ramp image
 		genErr := mockZone.Generate(myImage)
 		// Reapply the mask because for somereason it is not transferred across the test suiteS?

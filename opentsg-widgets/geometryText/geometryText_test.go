@@ -21,7 +21,7 @@ func TestFillMethod(t *testing.T) {
 		return mg, nil
 	}
 	mockG := config.Grid{Location: "Nothing"}
-	mockJson4 := geomTextJSON{GridLoc: &mockG, TextColour: "#C2A649"}
+	mockJson4 := Config{GridLoc: &mockG, TextColour: "#C2A649"}
 	canvas := image.NewNRGBA64(image.Rect(0, 0, 1000, 1000))
 	c := context.Background()
 	mockJson4.Generate(canvas, &c)

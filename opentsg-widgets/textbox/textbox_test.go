@@ -20,20 +20,20 @@ import (
 func TestDemo(t *testing.T) {
 	// base example
 	tbDemo := TextboxJSON{}
-	examplejson.SaveExampleJson(tbDemo, widgetType, "minimum", false)
+	examplejson.SaveExampleJson(tbDemo, WidgetType, "minimum", false)
 
 	tbDemoMax := TextboxJSON{Text: []string{"sample", "text"}, Border: "#91B645", BorderSize: 5,
 		Back: "#eeeeee", Textc: "#C2A649", Font: text.FontPixel, FillType: text.FillTypeRelaxed,
 		XAlignment: text.AlignmentLeft, YAlignment: text.AlignmentBottom}
-	examplejson.SaveExampleJson(tbDemoMax, widgetType, "maximum", true)
+	examplejson.SaveExampleJson(tbDemoMax, WidgetType, "maximum", true)
 
 	tbDemoNoborder := TextboxJSON{Text: []string{"sample", "text"},
 		Back: "#333333", Textc: "#C2A649"}
-	examplejson.SaveExampleJson(tbDemoNoborder, widgetType, "noborder", true)
+	examplejson.SaveExampleJson(tbDemoNoborder, WidgetType, "noborder", true)
 
 	tbDemoNoText := TextboxJSON{Border: "#EEE", BorderSize: 25,
 		Back: "rgb12(3566,2312,34)"}
-	examplejson.SaveExampleJson(tbDemoNoText, widgetType, "notext", true)
+	examplejson.SaveExampleJson(tbDemoNoText, WidgetType, "notext", true)
 
 }
 
@@ -52,7 +52,7 @@ func TestLines(t *testing.T) {
 		myImage := colour.NewNRGBA64(colour.ColorSpace{}, image.Rectangle{image.Point{0, 0}, image.Point{1024, 240}})
 		mockTB.Text = str
 		genErr := mockTB.Generate(myImage, &mockContext)
-		examplejson.SaveExampleJson(mockTB, widgetType, explanation[i], false)
+		examplejson.SaveExampleJson(mockTB, WidgetType, explanation[i], false)
 
 		// f, _ := os.Create(original[i])
 		// png.Encode(f, myImage)
@@ -113,7 +113,7 @@ func TestFontImport(t *testing.T) {
 		//	bc := context.Background()
 		//	vase := image.NewNRGBA64(image.Rect(0, 0, 1000, 100))
 		//	tests[i].Generate(vase, bc)
-		examplejson.SaveExampleJson(tests[i], widgetType, e, false)
+		examplejson.SaveExampleJson(tests[i], WidgetType, e, false)
 		// f, _ := os.Create(e + ".png")
 		// colour.PngEncode(f, vase)
 	}

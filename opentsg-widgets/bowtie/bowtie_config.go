@@ -8,7 +8,7 @@ import (
 	_ "embed"
 )
 
-type bowtieJSON struct {
+type Config struct {
 	SegementCount  int      `json:"segmentCount,omitempty" yaml:"segmentCount,omitempty"`
 	SegmentColours []string `json:"segmentColors,omitempty" yaml:"segmentColors,omitempty"`
 	Blend          string   `json:"blend,omitempty" yaml:"blend,omitempty"`
@@ -23,4 +23,4 @@ type bowtieJSON struct {
 }
 
 //go:embed jsonschema/jsonschema.json
-var schemaInit []byte
+var Schema []byte

@@ -7,15 +7,12 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"image/jpeg"
 	"image/png"
 	"os"
 	"testing"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	. "github.com/smartystreets/goconvey/convey"
-
-	texter "github.com/mrmxf/opentsg-modules/opentsg-widgets/text"
 )
 
 func TestTpigGeometry(t *testing.T) {
@@ -160,6 +157,7 @@ func TestGridGeometry(t *testing.T) {
 
 }
 
+/*
 func TestTpigGeometryHouse(t *testing.T) {
 	c := context.Background()
 
@@ -195,3 +193,4 @@ func TestTpigGeometryHouse(t *testing.T) {
 	f, _ := os.Create("./testdata/tpig/house.jpeg")
 	jpeg.Encode(f, in.canvas, nil)
 }
+*/

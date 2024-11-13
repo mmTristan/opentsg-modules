@@ -11,11 +11,12 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colourgen"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
 	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
 )
 
 const (
-	widgetType = "builtin.bowtie"
+	WidgetType = "builtin.bowtie"
 )
 
 // SwirlGen takes a canvas and then returns an image of the swirl layered on top of the image/
@@ -23,7 +24,7 @@ const (
 func SwirlGen(canvasChan chan draw.Image, debug bool, c *context.Context, wg, wgc *sync.WaitGroup, logs *errhandle.Logger) {
 	defer wg.Done()
 	opts := []any{c}
-	conf := widgethandler.GenConf[bowtieJSON]{Debug: debug, Schema: schemaInit, WidgetType: widgetType, ExtraOpt: opts}
+	conf := widgethandler.GenConf[Config]{Debug: debug, Schema: Schema, WidgetType: WidgetType, ExtraOpt: opts}
 	widgethandler.WidgetRunner(canvasChan, conf, c, logs, wgc) // Update this to pass an error which is then formatted afterwards
 }
 
@@ -41,7 +42,117 @@ type segment struct {
 	startN, endN     int
 }
 
-func (s bowtieJSON) Generate(canvas draw.Image, opts ...any) error {
+func (c Config) Handle(resp tsg.Response, req *tsg.Request) {
+
+	if c.SegementCount < 4 {
+		resp.Write(tsg.WidgetError, fmt.Sprintf("0DEV 4 or more segments required, received %v", c.SegementCount))
+		return
+	}
+
+	var colours []*colour.CNRGBA64
+
+	if len(c.SegmentColours) == 0 {
+		colours = defaultColours
+	} else {
+		// let the users declar their own colours
+		colours = make([]*colour.CNRGBA64, len(c.SegmentColours))
+
+		for i, cstring := range c.SegmentColours {
+			col := colourgen.HexToColour(cstring, req.PatchProperties.ColourSpace)
+			colours[i] = col
+		}
+
+	}
+
+	bounds := resp.BaseImage().Bounds().Max
+
+	angleStep := (2 * math.Pi) / float64(c.SegementCount)
+
+	ang, err := c.ClockwiseRotationAngle()
+	if err != nil {
+		resp.Write(tsg.WidgetError, err.Error())
+		return
+	}
+
+	// get the frame count to get the angular rotation
+	frame := req.FrameProperties.FrameNumber
+
+	startAng, err := c.GetStartAngle()
+	if err != nil {
+		resp.Write(tsg.WidgetError, err.Error())
+		return
+	}
+
+	startPoint := (math.Pi * 2) - (ang * float64(frame)) - startAng
+	// reset the angle to be as close to 2pi as possible.
+	// these steps do not change the angle of rotation
+	for startPoint < 0 {
+		startPoint += (2 * math.Pi)
+	}
+
+	segments := make([]segment, c.SegementCount)
+
+	for i := 0; i < c.SegementCount; i++ {
+		endAng := startPoint - angleStep
+
+		// make sure the start points are always positive
+		for startPoint < 0 {
+			startPoint += (2 * math.Pi)
+		}
+
+		// make it the start point to stop any
+		// float issues meaning a line of angles are missed
+		if i == c.SegementCount-1 {
+
+			endAng = (math.Pi * 2) - (ang * float64(frame)) - startAng
+		}
+
+		for endAng < 0 {
+			endAng += (2 * math.Pi)
+		}
+		// set the start point for the compare fucntions
+		funcStart := startPoint
+
+		if endAng < startPoint {
+			segments[i] = segment{colourPos: i % len(colours),
+				startAng: startPoint,
+				endAng:   endAng,
+				angStep:  angleStep,
+				startN:   (i + 1%len(colours) + len(colours)) % len(colours),
+				endN:     (i - 1%len(colours) + len(colours)) % len(colours),
+				angleValid: func(ang float64) bool {
+
+					return (ang < funcStart) && (ang >= endAng)
+				},
+			}
+		} else {
+			segments[i] = segment{colourPos: i % len(colours),
+				startAng: startPoint,
+				endAng:   endAng,
+				angStep:  angleStep,
+				startN:   (i + 1%len(colours) + len(colours)) % len(colours),
+				endN:     (i - 1%len(colours) + len(colours)) % len(colours),
+				angleValid: func(ang float64) bool {
+					return (ang <= funcStart) || (ang >= endAng)
+				},
+			}
+		}
+		startPoint = endAng
+
+	}
+
+	out, err := c.CalcOffset(bounds)
+	if err != nil {
+		resp.Write(tsg.WidgetError, err.Error())
+		return
+	}
+
+	fill(resp.BaseImage(), colours, segments, float64(bounds.X)/2+float64(out.X), float64(bounds.Y)/2+float64(out.Y), c.Blend)
+
+	resp.Write(tsg.WidgetSuccess, "success")
+}
+
+func (s Config) Generate(canvas draw.Image, opts ...any) error {
 
 	c, ok := opts[0].(*context.Context)
 	if !ok {

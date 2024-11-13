@@ -17,6 +17,7 @@ import (
 	"github.com/golang/freetype/truetype"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
 )
@@ -52,6 +53,131 @@ var Pixel []byte
 // DrawString draws a single string in a textbox
 func (t TextboxProperties) DrawString(canvas draw.Image, tsgContext *context.Context, label string) error {
 	return t.DrawStrings(canvas, tsgContext, []string{label})
+}
+
+// drawstring draws multiple lines of text in a textbox
+func (t TextboxProperties) DrawStringsHandler(canvas draw.Image, req *tsg.Request, labels []string) error {
+
+	// check somethings been assigned first
+	if t.backgroundColour != nil {
+		// draw the background first
+		if t.backgroundColour.A != 0 {
+			colour.Draw(canvas, canvas.Bounds(), &image.Uniform{t.backgroundColour}, image.Point{}, draw.Src)
+		}
+	}
+
+	// only do the text calculations if there's any
+	// text colour
+	// or any text
+	if t.textColour != nil && len(labels) > 0 {
+		if t.textColour.A != 0 {
+			fontByte := fontSelectorHandler(req, t.font)
+
+			fontain, err := freetype.ParseFont(fontByte)
+			if err != nil {
+				return fmt.Errorf("0101 %v", err)
+			}
+
+			lines := len(labels)
+			fontBounds := fontain.Bounds(fixed.Int26_6(1 * 64))
+
+			var label string
+			for _, labl := range labels {
+				if len(labl) > len(label) {
+					label = labl
+				}
+			}
+
+			// scale the text to which ever dimension is smaller
+			// (y / lines) / y scale
+			scale := 64 * (float64(canvas.Bounds().Max.Y) / float64(lines)) / (float64(fontBounds.Max.Y - fontBounds.Min.Y))
+			// x to y ratio * x / (x scale * number of letters)
+			width := 2 * 64 * (float64(canvas.Bounds().Max.X)) / (float64(fontBounds.Max.X-fontBounds.Min.X) * float64(len(label)))
+
+			if t.verticalText {
+				// scale in the opposite directions
+				scale = 2 * 64 * (float64(canvas.Bounds().Max.Y)) / (float64(fontBounds.Max.Y-fontBounds.Min.Y) * float64(len(label)))
+				width = 64 * (float64(canvas.Bounds().Max.Y) / float64(lines)) / (float64(fontBounds.Max.Y - fontBounds.Min.Y))
+			}
+
+			// @TODO flip directions for vertical text
+
+			if width < scale {
+				scale = width
+			}
+
+			opt := truetype.Options{Size: scale, SubPixelsY: 8, Hinting: 2}
+			myFace := truetype.NewFace(fontain, &opt)
+
+			bounds := canvas.Bounds().Max
+
+			if t.verticalText {
+				bounds.X /= lines
+			} else {
+				bounds.Y /= lines
+			}
+
+			switch t.fillType {
+			case FillTypeFull:
+				myFace, _ = fullFill(bounds, myFace, fontain, t.verticalText, scale, label)
+			default:
+				myFace, _ = relaxedFill(bounds, myFace, fontain, t.verticalText, scale, label)
+			}
+
+			// fix point for things like framecount or is this unlikely to matter?
+			for i, label := range labels {
+
+				lab := []string{label}
+				// this is the y height
+				var verticalBox fixed.Rectangle26_6
+				// set up the vertical text
+				if t.verticalText {
+					// split per letter
+					lab = strings.Split(label, "")
+
+					verticalBox, _ = getBoundBox(myFace, t.verticalText, label)
+				}
+				var prevYOff fixed.Int26_6
+
+				for _, l := range lab {
+					labelBox, _ := font.BoundString(myFace, l)
+					var xOff, yOff int
+					if !t.verticalText {
+						xOff = xPos(canvas, labelBox, t.xAlignment, 1, 0)
+						yOff = yPos(canvas, labelBox, t.yAlignment, float64(lines), i)
+					} else {
+
+						// replace the space with something that has dimensions
+						if l == " " {
+							labelBox, _ = font.BoundString(myFace, "<")
+						}
+						/*
+							go through every letter
+							using the minimum to set the y position
+							then take away the height of the previous letter to ensure the text moves
+						*/
+						xOff = xPos(canvas, labelBox, t.xAlignment, float64(lines), i)
+						yOff = yPos(canvas, verticalBox, t.yAlignment, 1, 0) + int(prevYOff.Round()) - labelBox.Min.Y.Round()
+						prevYOff += (labelBox.Max.Y - labelBox.Min.Y)
+
+					}
+
+					point := fixed.Point26_6{X: fixed.Int26_6(xOff * 64), Y: fixed.Int26_6(yOff * 64)}
+
+					//	myFace := truetype.NewFace(fontain, &opt)
+					d := &font.Drawer{
+						Dst:  canvas,
+						Src:  image.NewUniform(t.textColour),
+						Face: myFace,
+						Dot:  point,
+					}
+					d.DrawString(l)
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // drawstring draws multiple lines of text in a textbox
@@ -329,6 +455,34 @@ func yPos(canvas image.Image, rect fixed.Rectangle26_6, position string, lines f
 func fontSelector(c *context.Context, fontLocation string) []byte {
 
 	font, err := core.GetWebBytes(c, fontLocation)
+
+	if err == nil {
+		return font
+	}
+
+	font, err = os.ReadFile(fontLocation)
+	if err == nil {
+		return font
+	}
+
+	switch fontLocation {
+	case "title":
+		return Title
+	case "body":
+		return Body
+	case "pixel":
+		return Pixel
+	default:
+		return Header
+	}
+}
+
+// font selector enumerates through the different sources of http,
+// local files,
+// then predetermined embedded fonts and returns the font based on the input string.
+func fontSelectorHandler(req *tsg.Request, fontLocation string) []byte {
+
+	font, err := req.SearchWithCredentials(fontLocation)
 
 	if err == nil {
 		return font

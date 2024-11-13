@@ -7,7 +7,7 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
 )
 
-type noiseJSON struct {
+type Config struct {
 	//	Type      string       `json:"type" yaml:"type"`
 	NoiseType         string            `json:"noiseType" yaml:"noiseType"`
 	Minimum           int               `json:"minimum,omitempty" yaml:"minimum,omitempty"`
@@ -26,7 +26,7 @@ type Guillotine struct {
 }
 
 //go:embed jsonschema/noiseschema.json
-var schemaInit []byte
+var Schema []byte
 
 /*
 func (n noiseJSON) Alias() string {

@@ -12,24 +12,84 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colourgen"
 	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
 )
 
 const (
-	widgetType = "builtin.fourcolor"
+	WidgetType = "builtin.fourcolor"
 )
 
 func FourColourGenerator(canvasChan chan draw.Image, debug bool, c *context.Context, wg, wgc *sync.WaitGroup, logs *errhandle.Logger) {
 	defer wg.Done()
 	opts := []any{c}
-	conf := widgethandler.GenConf[fourJSON]{Debug: debug, Schema: schemaInit, WidgetType: widgetType, ExtraOpt: opts}
+	conf := widgethandler.GenConf[Config]{Debug: debug, Schema: Schema, WidgetType: WidgetType, ExtraOpt: opts}
 	widgethandler.WidgetRunner(canvasChan, conf, c, logs, wgc) // Update this to pass an error which is then formatted afterwards
 }
 
 var getGeometry = gridgen.GetGridGeometry
 
+func (f Config) Handle(resp tsg.Response, req *tsg.Request) {
+	if len(f.Colourpallette) < 4 {
+		resp.Write(tsg.WidgetError, fmt.Sprintf("invalid number of colours chosen for the fourcolour pallette, need at least 4 got %v", len(f.Colourpallette)))
+		return
+	}
+	pallette := make([]color.Color, len(f.Colourpallette))
+
+	for i, c := range f.Colourpallette {
+		pallette[i] = colourgen.HexToColour(c, f.ColourSpace)
+	}
+
+	flats := req.PatchProperties.Geometry
+
+	namelocations := make(map[string]int)
+	nodes := make([]nodal, len(flats))
+
+	// TODO Manual neighbour finding or ensure they must always suggest having a neighbour
+	//	fmt.Println(len(nodes))
+	for i, flat := range flats {
+		neighs := []int{}
+
+		for _, ftag := range flat.Tags {
+			if len(ftag) < 10 {
+				continue
+			}
+
+			if ftag[:10] == "neighbour:" {
+				// do some maths about incrementing the start point as more neighbours are found
+				neigh := ftag[10:]
+				neighpos, ok := namelocations[neigh]
+				if !ok {
+					for j, f := range flats {
+						if f.Name == neigh {
+							neighpos = j
+							namelocations[neigh] = j
+							ok = true
+						}
+					}
+				}
+				if ok {
+					neighs = append(neighs, neighpos)
+				}
+			}
+		}
+		nodes[i] = nodal{neighbours: neighs, area: flat.Shape}
+		//	fmt.Println(len(neighs), neighs)
+	}
+
+	// extract the colour here
+	_, filled := bruteColourArea(nodes, len(pallette)+1)
+	// Break if there's an error etc
+	for _, node := range filled {
+		setcolour := node.color
+		// fmt.Println(node.area, canvas.Bounds(), setcolour)
+		colour.Draw(resp.BaseImage(), node.area, &image.Uniform{pallette[setcolour-1]}, image.Point{}, draw.Src)
+
+	}
+}
+
 // amend so that the number of colours is based off of the input, can be upgraded to 5 or 6 for performance
-func (f fourJSON) Generate(canvas draw.Image, opt ...any) error {
+func (f Config) Generate(canvas draw.Image, opt ...any) error {
 
 	if len(f.Colourpallette) < 4 {
 		return fmt.Errorf("invalid number of colours chosen for the fourcolour pallette")

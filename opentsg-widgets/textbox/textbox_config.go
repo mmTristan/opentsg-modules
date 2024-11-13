@@ -25,7 +25,7 @@ type TextboxJSON struct {
 }
 
 //go:embed jsonschema/textBoxSchema.json
-var textBoxSchema []byte
+var Schema []byte
 
 /*
 func (tb TextboxJSON) Alias() string {

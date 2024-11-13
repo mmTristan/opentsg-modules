@@ -353,8 +353,8 @@ func TestQueue(t *testing.T) {
 	for i, ba := range areas {
 		out := setUpPoolRunner(0, firstRun[i], false)
 
-		pass := out.c.check(3, ba)
-		fmt.Println(out.c.composits)
+		pass := out.drawers.check(3, ba)
+		fmt.Println(out.drawers.drawQueue)
 		Convey("Checking the z order handler stops premature widgets", t, func() {
 			Convey(message[i], func() {
 				Convey("A false value is returned stating it is not the widgets turn", func() {
@@ -376,8 +376,8 @@ func TestQueue(t *testing.T) {
 	for i, ba := range areas {
 		out := setUpPoolRunner(0, true, runStatus[i])
 
-		pass := out.c.check(3, ba)
-		fmt.Println(out.c.composits)
+		pass := out.drawers.check(3, ba)
+		fmt.Println(out.drawers.drawQueue)
 		Convey("Checking the z order handler allows widgets that do not clash", t, func() {
 			Convey(message[i], func() {
 				Convey("A true value is returned stating it is the widgets turn", func() {
@@ -391,17 +391,17 @@ func TestQueue(t *testing.T) {
 
 func setUpPoolRunner(zPos int, firstWidgetPresent, runStatus bool) *Pool {
 
-	layers := map[int]compositeQueue{
+	layers := map[int]drawQueue{
 
-		1: {composited: runStatus, area: image.Rect(10, 10, 20, 20)},
-		2: {composited: runStatus, area: image.Rect(20, 20, 30, 30)},
+		1: {drawn: runStatus, area: image.Rect(10, 10, 20, 20)},
+		2: {drawn: runStatus, area: image.Rect(20, 20, 30, 30)},
 	}
 
 	if firstWidgetPresent {
-		layers[0] = compositeQueue{composited: runStatus, area: image.Rect(0, 0, 10, 10)}
+		layers[0] = drawQueue{drawn: runStatus, area: image.Rect(0, 0, 10, 10)}
 	}
 
-	return &Pool{c: &composit{currentZ: &zPos, composits: layers}}
+	return &Pool{drawers: &drawers{currentZ: &zPos, drawQueue: layers}}
 }
 
 type dummyHandler struct {

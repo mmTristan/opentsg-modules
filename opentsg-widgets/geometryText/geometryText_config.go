@@ -5,13 +5,13 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
 )
 
-type geomTextJSON struct {
+type Config struct {
 	TextColour  string            `json:"textColor" yaml:"textColor"`
 	GridLoc     *config.Grid      `json:"grid,omitempty" yaml:"grid,omitempty"`
 	ColourSpace colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
 }
 
-var schemaInit = []byte(`{
+var Schema = []byte(`{
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://example.com/product.schema.json",
 	"title": "Allow anything through for tests",
@@ -19,10 +19,10 @@ var schemaInit = []byte(`{
 	"type": "object"
 	}`)
 
-func (f geomTextJSON) Alias() string {
+func (f Config) Alias() string {
 	return f.GridLoc.Alias
 }
 
-func (f geomTextJSON) Location() string {
+func (f Config) Location() string {
 	return f.GridLoc.Location
 }

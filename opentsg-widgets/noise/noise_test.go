@@ -16,15 +16,15 @@ import (
 
 func TestDemo(t *testing.T) {
 	// base example
-	noiseDemo := noiseJSON{NoiseType: whiteNoise}
-	examplejson.SaveExampleJson(noiseDemo, widgetType, "minimum", true)
+	noiseDemo := Config{NoiseType: whiteNoise}
+	examplejson.SaveExampleJson(noiseDemo, WidgetType, "minimum", true)
 
-	noiseDemoMax := noiseJSON{NoiseType: whiteNoise, Minimum: 2000, Maximum: 3000}
-	examplejson.SaveExampleJson(noiseDemoMax, widgetType, "maximum", true)
+	noiseDemoMax := Config{NoiseType: whiteNoise, Minimum: 2000, Maximum: 3000}
+	examplejson.SaveExampleJson(noiseDemoMax, WidgetType, "maximum", true)
 }
 
 func TestWhiteNoise(t *testing.T) {
-	var mockNoise noiseJSON
+	var mockNoise Config
 
 	mockNoise.NoiseType = whiteNoise
 	randnum = func() int64 { return 27 }
@@ -37,7 +37,7 @@ func TestWhiteNoise(t *testing.T) {
 		myImage := image.NewNRGBA64(image.Rectangle{image.Point{0, 0}, image.Point{1000, 1000}})
 		// Generate the noise image
 		genErr := mockNoise.Generate(myImage)
-		examplejson.SaveExampleJson(mockNoise, widgetType, explanation[i], false)
+		examplejson.SaveExampleJson(mockNoise, WidgetType, explanation[i], false)
 		// Open the image to compare to
 		file, _ := os.Open(compare)
 		// Decode to get the colour values
@@ -72,7 +72,7 @@ func TestWhiteNoise(t *testing.T) {
 		myImage := image.NewNRGBA64(image.Rectangle{image.Point{0, 0}, image.Point{1000, 200}})
 		// Generate the noise image
 		genErr := mockNoise.Generate(myImage)
-		examplejson.SaveExampleJson(mockNoise, widgetType, explanationG[i], true)
+		examplejson.SaveExampleJson(mockNoise, WidgetType, explanationG[i], true)
 		// Open the image to compare to
 		file, _ := os.Open(fmt.Sprintf("./testdata/%s.png", explanationG[i]))
 		// Decode to get the colour values

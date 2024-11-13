@@ -21,7 +21,7 @@ func TestBadFile(t *testing.T) {
 	Ww1Gl.png"`}
 	var badExt [7]error
 	for i := range badNames {
-		baseTPG := openTSG{customSaves: baseSaves()}
+		baseTPG := OpenTSG{customSaves: baseSaves()}
 		badExt[i] = baseTPG.savefile(badNames[i], "", (*image.NRGBA64)(mockCanvas), 16)
 
 		Convey("Checking that incorrect extensions are not sent through", t, func() {
@@ -45,7 +45,7 @@ func TestGoodFile(t *testing.T) {
 		"これは有効なファイル名です.tif", "этодопустимоеимяфайла.PNG", "space file.png", "hello.dpx", "yes.png"}
 
 	// fileD = func() int { return 16 }
-	baseTPG := openTSG{customSaves: baseSaves()}
+	baseTPG := OpenTSG{customSaves: baseSaves()}
 	for _, name := range goodNames {
 		goodExt := baseTPG.savefile(name, "", (*image.NRGBA64)(mockCanvas), 16)
 
@@ -70,7 +70,7 @@ func TestMustachers(t *testing.T) {
 	goodNames := []string{"secrettest{{framenumber}}.pNg", "run{{framenumber}}.png"}
 	framenumbers := []string{"0000", "3452"}
 	expec := []string{"./secrettest0000.pNg", "run3452.png"}
-	baseTPG := openTSG{customSaves: baseSaves()}
+	baseTPG := OpenTSG{customSaves: baseSaves()}
 	// fileD = func() int { return 16 }
 	for i, name := range goodNames {
 

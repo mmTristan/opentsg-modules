@@ -19,20 +19,20 @@ import (
 
 func TestDemo(t *testing.T) {
 	// base example
-	qrDemo := qrcodeJSON{Code: "https://opentsg.studio/"}
-	examplejson.SaveExampleJson(qrDemo, widgetType, "minimum", true)
+	qrDemo := Config{Code: "https://opentsg.studio/"}
+	examplejson.SaveExampleJson(qrDemo, WidgetType, "minimum", true)
 
-	qrDemoMax := qrcodeJSON{Code: "https://opentsg.studio/", Size: &sizeJSON{Width: 100, Height: 100}}
-	examplejson.SaveExampleJson(qrDemoMax, widgetType, "maximum", true)
+	qrDemoMax := Config{Code: "https://opentsg.studio/", Size: &sizeJSON{Width: 100, Height: 100}}
+	examplejson.SaveExampleJson(qrDemoMax, WidgetType, "maximum", true)
 
-	qrDemoMiddle := qrcodeJSON{Code: "https://opentsg.studio/", Size: &sizeJSON{Width: 50, Height: 50}}
+	qrDemoMiddle := Config{Code: "https://opentsg.studio/", Size: &sizeJSON{Width: 50, Height: 50}}
 	qrDemoMiddle.Offset = parameters.Offset{Offset: parameters.XYOffset{X: 50, Y: 50}}
-	examplejson.SaveExampleJson(qrDemoMiddle, widgetType, "middlepic", true)
+	examplejson.SaveExampleJson(qrDemoMiddle, WidgetType, "middlepic", true)
 }
 
 func TestQrGen(t *testing.T) {
 	// Run this so the qr code is not placed, placed in the middle and bottom right
-	var qrmock qrcodeJSON
+	var qrmock Config
 
 	numberToCheck := [][]float64{{0, 0}, {50, 50}, {97.1, 97.1}}
 	fileCheck := []string{"./testdata/topleft.png", "./testdata/middle.png", "./testdata/bottomright.png"}
@@ -59,7 +59,7 @@ func TestQrGen(t *testing.T) {
 		// Assign the colour to the correct type of image NGRBA64 and replace the colour values
 		c := context.Background()
 		genErr := qrmock.Generate(readImage, &c)
-		examplejson.SaveExampleJson(qrmock, widgetType, explanation[i], false)
+		examplejson.SaveExampleJson(qrmock, WidgetType, explanation[i], false)
 		// Make a hash of the pixels of each image
 		hnormal := sha256.New()
 		htest := sha256.New()
@@ -84,7 +84,7 @@ func TestQrGen(t *testing.T) {
 	base := image.NewNRGBA64(image.Rect(0, 0, 1000, 1000))
 	c := context.Background()
 	genErr := qrmock.Generate(base, &c)
-	examplejson.SaveExampleJson(qrmock, widgetType, "full", false)
+	examplejson.SaveExampleJson(qrmock, WidgetType, "full", false)
 
 	file, _ := os.Open("./testdata/full.png")
 	baseVals, _ := png.Decode(file)
@@ -107,7 +107,7 @@ func TestQrGen(t *testing.T) {
 }
 
 func TestErr(t *testing.T) {
-	var qrmock qrcodeJSON
+	var qrmock Config
 
 	// Run this so the qr code is not placed, placed in the middle and bottom right
 	numberToCheck := [][]float64{{100, 0}, {98, 100}, {0, 100}, {40, 80}, {0, 0}, {0, 0}}
@@ -150,7 +150,7 @@ func TestErr(t *testing.T) {
 
 func TestQrResize(t *testing.T) {
 	// Run this so the qr code is not placed, placed in the middle and bottom right
-	var qrmock qrcodeJSON
+	var qrmock Config
 
 	numberToCheck := [][]float64{{58, 58}, {100, 100}, {75, 75}}
 	// FileCheck := []string{"./testdata/topleftr.png", "./testdata/middler.png", "./testdata/bottomrightr.png"}

@@ -166,7 +166,7 @@ func (s Config) Handle(resp tsg.Response, req *tsg.Request) {
 		fillColour := colours[cname]
 		if fillColour == nil {
 			// Blow the doors of etc
-			resp.Write(400, fmt.Sprintf("The colour %v is not an available colour", cname))
+			resp.Write(tsg.WidgetError, fmt.Sprintf("The colour %v is not an available colour", cname))
 			return
 		}
 		// Draw the narrow box
@@ -190,5 +190,5 @@ func (s Config) Handle(resp tsg.Response, req *tsg.Request) {
 		height += hOff
 	}
 
-	resp.Write(200, "success")
+	resp.Write(tsg.WidgetSuccess, "success")
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
 	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
 
 	"github.com/nfnt/resize"
@@ -28,7 +29,7 @@ import (
 )
 
 const (
-	widgetType = "builtin.addimage"
+	WidgetType = "builtin.addimage"
 )
 
 // ImageGen opens an image and places it at the user specife grid location,
@@ -36,11 +37,103 @@ const (
 // Only 8/16 bit PNG and TIFF files are valid file to be uploaded.
 func ImageGen(canvasChan chan draw.Image, debug bool, c *context.Context, wg, wgc *sync.WaitGroup, logs *errhandle.Logger) {
 	defer wg.Done()
-	conf := widgethandler.GenConf[addimageJSON]{Debug: debug, Schema: schemaInit, WidgetType: widgetType, ExtraOpt: []any{c}}
+	conf := widgethandler.GenConf[Config]{Debug: debug, Schema: Schema, WidgetType: WidgetType, ExtraOpt: []any{c}}
 	widgethandler.WidgetRunner(canvasChan, conf, c, logs, wgc)
 }
 
-func (i addimageJSON) Generate(canvas draw.Image, opts ...any) error {
+func (c Config) Handle(resp tsg.Response, req *tsg.Request) {
+	filename := c.Image
+	if filename == "" {
+		resp.Write(tsg.WidgetError, fmt.Sprintf("0161 No image declared"))
+		return
+	}
+
+	wDir := req.FrameProperties.WorkingDir
+	// Just check if it's a website first
+	webBytes, errOpen := req.SearchWithCredentials(filename)
+	var newImage image.Image
+	var err error
+	var depth int
+	// Open a local file next if not
+	if errOpen != nil {
+
+		file, errOpen := os.Open(filepath.Join(wDir, filename))
+		if errOpen != nil {
+			resp.Write(tsg.WidgetError, errOpen.Error())
+			return
+		}
+		newImage, depth, err = fToImg(file, file.Name())
+	} else {
+		bufRead := bytes.NewReader(webBytes)
+		name := strings.Split(filename, "/")
+		newImage, depth, err = fToImg(bufRead, name[len(name)-1])
+	}
+
+	if err != nil {
+		resp.Write(tsg.WidgetError, err.Error())
+		return
+	}
+
+	var extraX, extraY int
+	// stretch the image if required
+	if c.ImgFill != "preserve" {
+
+		// Get wh and resize if needed if wh>xy throw an exception
+		// w, h := canvas.Bounds().Max.X, canvas.Bounds().Max.Y // ImgSize()
+
+		// if image fill is not called then move it around.
+
+		// Replace with our own brand eventually that is true 64 bit
+		// Make it 64 but it needs a proper method to change it
+		w, h := resizeParams(c.ImgFill, newImage.Bounds().Max, resp.BaseImage().Bounds().Max)
+
+		if w != newImage.Bounds().Max.X || h != newImage.Bounds().Max.Y {
+			newImage = resize.Resize(uint(w), uint(h), newImage, resize.Bicubic)
+			// https://pkg.go.dev/golang.org/x/image/draw#pkg-variables use a different resize
+		}
+	} else {
+		// get centre
+
+		extraX = (resp.BaseImage().Bounds().Dx() - newImage.Bounds().Dx()) / 2
+		extraY = (resp.BaseImage().Bounds().Dy() - newImage.Bounds().Dy()) / 2
+	}
+	// newImg64 := gridgen.ImageGenerator(*c, image.Rect(0, 0, newImage.Bounds().Max.X, newImage.Bounds().Max.Y))
+	if c.ColourSpace == nil {
+		c.ColourSpace = &colour.ColorSpace{}
+	}
+
+	newImg64 := colour.NewNRGBA64(req.PatchProperties.ColourSpace, newImage.Bounds())
+
+	imgOffset, err := c.CalcOffset(resp.BaseImage().Bounds().Max)
+	imgOffset = imgOffset.Add(image.Point{X: extraX, Y: extraY})
+
+	// imgOffset = imgOffset.Add()
+	if err != nil {
+		resp.Write(tsg.WidgetError, fmt.Sprintf("0DEV error extracting the image offset %v", err))
+	}
+
+	if depth == 8 {
+		b := newImg64.Bounds().Max
+		for x := 0; x < b.X; x++ {
+			for y := 0; y < b.Y; y++ {
+				got := newImage.At(x, y)
+
+				// fullDepth := colourgen.ConvertNRGBA64(got)
+
+				newImg64.Set(x, y, got) // fullDepth)
+
+			}
+		}
+	} else {
+		colour.Draw(newImg64, newImg64.Bounds(), newImage, image.Point{}, draw.Over)
+	}
+
+	// draw.Src ensures the colourspace transformations are kept
+	// as long as the picture has no alpha
+	colour.Draw(resp.BaseImage(), image.Rectangle{Min: resp.BaseImage().Bounds().Min.Add(imgOffset), Max: resp.BaseImage().Bounds().Max}, newImg64, image.Point{}, draw.Src)
+}
+
+func (i Config) Generate(canvas draw.Image, opts ...any) error {
 
 	filename := i.Image
 	if filename == "" {

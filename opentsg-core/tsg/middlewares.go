@@ -76,11 +76,11 @@ func (s *slogger) Write(status StatusCode, message string) {
 // getLogLevel converts the status code into and error level for slog.
 func getLogLevel(status StatusCode) slog.Level {
 	switch status {
-	case WidgetSuccess, 200:
+	case WidgetSuccess, 200, Profiler:
 		return slog.LevelDebug
 	case FrameSuccess:
 		return slog.LevelInfo
-	case 600, WidgetNotFound:
+	case WidgetNotFound, WidgetWarning:
 		return slog.LevelWarn
 	case 400, 500, EncoderNotFound:
 		return slog.LevelError

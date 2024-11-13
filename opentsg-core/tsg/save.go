@@ -30,7 +30,7 @@ type EncodeOptions struct {
 
 // HandleFunc registers the handler function for the given pattern in [DefaultServeMux].
 // The documentation for [ServeMux] explains how patterns are matched.
-func (o openTSG) EncoderFunc(extension string, encoder Encoder) {
+func (o OpenTSG) EncoderFunc(extension string, encoder Encoder) {
 	// set up router here
 	extension = strings.ToUpper(extension)
 	if _, ok := o.encoders[extension]; ok {
@@ -46,7 +46,7 @@ func (o openTSG) EncoderFunc(extension string, encoder Encoder) {
 
 // CanvasSave saves the file according to the extensions provided
 // the name add is for debug to allow to identify images
-func (tpg *openTSG) canvasSave(canvas draw.Image, filename []string, bitdeph int, mnt, framenumber string, debug bool, logs *errhandle.Logger) {
+func (tpg *OpenTSG) canvasSave(canvas draw.Image, filename []string, bitdeph int, mnt, framenumber string, debug bool, logs *errhandle.Logger) {
 	for _, name := range filename {
 		truepath, err := filepath.Abs(filepath.Join(mnt, name))
 		if err != nil {
@@ -82,7 +82,7 @@ func baseSaves() map[string]func(io.Writer, draw.Image, int) error {
 	"CSV": WriteCSVFile,
 } */
 
-func (tpg *openTSG) savefile(filename, framenumber string, base draw.Image, bitdepth int) error {
+func (tpg *OpenTSG) savefile(filename, framenumber string, base draw.Image, bitdepth int) error {
 	// regTIFF := regexp.MustCompile(`^[\w\W]{1,255}\.[tT][iI][fF]{1,2}$`)
 	// regPNG := regexp.MustCompile(`^[\w\W]{1,255}\.[pP][nN][gG]$`)
 	// regCSV := regexp.MustCompile(`^[\w\W]{1,255}\.[cC][sS][Vv]$`)
@@ -300,7 +300,7 @@ Add base encoders adds the following file encoders to an OpenTSG object:
 - exr
 - tiff (as tiff and tif)
 */
-func AddBaseEncoders(tsg *openTSG) {
+func AddBaseEncoders(tsg *OpenTSG) {
 
 	tsg.EncoderFunc("dpx", EncodeDPXFile)
 	tsg.EncoderFunc("csv", EncodeCSVFile)
@@ -311,7 +311,7 @@ func AddBaseEncoders(tsg *openTSG) {
 
 }
 
-func (tsg *openTSG) encodeFrame(filename string, base draw.Image, bitdepth int) error {
+func (tsg *OpenTSG) encodeFrame(filename string, base draw.Image, bitdepth int) error {
 
 	extensions := strings.Split(filename, ".")
 	ext := extensions[len(extensions)-1]

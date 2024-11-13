@@ -14,34 +14,123 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/text"
 )
 
 const (
-	widgetType = "builtin.frameCounter"
+	WidgetType = "builtin.frameCounter"
 )
 
 func CountGen(canvasChan chan draw.Image, debug bool, c *context.Context, wg, wgc *sync.WaitGroup, logs *errhandle.Logger) {
 	defer wg.Done()
 	opts := []any{c}
-	conf := widgethandler.GenConf[frameJSON]{Debug: debug, Schema: frameSchema, WidgetType: widgetType, ExtraOpt: opts}
+	conf := widgethandler.GenConf[Config]{Debug: debug, Schema: Schema, WidgetType: WidgetType, ExtraOpt: opts}
 	widgethandler.WidgetRunner(canvasChan, conf, c, logs, wgc) // Update this to pass an error which is then formatted afterwards
+}
+
+// Handler has some updates over previous versions
+// it now runs regardless of FrameCounter, if you are calling it you want a frame counter
+func (c Config) Handle(resp tsg.Response, req *tsg.Request) {
+	b := resp.BaseImage().Bounds().Max
+
+	if c.Font == "" {
+		c.Font = text.FontPixel
+	}
+
+	// stop errors happening when font is not declared
+	if c.FontSize == 0 {
+		c.FontSize = 100
+	}
+
+	// Size of the text in pixels to font
+	c.FontSize = (float64(b.Y) * (c.FontSize / 100)) // keep as pixels
+
+	if b.Y > b.X {
+		c.FontSize *= (float64(b.X) / float64(b.Y)) // Scale the font size for narrow grids
+	}
+
+	if c.FontSize < 7 {
+		resp.Write(tsg.WidgetError, fmt.Sprintf("0DDEV The font size %v pixels is smaller thant the minimum value of 7 pixels", c.FontSize))
+		return
+	}
+
+	square := image.Point{int(c.FontSize), int(c.FontSize)}
+
+	frame := req.GenerateSubImage(resp.BaseImage(), image.Rect(0, 0, square.X, square.Y))
+
+	defaultBackground := colour.CNRGBA64{R: uint16(195) << 8, G: uint16(195) << 8, B: uint16(195) << 8, A: uint16(195) << 8, ColorSpace: c.ColourSpace}
+	defaulText := colour.CNRGBA64{A: 65535, ColorSpace: c.ColourSpace}
+
+	txtBox := text.NewTextboxer(c.ColourSpace,
+		text.WithFill(text.FillTypeFull),
+		text.WithFont(c.Font),
+		text.WithBackgroundColour(&defaultBackground),
+		text.WithTextColour(&defaulText),
+	)
+
+	// update the colours if required
+	if c.BackColour != "" {
+		text.WithBackgroundColourString(c.BackColour)(txtBox)
+	}
+
+	if c.TextColour != "" {
+		text.WithTextColourString(c.TextColour)(txtBox)
+	}
+	// MyFont.Advance
+	mes, err := intTo4(req.FrameProperties.FrameNumber)
+	if err != nil {
+		resp.Write(tsg.WidgetError, err.Error())
+		return
+	}
+
+	err = txtBox.DrawStringsHandler(frame, req, []string{mes})
+	if err != nil {
+		resp.Write(tsg.WidgetError, err.Error())
+		return
+	}
+
+	fb := frame.Bounds().Max
+	// If pos not given then draw it here
+
+	var x, y int
+	switch imgpos := c.Imgpos.(type) {
+	case map[string]interface{}:
+		x, y = userPos(imgpos, b, fb)
+	default:
+		x, y = 0, 0
+
+	}
+
+	if x > (b.X - fb.X) {
+		resp.Write(tsg.WidgetError, fmt.Sprintf("_0153 the x position %v is greater than the x boundary of %v with frame width of %v", x, resp.BaseImage().Bounds().Max.X, fb.X))
+		return
+	} else if y > b.Y-fb.Y {
+		resp.Write(tsg.WidgetError, fmt.Sprintf("_0153 the y position %v is greater than the y boundary of %v with frame height of %v", y, resp.BaseImage().Bounds().Max.Y, fb.Y))
+		return
+	}
+
+	// Corner := image.Point{-1 * (canvas.Bounds().Max.X - height - 1), -1 * (canvas.Bounds().Max.Y - height - 1)}
+	colour.Draw(resp.BaseImage(), image.Rect(x, y, x+int(c.FontSize), y+int(c.FontSize)), frame, image.Point{}, draw.Over)
+
+	resp.Write(tsg.WidgetSuccess, "success")
+
 }
 
 var pos = framePos
 
-func (f frameJSON) Helper(key string, c *context.Context) {
+func (f Config) Helper(key string, c *context.Context) {
 	// Update the frame number add amend context with it
 	f.FrameNumber = pos()
-	fc := make(map[string]frameJSON)
+	fc := make(map[string]Config)
 	fc[key] = f
 
 	// Widgethandler.Put(fc, c)
 
 }
 
-func (f frameJSON) Generate(canvas draw.Image, extraOpts ...any) error {
+func (f Config) Generate(canvas draw.Image, extraOpts ...any) error {
 
 	b := canvas.Bounds().Max
 	if !f.getFrames() {

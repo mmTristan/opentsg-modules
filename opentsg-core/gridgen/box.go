@@ -10,7 +10,7 @@ import (
 )
 
 type Box interface {
-	generateBox(c *context.Context) (draw.Image, image.Point, draw.Image, error)
+	GenerateBox(c *context.Context) (canvas draw.Image, loc image.Point, mask draw.Image, err error)
 }
 
 /*
@@ -29,21 +29,24 @@ design ideas
 
     "box": {
         "alias": " noiseBox",
-        "bounds": {"x":200, "y":1700, "w":3640, "h":1900}
+        "bounds": {"x":R1, "y":C100, "w":B, "h":3}
     },
+
+	grid coordinates are the default unit of what is used
+	explicit coordinate is relative card
 
     "box": {
         "alias": " noiseBox2",
-        "bounds": {"x":200, "y":1700, "x2":8000, "y2":4000}
+        "bounds": {"x":5%, "y":20%, "x2":34%, "y2":40%}
     },
 
 
 	"box": {
         "alias": " noiseBox2",
-        "coordinates": {"x":"200px", "y":1700, "x2":8000, "y2":4000}
+        "coordinates": {"x":"200px", "y":1700px, "x2":8000px, "y2":4000px}
     },
 
-	{"x":200, "y":1700, "w":3640, "h":1900} implicitly a top-left pinned box because it has 4 properties x, y, w, h
+{"x":200px, "y":1700px, "w":3640px, "h":1900px} implicitly a top-left pinned box because it has 4 properties x, y, w, h
 {"x":200, "y":1700, "x2":3640, "y2":1900} implicitly a corner pinned box because it has 4 properties x, y, x2, y2
 {"cx":200, "cy":1700, "x2":3640, "y2":1900} do the
 
@@ -81,35 +84,42 @@ as fetures will deffo be missing
 
 */
 type bounds struct {
+	// use a predeclared alias
+	// alias must be declared before
 	useAlias string
 
 	// top left coordinates
 	// actually any
 	x, y any
-
+	// bottom right
+	// if not used then the grid is 1 square
 	x2, y2 any
 
 	// width height
 	// can they be A or 1 etc. just mix it up
-	w, h any
-	// impement stuff like this
-	// calc(100% - 100px)
+	w, h any // width: 200px; height: 150px;
 
 	// centre values
-	// or would they be float for half sizes etc
-	cx, cy any
+	// width
+	XAlignment, YAlignment string // default top left but let them choose
 	// or masks like this. Leave masks out for the moment?
 	//  mask-image: radial-gradient(circle, black 50%, rgba(0, 0, 0, 0.5) 50%);
 
-	// how many x values to include for corners etc
-
 	// circle properties
-	// can then get the area around?
+	// border radius - what css uses
+	// https://prykhodko.medium.com/css-border-radius-how-does-it-work-bfdf23792ac2
+	// taps out at 50% - keep it the simple version to start
 	radius int
-
-	// for the mask generation
-	offsets any
 }
+
+/*
+
+no shapes apart from square with rounded edges
+
+cx,cy? are these needed when you can still set squares
+keep
+
+*/
 
 // https://www.w3schools.com/css/css_boxmodel.asp
 func (b bounds) generateBox(c *context.Context) (draw.Image, image.Point, draw.Image, error) {
@@ -135,7 +145,7 @@ func (b bounds) generateBox(c *context.Context) (draw.Image, image.Point, draw.I
 			return nil, image.Point{}, nil, fmt.Errorf(invalidAlias, b.useAlias)
 		}
 	case b.x != nil || b.y != nil:
-	case b.cx != nil || b.cy != nil:
+
 	default:
 		// return no coordinate postion used
 	}
@@ -157,6 +167,13 @@ func (b bounds) generateBox(c *context.Context) (draw.Image, image.Point, draw.I
 	// returns the mask, coordinate and base image and error
 	return nil, image.Point{}, nil, nil
 }
+
+/*
+
+pixel, string, percentage or grid for xy
+pixel string percentage for height and width
+
+*/
 
 /*
 func anyToLength(coordinate any) int {

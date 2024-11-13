@@ -20,15 +20,15 @@ import (
 
 func TestDemo(t *testing.T) {
 	// base example
-	frameDemo := frameJSON{FrameCounter: true}
-	examplejson.SaveExampleJson(frameDemo, widgetType, "minimum", true)
+	frameDemo := Config{FrameCounter: true}
+	examplejson.SaveExampleJson(frameDemo, WidgetType, "minimum", true)
 
-	frameDemoMax := frameJSON{FrameCounter: true, TextColour: "#C2A649", BackColour: "#91B645", Font: text.FontTitle, FontSize: 25,
+	frameDemoMax := Config{FrameCounter: true, TextColour: "#C2A649", BackColour: "#91B645", Font: text.FontTitle, FontSize: 25,
 		Imgpos: topLeft}
-	examplejson.SaveExampleJson(frameDemoMax, widgetType, "maximum", true)
+	examplejson.SaveExampleJson(frameDemoMax, WidgetType, "maximum", true)
 
-	frameDemoStyle := frameJSON{FrameCounter: true, TextColour: "rgb(154,58,115)", BackColour: "rgb12(816,816,816)", Font: text.FontBody}
-	examplejson.SaveExampleJson(frameDemoStyle, widgetType, "styleChange", true)
+	frameDemoStyle := Config{FrameCounter: true, TextColour: "rgb(154,58,115)", BackColour: "rgb12(816,816,816)", Font: text.FontBody}
+	examplejson.SaveExampleJson(frameDemoStyle, WidgetType, "styleChange", true)
 
 }
 
@@ -43,7 +43,7 @@ func TestStringGen(t *testing.T) {
 		numberToCheck := []int{0, 12, 134, 5666}
 		expecResult := []string{"0000", "0012", "0134", "5666"}
 		explanation := []string{"0000", "0012", "0134", "5666"}
-		yesFrame := frameJSON{FrameCounter: true, FontSize: 100}
+		yesFrame := Config{FrameCounter: true, FontSize: 100}
 		//	yesFrame.FrameCounter = true
 
 		for i := range numberToCheck {
@@ -53,7 +53,7 @@ func TestStringGen(t *testing.T) {
 			myImage := image.NewNRGBA64(image.Rectangle{image.Point{0, 0}, image.Point{33, 33}})
 			genErr := yesFrame.Generate(myImage, &c)
 
-			examplejson.SaveExampleJson(yesFrame, widgetType, explanation[i], false)
+			examplejson.SaveExampleJson(yesFrame, WidgetType, explanation[i], false)
 
 			// f, _ := os.Create("./testdata/framecount" + expecResult[i] + ".png")
 			// png.Encode(f, myImage)
@@ -99,7 +99,7 @@ func TestFonts(t *testing.T) {
 	// Keep this in the background unti it runs
 	if bi.GoVersion[:6] != "go1.18" {
 		pos = func() int { return 567 }
-		var mockFrame frameJSON
+		var mockFrame Config
 		mockFrame.FrameCounter = true
 		fontType := []string{"header", "", "./testdata/Timmy-Regular.ttf", "title"}
 		explanation := []string{"header", "default", "imported", "title"}
@@ -111,7 +111,7 @@ func TestFonts(t *testing.T) {
 			myImage := image.NewNRGBA64(image.Rectangle{image.Point{0, 0}, image.Point{100, 100}})
 			genErr := mockFrame.Generate(myImage, &c)
 
-			examplejson.SaveExampleJson(mockFrame, widgetType, explanation[i], false)
+			examplejson.SaveExampleJson(mockFrame, WidgetType, explanation[i], false)
 			// Save these images when we can test for them
 			//	f, _ := os.Create("./testdata/framecount" + fmt.Sprintf("%v", i) + "2.png")
 			//	png.Encode(f, myImage)
@@ -134,7 +134,7 @@ func TestErrors(t *testing.T) {
 	numberToCheck := []int{99999}
 	expecResult := []string{"frame Count greater then 9999"}
 
-	var yesFrame frameJSON
+	var yesFrame Config
 	yesFrame.FrameCounter = true
 	yesFrame.FontSize = 90
 
@@ -190,7 +190,7 @@ func TestInterpret(t *testing.T) {
 
 	for i, testbody := range differentPos {
 		body := []byte(testbody)
-		var f frameJSON
+		var f Config
 		json.Unmarshal(body, &f)
 		//	fmt.Println(f.Imgpos)
 		x, y := userPos(f.Imgpos.(map[string]interface{}), image.Point{100, 100}, image.Point{10, 10})

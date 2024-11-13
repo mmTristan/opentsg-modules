@@ -15,17 +15,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/addimage"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/bowtie"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/fourcolour"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/framecount"
-	geometrytext "github.com/mrmxf/opentsg-modules/opentsg-widgets/geometryText"
-	ramps "github.com/mrmxf/opentsg-modules/opentsg-widgets/gradients"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/noise"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/qrgen"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/resize"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/textbox"
-	"github.com/mrmxf/opentsg-modules/opentsg-widgets/zoneplate"
 	"gopkg.in/yaml.v3"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/canvaswidget"
@@ -40,9 +29,9 @@ type syncmap struct {
 	data   map[string]any
 }
 
-type openTSG struct {
-	internal  context.Context
-	framcount int
+type OpenTSG struct {
+	internal   context.Context
+	framecount int
 	// to be trimmed
 	customWidgets []func(chan draw.Image, bool, *context.Context, *sync.WaitGroup, *sync.WaitGroup, *errhandle.Logger)
 	customSaves   map[string]func(io.Writer, draw.Image, int) error
@@ -72,7 +61,7 @@ type hand struct {
 
 // BuildOpenTSG creates the OpenTSG engine.
 // It is configured by an input json file and any profile set up information.
-func BuildOpenTSG(inputFile string, profile string, debug bool, runnerConf *RunnerConfiguration, httpsKeys ...string) (*openTSG, error) {
+func BuildOpenTSG(inputFile string, profile string, debug bool, runnerConf *RunnerConfiguration, httpsKeys ...string) (*OpenTSG, error) {
 	cont, framenumber, configErr := core.FileImport(inputFile, profile, debug, httpsKeys...)
 
 	if configErr != nil {
@@ -89,7 +78,7 @@ func BuildOpenTSG(inputFile string, profile string, debug bool, runnerConf *Runn
 		runnerConf.RunnerCount = 1
 	}
 
-	opentsg := &openTSG{internal: cont, framcount: framenumber,
+	opentsg := &OpenTSG{internal: cont, framecount: framenumber,
 		customWidgets: baseWidgets(),
 		handlers:      map[string]hand{},
 		encoders:      map[string]Encoder{},
@@ -123,7 +112,7 @@ and then would be  to the tsg object like this
 
 	tpg.AddCustomSaves([]tsg.NameSave{{Extension: "JPEG", SaveFunction: WriteJPEGFile}
 */
-func (tsg *openTSG) AddCustomSaves(customSaves []NameSave) {
+func (tsg *OpenTSG) AddCustomSaves(customSaves []NameSave) {
 	// need name and save function
 	// TODO:emit warnings
 
@@ -135,17 +124,17 @@ func (tsg *openTSG) AddCustomSaves(customSaves []NameSave) {
 
 // Add CustomWidgets allows for custom widget functions to be run from opentsg. Without going into the internals of the opentsg and changing things up.
 // To understand the design of the widgets function, please check the layout of the widget module.
-func (tsg *openTSG) AddCustomWidgets(widgets ...func(chan draw.Image, bool, *context.Context, *sync.WaitGroup, *sync.WaitGroup, *errhandle.Logger)) {
+func (tsg *OpenTSG) AddCustomWidgets(widgets ...func(chan draw.Image, bool, *context.Context, *sync.WaitGroup, *sync.WaitGroup, *errhandle.Logger)) {
 	tsg.customWidgets = append(tsg.customWidgets, widgets...)
 }
 
 // Draw generates the images for each array section of the json array and applies it to the test card grid.
-func (tsg *openTSG) Draw(debug bool, mnt, logType string) {
-	imageNo := tsg.framcount
+func (tsg *OpenTSG) Draw(debug bool, mnt, logType string) {
+	imageNo := tsg.framecount
 
 	// wait for every frame to run before exiting the lopp
 	var wg sync.WaitGroup
-	wg.Add(tsg.framcount)
+	wg.Add(tsg.framecount)
 
 	logs := make(chan *errhandle.Logger, imageNo)
 
@@ -260,20 +249,11 @@ func (tsg *openTSG) Draw(debug bool, mnt, logType string) {
 }
 
 func baseWidgets() []func(chan draw.Image, bool, *context.Context, *sync.WaitGroup, *sync.WaitGroup, *errhandle.Logger) {
-	return []func(chan draw.Image, bool, *context.Context, *sync.WaitGroup, *sync.WaitGroup, *errhandle.Logger){
-		ramps.RampGenerate, zoneplate.ZoneGen, noise.NGenerator, widgethandler.MockCanvasGen,
-		addimage.ImageGen, textbox.TBGenerate, //  bars.BarGen, saturation.SatGen,
-		framecount.CountGen, qrgen.QrGen, //  twosi.SIGenerate, nearblack.NBGenerate,luma.Generate,
-		fourcolour.FourColourGenerator, geometrytext.LabelGenerator,
-		bowtie.SwirlGen, resize.Gen,
-		// This one should be placed last as it is checking for missed names,
-		// however order doesn't matter for concurrent functions with the wait groups.
-		widgethandler.MockMissedGen,
-	}
+	return []func(chan draw.Image, bool, *context.Context, *sync.WaitGroup, *sync.WaitGroup, *errhandle.Logger){}
 }
 
 // each image is added to the base image
-func (tsg *openTSG) widgetGen(c *context.Context, debug bool, canvas draw.Image, logs *errhandle.Logger) {
+func (tsg *OpenTSG) widgetGen(c *context.Context, debug bool, canvas draw.Image, logs *errhandle.Logger) {
 
 	// gridgen.ParamToCanvas can be changed depending on the coordinate system
 	canvasChan := make(chan draw.Image, 1)

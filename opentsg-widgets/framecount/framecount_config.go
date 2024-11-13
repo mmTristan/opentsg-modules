@@ -7,7 +7,7 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
 )
 
-type frameJSON struct {
+type Config struct {
 	//	Type         string            `json:"type" yaml:"type"`
 	FrameCounter      bool        `json:"frameCounter,omitempty" yaml:"frameCounter,omitempty"`
 	Imgpos            interface{} `json:"gridPosition" yaml:"gridPosition"`
@@ -27,9 +27,9 @@ type frameJSON struct {
 var framecount = -1
 
 //go:embed jsonschema/framecounter.json
-var frameSchema []byte
+var Schema []byte
 
-func (f *frameJSON) getFrames() bool {
+func (f *Config) getFrames() bool {
 	if f.FrameCounter {
 		framecount++
 	}

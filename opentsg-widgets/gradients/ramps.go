@@ -12,6 +12,7 @@ import (
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
 )
 
@@ -21,15 +22,108 @@ const (
 	rotate270  = "rotate270"
 	noRotation = "xy"
 
-	widgetType = "builtin.gradients"
+	WidgetType = "builtin.gradients"
 )
 
 // TextBoxGen generates text boxes on a given image based on config values
 func RampGenerate(canvasChan chan draw.Image, debug bool, c *context.Context, wg, wgc *sync.WaitGroup, logs *errhandle.Logger) {
 	defer wg.Done()
 
-	conf := widgethandler.GenConf[Ramp]{Debug: debug, Schema: textBoxSchema, WidgetType: widgetType}
+	conf := widgethandler.GenConf[Ramp]{Debug: debug, Schema: Schema, WidgetType: WidgetType}
 	widgethandler.WidgetRunner(canvasChan, conf, c, logs, wgc) // Update this to pass an error which is then formatted afterwards
+}
+
+func (r Ramp) Handle(resp tsg.Response, req *tsg.Request) {
+	// calculate the whole height of each one
+	// holderc := context.Background()
+
+	rotation, err := setBase(&r.WidgetProperties, resp.BaseImage().Bounds().Max)
+
+	if err != nil {
+
+		resp.Write(tsg.WidgetError, err.Error())
+		return
+	}
+
+	// validate the control here
+	//	input.StripeGroup.InterStripe.base = input.WidgetProperties
+
+	totalHeight := r.Gradients.GroupSeparator.Height + ((len(r.Gradients.Gradients) - 1) * r.Gradients.GradientSeparator.Height)
+	for _, r := range r.Gradients.Gradients {
+		totalHeight += r.Height
+	}
+
+	totalHeight *= len(r.Groups)
+	rowHeight := r.WidgetProperties.rowDimension(resp.BaseImage().Bounds())
+
+	groupStep := float64(rowHeight) / float64(totalHeight)
+
+	position := 0.0
+	// posPoint := image.Point{}
+	for _, str := range r.Groups {
+
+		if r.Gradients.GroupSeparator.Height != 0 {
+
+			rowHeight := r.Gradients.GroupSeparator.Height
+			// draw the header
+			end := int(position + groupStep*float64(rowHeight))
+			rowCut := r.WidgetProperties.rowOrColumn(resp.BaseImage().Bounds(), end, position)
+			row := colour.NewNRGBA64(req.PatchProperties.ColourSpace, rowCut)
+			//	row := image.NewNRGBA64(rowCut)
+			posPoint := r.WidgetProperties.positionPoint(resp.BaseImage().Bounds().Max, end-int(position), int(position))
+			drawSegment(resp.BaseImage(), row, req.PatchProperties.ColourSpace, posPoint, r.Gradients.GroupSeparator)
+
+			position += groupStep * float64(rowHeight)
+
+		}
+
+		for i, ramp := range r.Gradients.Gradients {
+
+			end := int(position + groupStep*float64(ramp.Height))
+			rowCut := r.WidgetProperties.rowOrColumn(resp.BaseImage().Bounds(), end, position)
+			rrow := colour.NewNRGBA64(req.PatchProperties.ColourSpace, rowCut)
+			// rrow := image.NewNRGBA64(rowCut)
+
+			ramp.colour = str.Colour
+			ramp.startPoint = str.InitialPixelValue
+			ramp.reverse = str.Reverse
+
+			ramp.base = r.WidgetProperties
+			posPoint := r.WidgetProperties.positionPoint(resp.BaseImage().Bounds().Max, end-int(position), int(position))
+			drawSegment(resp.BaseImage(), rrow, req.PatchProperties.ColourSpace, posPoint, ramp)
+
+			position += groupStep * float64(ramp.Height)
+			//	posPoint = r.base.positionPoint(target.Bounds().Max, int(position))
+			if i+1 < len(r.Gradients.Gradients) {
+				interHeight := r.Gradients.GradientSeparator.Height
+				// accounts for jumps in floats and ints
+				end := int(position + groupStep*float64(interHeight))
+
+				rowCut := r.WidgetProperties.rowOrColumn(resp.BaseImage().Bounds(), end, position)
+				irow := colour.NewNRGBA64(req.PatchProperties.ColourSpace, rowCut)
+				// irow := image.NewNRGBA64(rowCut)
+				altCopy := r.Gradients.GradientSeparator
+				altCopy.base = r.WidgetProperties
+				altCopy.step = r.Gradients.Gradients[i+1].BitDepth
+				posPoint := r.WidgetProperties.positionPoint(resp.BaseImage().Bounds().Max, end-int(position), int(position))
+				drawSegment(resp.BaseImage(), irow, req.PatchProperties.ColourSpace, posPoint, altCopy)
+
+				position += groupStep * float64(interHeight)
+				//	posPoint = input.base.positionPoint(target.Bounds().Max, int(position))
+				// calculate segments here
+			}
+
+		}
+
+	}
+
+	// rotate if required
+	// this is not pixel accurate
+	if rotation != 0 {
+		rotate(resp.BaseImage(), rotation)
+	}
+
+	resp.Write(tsg.WidgetSuccess, "success")
 }
 
 // Generate runs the ramps widget.

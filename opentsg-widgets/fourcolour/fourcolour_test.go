@@ -27,9 +27,9 @@ func TestFillMethod(t *testing.T) {
 		return mg, nil
 	}
 	// mockG := config.Grid{Location: "Nothing"}
-	mockJson4 := fourJSON{Colourpallette: []string{"#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF"}}
-	mockJson5 := fourJSON{Colourpallette: []string{"#FF0000", "#00FF00", "#0000FF", "#FFFF00"}}
-	mockJsons := []fourJSON{mockJson4, mockJson5}
+	mockJson4 := Config{Colourpallette: []string{"#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF"}}
+	mockJson5 := Config{Colourpallette: []string{"#FF0000", "#00FF00", "#0000FF", "#FFFF00"}}
+	mockJsons := []Config{mockJson4, mockJson5}
 
 	explanation := []string{"fiveColour", "fourColour"}
 
@@ -40,7 +40,7 @@ func TestFillMethod(t *testing.T) {
 		c := context.Background()
 		genErr := mj.Generate(canvas, &c)
 
-		examplejson.SaveExampleJson(mj, widgetType, explanation[i], false)
+		examplejson.SaveExampleJson(mj, WidgetType, explanation[i], false)
 
 		f, _ := os.Open("./testdata/generatecheck" + fmt.Sprint(len(mj.Colourpallette)) + ".png")
 		baseVals, _ := png.Decode(f)
@@ -77,7 +77,7 @@ func BenchmarkNRGBA64ACESColour(b *testing.B) {
 	}
 	//	mockG := config.Grid{Location: "Nothing"}
 	// mockJson := fourJSON{GridLoc: &mockG, Colourpallette: []string{"#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF"}}
-	mockJson := fourJSON{Colourpallette: []string{"#FF0000", "#00FF00", "#0000FF", "#FFFF00"}}
+	mockJson := Config{Colourpallette: []string{"#FF0000", "#00FF00", "#0000FF", "#FFFF00"}}
 	canvas := image.NewNRGBA64(image.Rect(0, 0, 1, 1))
 	c := context.Background()
 	// run the Fib function b.N times
@@ -94,7 +94,7 @@ func BenchmarkNRGBA64ACESOTher(b *testing.B) {
 		return mg, nil
 	}
 	//	mockG := config.Grid{Location: "Nothing"}
-	mockJson := fourJSON{Colourpallette: []string{"#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF"}}
+	mockJson := Config{Colourpallette: []string{"#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF"}}
 
 	canvas := image.NewNRGBA64(image.Rect(0, 0, 1, 1))
 	c := context.Background()

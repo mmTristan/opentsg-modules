@@ -13,11 +13,12 @@ import (
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
 )
 
 const (
-	widgetType = "builtin.noise"
+	WidgetType = "builtin.noise"
 )
 
 const (
@@ -27,7 +28,7 @@ const (
 // NGenerator generates images of noise
 func NGenerator(canvasChan chan draw.Image, debug bool, c *context.Context, wg, wgc *sync.WaitGroup, logs *errhandle.Logger) {
 	defer wg.Done()
-	conf := widgethandler.GenConf[noiseJSON]{Debug: debug, Schema: schemaInit, WidgetType: widgetType}
+	conf := widgethandler.GenConf[Config]{Debug: debug, Schema: Schema, WidgetType: WidgetType}
 	widgethandler.WidgetRunner(canvasChan, conf, c, logs, wgc) // Update this to pass an error which is then formatted afterwards
 }
 
@@ -37,7 +38,38 @@ func randSeed() int64 {
 	return time.Now().Unix()
 }
 
-func (n noiseJSON) Generate(canvas draw.Image, opt ...any) error {
+func (c Config) Handle(resp tsg.Response, _ *tsg.Request) {
+
+	// Have a seed variable tht is taken out for testing purposes
+	random := rand.New(rand.NewSource(randnum()))
+
+	var max int
+	if c.Maximum != 0 {
+		max = c.Maximum
+	} else {
+		// Revert to the default
+		max = 4095
+	}
+	min := c.Minimum
+
+	if max < min {
+		resp.Write(tsg.WidgetError, fmt.Sprintf("0141 The minimum noise value %v is greater than the maximum noise value %v", min, max))
+		return
+	}
+
+	if c.NoiseType == whiteNoise { // upgrade to switch statement when more types come in
+		err := c.whitenoise(random, resp.BaseImage(), min, max)
+		if err != nil {
+			resp.Write(tsg.WidgetError, err.Error())
+			return
+		}
+	}
+
+	resp.Write(tsg.WidgetSuccess, "success")
+
+}
+
+func (n Config) Generate(canvas draw.Image, opt ...any) error {
 	// Have a seed variable tht is taken out for testing purposes
 	random := rand.New(rand.NewSource(randnum()))
 
@@ -61,7 +93,7 @@ func (n noiseJSON) Generate(canvas draw.Image, opt ...any) error {
 	return nil
 }
 
-func (n noiseJSON) whitenoise(random *rand.Rand, canvas draw.Image, min, max int) error {
+func (n Config) whitenoise(random *rand.Rand, canvas draw.Image, min, max int) error {
 	b := canvas.Bounds().Max
 
 	yStart := 0

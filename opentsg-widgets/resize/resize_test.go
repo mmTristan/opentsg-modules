@@ -44,7 +44,7 @@ func TestExample(t *testing.T) {
 
 	for i, example := range examples {
 
-		examplejson.SaveExampleJson(example, widgetType, desc[i], true)
+		examplejson.SaveExampleJson(example, WidgetType, desc[i], true)
 	}
 
 }

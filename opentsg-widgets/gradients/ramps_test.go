@@ -18,7 +18,7 @@ import (
 func TestDemo(t *testing.T) {
 	// base example
 	tbDemo := Ramp{}
-	examplejson.SaveExampleJson(tbDemo, widgetType, "minimum", false)
+	examplejson.SaveExampleJson(tbDemo, WidgetType, "minimum", false)
 
 	mockFull := Ramp{Groups: []RampProperties{{Colour: "green", InitialPixelValue: 960, Reverse: true}, {Colour: "gray", InitialPixelValue: 960, Reverse: true}, {Colour: "blue", InitialPixelValue: 0}, {Colour: "red", InitialPixelValue: 0}},
 		Gradients: groupContents{GroupSeparator: groupSeparator{Height: 2, Colour: "white"},
@@ -29,7 +29,7 @@ func TestDemo(t *testing.T) {
 
 	// set the angle later
 	mockFull.WidgetProperties.CwRotation = "π*31/20"
-	examplejson.SaveExampleJson(mockFull, widgetType, "maximum", true)
+	examplejson.SaveExampleJson(mockFull, WidgetType, "maximum", true)
 
 	mockNoGroupDiv := Ramp{Groups: []RampProperties{{Colour: "green"}, {Colour: "blue", InitialPixelValue: 0}, {Colour: "red", InitialPixelValue: 0}},
 		Gradients: groupContents{
@@ -38,7 +38,7 @@ func TestDemo(t *testing.T) {
 		WidgetProperties: control{MaxBitDepth: 10, TextProperties: textObjectJSON{TextHeight: 30, TextColour: "#345AB6",
 			TextXPosition: text.AlignmentLeft, TextYPosition: text.AlignmentTop}, PixelValueRepeat: 1, ObjectFitFill: true}}
 
-	examplejson.SaveExampleJson(mockNoGroupDiv, widgetType, "noGroupSeparator", true)
+	examplejson.SaveExampleJson(mockNoGroupDiv, WidgetType, "noGroupSeparator", true)
 
 	mockNoGradDiv := Ramp{Groups: []RampProperties{{Colour: "green"}, {Colour: "blue", InitialPixelValue: 0}, {Colour: "red", InitialPixelValue: 0}},
 		Gradients: groupContents{
@@ -46,14 +46,14 @@ func TestDemo(t *testing.T) {
 			Gradients:      []Gradient{{Height: 5, BitDepth: 4, Label: "4b"}, {Height: 5, BitDepth: 6, Label: "6b"}, {Height: 5, BitDepth: 8, Label: "8b"}}},
 		WidgetProperties: control{MaxBitDepth: 8, TextProperties: textObjectJSON{TextHeight: 30, TextColour: "#345AB6"}, PixelValueRepeat: 1, ObjectFitFill: false}}
 
-	examplejson.SaveExampleJson(mockNoGradDiv, widgetType, "noGradientSeparator", true)
+	examplejson.SaveExampleJson(mockNoGradDiv, WidgetType, "noGradientSeparator", true)
 
 	mockNoText := Ramp{Groups: []RampProperties{{Colour: "red", InitialPixelValue: 128}, {Colour: "green", InitialPixelValue: 128}, {Colour: "blue", InitialPixelValue: 128}, {Colour: "grey", InitialPixelValue: 128}},
 		Gradients: groupContents{
 			Gradients: []Gradient{{Height: 5, BitDepth: 4}, {Height: 5, BitDepth: 6}, {Height: 5, BitDepth: 8}}},
 		WidgetProperties: control{MaxBitDepth: 8, PixelValueRepeat: 1, ObjectFitFill: false}}
 
-	examplejson.SaveExampleJson(mockNoText, widgetType, "noText", true)
+	examplejson.SaveExampleJson(mockNoText, WidgetType, "noText", true)
 
 }
 
@@ -66,7 +66,7 @@ func TestTemp(t *testing.T) {
 	tester := image.NewNRGBA64(image.Rect(0, 0, 1024, 1000)) // 960))
 	mock.Generate(tester)
 
-	examplejson.SaveExampleJson(mock, widgetType, "demo", false)
+	examplejson.SaveExampleJson(mock, WidgetType, "demo", false)
 
 	f, _ := os.Create("./testdata/tester.png")
 	png.Encode(f, tester)
@@ -90,7 +90,7 @@ func TestRotation(t *testing.T) {
 		mock.WidgetProperties.CwRotation = angle
 
 		angleImage := image.NewNRGBA64(image.Rectangle{image.Point{0, 0}, image.Point{4096, 2000}})
-		examplejson.SaveExampleJson(mock, widgetType, explanationRight[i], false)
+		examplejson.SaveExampleJson(mock, WidgetType, explanationRight[i], false)
 		genErr := mock.Generate(angleImage)
 
 		// Generate the ramp image
@@ -128,7 +128,7 @@ func TestRotation(t *testing.T) {
 	for i, angle := range anglesOffRight {
 		mock.WidgetProperties.CwRotation = angle
 		angleImage := image.NewNRGBA64(image.Rectangle{image.Point{0, 0}, image.Point{4096, 2000}})
-		examplejson.SaveExampleJson(mock, widgetType, explanation[i], false)
+		examplejson.SaveExampleJson(mock, WidgetType, explanation[i], false)
 		// Generate the ramp image
 		genErr := mock.Generate(angleImage)
 		// Open the image to compare to

@@ -158,5 +158,5 @@ func (bar BarJSON) Handle(resp tsg.Response, _ *tsg.Request) {
 		hOff = boxHeight
 	}
 
-	resp.Write(200, "success")
+	resp.Write(tsg.WidgetSuccess, "success")
 }

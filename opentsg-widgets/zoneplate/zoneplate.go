@@ -12,18 +12,110 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colourgen"
 	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
 )
 
 const (
-	widgetType = "builtin.zoneplate"
+	WidgetType = "builtin.zoneplate"
 )
 
 // zoneGen takes a canvas and then returns an image of the zone plate layered ontop of the image
 func ZoneGen(canvasChan chan draw.Image, debug bool, c *context.Context, wg, wgc *sync.WaitGroup, logs *errhandle.Logger) {
 	defer wg.Done()
-	conf := widgethandler.GenConf[ZConfig]{Debug: debug, Schema: schemaInit, WidgetType: widgetType}
+	conf := widgethandler.GenConf[ZConfig]{Debug: debug, Schema: Schema, WidgetType: WidgetType}
 	widgethandler.WidgetRunner(canvasChan, conf, c, logs, wgc) // Update this to pass an error which is then formatted afterwards
+}
+
+func (z ZConfig) Handle(resp tsg.Response, req *tsg.Request) {
+	frequency, _ := z.Frequency.GetAngle()
+	if frequency > math.Pi {
+		frequency = math.Pi
+	} else if frequency == 0 {
+		frequency = 0.8 * math.Pi
+	}
+
+	// set up constants for the zone plate
+	b := resp.BaseImage().Bounds().Max
+	rm := float64(b.X)
+	w := rm / 5
+
+	// set up the offset, this is centred in the middle of the box
+	off, err := z.CalcOffset(resp.BaseImage().Bounds().Max)
+	if err != nil {
+		resp.Write(tsg.WidgetError, err.Error())
+		return
+	}
+	xOffset := b.X/2 + off.X
+	yOffset := b.Y/2 + off.Y
+
+	yMagnitude := 1.0
+	// set xy to radius function
+	extractFunc := xyToRadius
+	switch z.PlateType {
+	case verticalSweep, sweepPattern:
+		extractFunc = xyToVerticalRadius
+	case horizontalSweep:
+		extractFunc = xyToHorizontalRadius
+		//	pattern, _, _ = createWeights16(b.X, 6, z.baseX/z.destX, lan)
+	case circlePattern, "":
+	case ellipse:
+		yMagnitude = 0.5
+	default:
+		resp.Write(tsg.WidgetError, fmt.Sprintf("unknown plateType \"%v\"", z.PlateType))
+		return
+	}
+
+	// set zone plate function
+	zplate := zPlate
+	switch z.WaveType {
+	case Sin:
+		zplate = sPlate
+	case Cos:
+		zplate = cPlate
+	case "cos*sin^2":
+		zplate = tPlate
+	}
+
+	ztc := zoneToColour
+	if len(z.Colors) > 0 {
+		colours := make([]colour.CNRGBA64, len(z.Colors))
+		for i, c := range z.Colors {
+			colours[i] = *colourgen.HexToColour(c, req.PatchProperties.ColourSpace)
+		}
+
+		ztc = func(zone float64) colour.CNRGBA64 {
+			//	fmt.Println(((zone+1)/2)*(float64(len(colours))), zone)
+			pos := int(((zone+1)/2)*(float64(len(colours)))) % len(colours)
+			return colours[pos]
+		}
+	}
+
+	rotation, err := z.ClockwiseRotationAngle()
+	if err != nil {
+		resp.Write(tsg.WidgetError, err.Error())
+		return
+	}
+
+	rotationOffset := startOffset(z.Startcolour)
+
+	for x := 0; x < b.X; x++ {
+		for y := 0; y < b.Y; y++ {
+
+			xp, yp := rotate(float64(x-xOffset), float64(y-yOffset)*yMagnitude, rotation)
+			r := extractFunc(xp, yp)
+
+			//	zone := math.Sin((z.km*r*r)/(2*rm)+offset) * (0.5*math.Tanh((rm-r)/w) + 0.5)
+			zone := zplate(r, frequency, rm, w, rotationOffset)
+
+			// assign the colour and draw the canvas
+			fill := ztc(zone)
+			resp.BaseImage().Set(x, y, &fill)
+
+		}
+	}
+
+	resp.Write(tsg.WidgetSuccess, "success")
 }
 
 func (z ZConfig) Generate(canvas draw.Image, opts ...any) error {

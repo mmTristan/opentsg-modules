@@ -91,5 +91,5 @@ func (l LumaJSON) Handle(resp tsg.Response, req *tsg.Request) {
 		}
 	}
 
-	resp.Write(200, "success")
+	resp.Write(tsg.WidgetSuccess, "success")
 }

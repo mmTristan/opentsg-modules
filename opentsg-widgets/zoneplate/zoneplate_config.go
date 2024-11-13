@@ -24,7 +24,7 @@ type ZConfig struct {
 }
 
 //go:embed jsonschema/zoneplateschema.json
-var schemaInit []byte
+var Schema []byte
 
 /*
 func (z zoneplateJSON) Alias() string {

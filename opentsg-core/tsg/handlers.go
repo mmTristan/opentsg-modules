@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
-	"image/color"
 	"image/draw"
 	"path/filepath"
 	"strings"
@@ -18,7 +17,6 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/widgets"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
 	"gopkg.in/yaml.v3"
 )
 
@@ -30,40 +28,44 @@ type Handler interface {
 // HandleFunc implements the Handler interface as a standalone functions
 type HandlerFunc func(Response, *Request)
 
-// Handle
+// Handle implements the handle method for functions
 func (f HandlerFunc) Handle(resp Response, req *Request) {
 	f(resp, req)
 }
 
-// HandleFunc registers the handler function for the given pattern in the
+// HandleFunc registers the handler function for the given widget type in the
 // openTSG engine
-func (o openTSG) HandleFunc(wType string, handler HandlerFunc) {
+func (o OpenTSG) HandleFunc(wType string, handler HandlerFunc) {
 	// set up router here
 
 	o.Handle(wType, []byte("{}"), handler)
 
 }
 
-// Handle adds a handler to the openTSG engine,
-// every widgetType (wType) needs to be unique.
-// The schema is used for passing any bytes into that handler object.
-func (o openTSG) Handle(wType string, schema []byte, handler Handler) {
+// Handle registers the handler class for the given widget type in the
+// openTSG engine, with an accompanying json schema.
+func (o OpenTSG) Handle(wType string, schema []byte, handler Handler) {
 
 	if _, ok := o.handlers[wType]; ok {
 		panic(fmt.Sprintf("The widget type %s has already been declared", wType))
 	}
 
+	// set a schema if one is given
+	if schema == nil {
+		schema = []byte("{}")
+	}
 	// do some checking for invalid characters, if there
 	// are any
 
 	o.handlers[wType] = hand{schema: schema, handler: handler}
 }
 
-func (o *openTSG) Use(middlewares ...func(Handler) Handler) {
+// Use appends a middleware handler to the OpenTSG middleware stack.
+func (o *OpenTSG) Use(middlewares ...func(Handler) Handler) {
 	o.middlewares = append(o.middlewares, middlewares...)
 }
 
-// Request contains all the information sent to a handler
+// Request contains all the information sent to a widget handler
 // for generating an image.
 //
 // It has methods for interacting with the core of openTSG.
@@ -84,11 +86,6 @@ type Request struct {
 
 	searchWithCredentials func(URI string) ([]byte, error)
 	getWidgetMetadata     func(alias, dotpath string) any
-	// generate an image of smaller dimensions
-	// Not really needed? Look through
-	// IMG(image.Rect)Draw.Image
-	// GetWidgetMetadata()
-	// generateSubImage func(baseImg draw.Image, bounds image.Rectangle) draw.Image
 }
 
 // SearchWithCredentials searches a URI utilising any login credentials used
@@ -99,17 +96,15 @@ func (r Request) SearchWithCredentials(URI string) ([]byte, error) {
 	if r.searchWithCredentials == nil {
 		return core.GetWebBytes(nil, URI)
 	}
+
 	return r.searchWithCredentials(URI)
 }
 
-//	GenerateSubImage generates an image of bounds, that matches the type of image given to it.
+// GenerateSubImage generates an image of area bounds, that matches the type of image given to it.
 //
 // Note it will not work with custom draw.Image types
 func (r Request) GenerateSubImage(baseImg draw.Image, bounds image.Rectangle) draw.Image {
 
-	if resp, ok := baseImg.(*response); ok {
-		baseImg = resp.baseImg
-	}
 	switch img := baseImg.(type) {
 	case *colour.NRGBA64:
 		return colour.NewNRGBA64(img.Space(), bounds)
@@ -119,8 +114,8 @@ func (r Request) GenerateSubImage(baseImg draw.Image, bounds image.Rectangle) dr
 	}
 }
 
-// GetWidget searches the metadata of a frame run for an alias and then recursivley searches through the keys to find nested values.
-// The keys are a dotpath, if rhe key is invalid a nil value is returned.
+// GetWidget searches the metadata of a frame, for the alias and then recursivley searches through the keys to find nested values.
+// The keys are a dotpath, if the key is invalid a nil value is returned.
 // if the alias is "" then all the metadata is returned.
 func (r Request) GetWidgetMetadata(alias, metadataField string) any {
 	if r.getWidgetMetadata == nil {
@@ -133,13 +128,15 @@ func (r Request) GetWidgetMetadata(alias, metadataField string) any {
 // PatchProperties contains the unique properties for
 // the patch the widget is generating.
 type PatchProperties struct {
-	WidgetType   string
+	WidgetType string
+	// the name of the widget call,
+	// it is the full dot path
 	WidgetFullID string
-	// only do max xy as min is always 0
+	// Dimensions and locations
 	Dimensions  image.Rectangle
 	TSGLocation image.Point
-	// Padding and margins?
-	Geomtetry   []gridgen.Segmenter
+	// Geometry contains any tsig information
+	Geometry    []gridgen.Segmenter
 	ColourSpace colour.ColorSpace
 }
 
@@ -147,54 +144,45 @@ type PatchProperties struct {
 // frame that is currently being generated.
 type FrameProperties struct {
 	FrameNumber int
-	WorkingDir  string
+	// Where was openTSG called from
+	// Often used for finding local files
+	WorkingDir string
+	//
+	FrameDimensions image.Point
 }
 
 type Response interface {
 	// Write a response to signal
 	// the end of the widget and to handle any errors.
-	// This is not vital
+	// on success use the tsg.WidgetSuccess status code
 	Write(status StatusCode, message string)
-	// Write(logLevel slog.Level ,status int, message string)
 
+	// Return the base image to be handled.
+	// Prevents overwriting the original draw.Image
+	// with custom types
 	BaseImage() draw.Image
-	// just draw the image as standard
-	// import it as our own in case it needs
-	// to be extended later
-	// draw.Image
 }
 
+// response implements the Response interface
 type response struct {
 	baseImg draw.Image
 	status  StatusCode
 	message string
 }
 
+// write to the response struct
 func (r *response) Write(status StatusCode, message string) {
 	// nothing is written at the moment
 	r.status = status
 	r.message = message
 }
 
+// return the base image to handle
 func (r *response) BaseImage() draw.Image {
 	return r.baseImg
 }
 
-func (r *response) At(x int, y int) color.Color {
-	return r.baseImg.At(x, y)
-}
-
-func (r *response) Bounds() image.Rectangle {
-	return r.baseImg.Bounds()
-}
-func (r *response) ColorModel() color.Model {
-	return r.baseImg.ColorModel()
-}
-
-func (r *response) Set(x, y int, c color.Color) {
-	r.baseImg.Set(x, y, c)
-}
-
+// StatusCode is the OpenTSG status code
 type StatusCode float64
 
 const (
@@ -203,12 +191,19 @@ const (
 	SaveSuccess     = StatusCode(200.002)
 	WidgetNotFound  = StatusCode(404.001)
 	EncoderNotFound = StatusCode(404.002)
+	Profiler        = StatusCode(100.999)
+
+	WidgetError   = StatusCode(500.001)
+	WidgetWarning = StatusCode(400.001)
 )
 
+// ensure the final 3 digits are printed
 func (s StatusCode) String() string {
 	return fmt.Sprintf("%.3f", s)
 }
 
+// Legacy runs the old OpenTSG handler methods
+// This version is currently ony used for testing.
 type Legacy struct {
 	// the location of the loader
 	FileLocation string `json:"fileLocation" yaml:"fileLocation"`
@@ -232,7 +227,9 @@ func (l Legacy) Handle(resp Response, req *Request) {
 	resp.Write(200, "")
 }
 
-func (tsg *openTSG) logErrors(code StatusCode, frameNumber int, jobId string, errors ...error) {
+// logErrors runs the internal errors as a handler
+// used for dumping the error logs
+func (tsg *OpenTSG) logErrors(code StatusCode, frameNumber int, jobId string, errors ...error) {
 	errHan := HandlerFunc(func(resp Response, req *Request) {
 		resp.Write(code, string(req.RawWidgetYAML))
 	})
@@ -247,17 +244,18 @@ func (tsg *openTSG) logErrors(code StatusCode, frameNumber int, jobId string, er
 	}
 }
 
-// Draw generates the images for each array section of the json array and applies it to the test card grid.
-func (tsg *openTSG) Run(mnt string) {
-	imageNo := tsg.framcount
+// Run starts the OpenTSG engine, it runs every frame given
+// to it from the set up file.
+func (tsg *OpenTSG) Run(mnt string) {
+	imageNo := tsg.framecount
 
 	// wait for every frame to run before exiting the lopp
 	var wg sync.WaitGroup
-	wg.Add(tsg.framcount)
+	wg.Add(tsg.framecount)
 
 	// hookdata is a large map that contains all the metadata across the run.
-	var locker sync.Mutex
-	hookdata := syncmap{&locker, make(map[string]any)}
+	//var locker sync.Mutex
+	//hookdata := syncmap{&locker, make(map[string]any)}
 
 	// runFile := time.Now().Format("2006-01-02T15:04:05")
 
@@ -298,7 +296,7 @@ func (tsg *openTSG) Run(mnt string) {
 				monit.incrementError(len(errs))
 			}
 
-			frameContext := widgethandler.MetaDataInit(frameConfigCont)
+			frameContext := &frameConfigCont
 			errs = canvaswidget.LoopInit(frameContext)
 
 			if len(errs) > 0 {
@@ -313,22 +311,22 @@ func (tsg *openTSG) Run(mnt string) {
 			if err != nil {
 				tsg.logErrors(500, frameNo, jobID, err)
 				monit.incrementError(1)
-				// frameWait.Done()
+
 				return // continue // skip to the next frame number
 			}
 
 			// generate all the widgets
 			tsg.widgetHandle(frameContext, canvas, &monit)
-			// frameWait.Done()
 
 			// get the metadata and add it onto the map for this frame
-			md, _ := metaHook(canvas, frameContext)
+			// @TODO update with the new metadata context
+			/*md, _ := metaHook(canvas, frameContext)
 			if len(md) != 0 { // only save if there actually is metadata
 				i4 := intToLength(frameNo, 4)
 				hookdata.syncer.Lock()
 				hookdata.data[fmt.Sprintf("frame %s", i4)] = md
 				hookdata.syncer.Unlock()
-			}
+			}*/
 
 			/*transformation station here where images can be moved to carved bits etc*/
 
@@ -367,7 +365,7 @@ func (tsg *openTSG) Run(mnt string) {
 
 // CanvasSave saves the file according to the extensions provided
 // the name add is for debug to allow to identify images
-func (tsg *openTSG) canvasSave2(canvas draw.Image, filename []string, bitdeph int, mnt string, monit *monitor) {
+func (tsg *OpenTSG) canvasSave2(canvas draw.Image, filename []string, bitdeph int, mnt string, monit *monitor) {
 	for _, name := range filename {
 		truepath, err := filepath.Abs(filepath.Join(mnt, name))
 		if err != nil {
@@ -408,7 +406,7 @@ type profile struct {
 }
 
 // // update widgetHandle to make the choices for me
-func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *monitor) {
+func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *monitor) {
 
 	// set up the core context functions
 	allWidgets := widgets.ExtractAllWidgets(c)
@@ -435,11 +433,11 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 	}
 
 	// set up the properties for all requests
-	fp := FrameProperties{WorkingDir: core.GetDir(*c), FrameNumber: monit.frameNo}
+	fp := FrameProperties{WorkingDir: core.GetDir(*c), FrameNumber: monit.frameNo, FrameDimensions: canvas.Bounds().Max}
 
 	zPos := 0
 	// sync tools for running the widgets async
-	runPool := Pool{AvailableMemeory: tsg.runnerConf.RunnerCount, c: &composit{composits: make(map[int]compositeQueue), currentZ: &zPos}}
+	runPool := Pool{AvailableMemeory: tsg.runnerConf.RunnerCount, drawers: &drawers{drawQueue: make(map[int]drawQueue), currentZ: &zPos}}
 	// wg for each widget
 	var wg sync.WaitGroup
 	wg.Add(len(allWidgets))
@@ -500,7 +498,7 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 
 					profiler := chain(tsg.middlewares, HandlerFunc(func(r1 Response, r2 *Request) {
 						out, _ := json.Marshal(p)
-						r1.Write(999, string(out))
+						r1.Write(Profiler, string(out))
 					}))
 					profiler.Handle(&resp, &req)
 				}
@@ -558,7 +556,7 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 				pp := PatchProperties{WidgetType: widgProps.WType,
 					WidgetFullID: widgProps.FullName,
 					Dimensions:   gridCanvas.Bounds(),
-					TSGLocation:  imgLocation, Geomtetry: flats,
+					TSGLocation:  imgLocation, Geometry: flats,
 					ColourSpace: widgProps.ColourSpace}
 				//	Han, err := Unmarshal(handlers.handler)(widg)
 				resp = response{baseImg: gridCanvas}
@@ -636,15 +634,15 @@ func (tsg *openTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 	wg.Wait()
 }
 
-type compositeQueue struct {
-	composited bool
-	area       image.Rectangle
+type drawQueue struct {
+	drawn bool
+	area  image.Rectangle
 }
 
-type composit struct {
+type drawers struct {
 	currentZ *int
 	sync.Mutex
-	composits map[int]compositeQueue
+	drawQueue map[int]drawQueue
 }
 
 func GenErrorHandler(code StatusCode, errMessage string) Handler {
@@ -654,56 +652,60 @@ func GenErrorHandler(code StatusCode, errMessage string) Handler {
 }
 
 func (p *Pool) CompleteZ(z int) {
-	p.c.Lock()
+	p.drawers.Lock()
 	// @TODO check for doubles
-	mid := p.c.composits[z]
-	mid.composited = true
-	p.c.composits[z] = mid
+	mid := p.drawers.drawQueue[z]
+	mid.drawn = true
+	p.drawers.drawQueue[z] = mid
 
-	if z == *p.c.currentZ {
+	if z == *p.drawers.currentZ {
 		// increment x amount of times until
 		// the next undrawn widget is reached
-		for p.c.composits[*p.c.currentZ].composited {
-			*p.c.currentZ++
+		for p.drawers.drawQueue[*p.drawers.currentZ].drawn {
+			*p.drawers.currentZ++
 		}
 	}
-	p.c.Unlock()
+	p.drawers.Unlock()
 
 }
 
 func (p *Pool) LogDrawArea(position int, area image.Rectangle) {
-	p.c.Lock()
+	p.drawers.Lock()
 	// @TODO check for doubles
-	p.c.composits[position] = compositeQueue{area: area}
-	p.c.Unlock()
+	p.drawers.drawQueue[position] = drawQueue{area: area}
+	p.drawers.Unlock()
 }
 
 func (p *Pool) queue(runner poolRunner, position int, area image.Rectangle) {
 
-	// put the runner in the pool while queueing
-	p.PutRunner(runner)
-	// get it back out at the end
-	defer func() {
-		var available bool
-		runner, available = p.GetRunner()
-		for !available {
-
-			time.Sleep(1 * time.Millisecond)
-			runner, available = p.GetRunner()
-		}
-	}()
 	// put the runner back with no memory
 	// so the cache is still useable?
-	clearPath := p.c.check(position, area)
+	clearPath := p.drawers.check(position, area)
+
+	if !clearPath {
+		// put the runner in the pool while queueing
+		// no point putting it back if we are about to use it
+		p.PutRunner(runner)
+		// get it back out at the end
+		defer func() {
+			var available bool
+			runner, available = p.GetRunner()
+			for !available {
+
+				time.Sleep(1 * time.Millisecond)
+				runner, available = p.GetRunner()
+			}
+		}()
+	}
 
 	for !clearPath {
 		time.Sleep(time.Millisecond * 1)
-		clearPath = p.c.check(position, area)
+		clearPath = p.drawers.check(position, area)
 	}
 
 }
 
-func (c *composit) check(position int, area image.Rectangle) bool {
+func (c *drawers) check(position int, area image.Rectangle) bool {
 	c.Lock()
 	widgePos := *c.currentZ
 	c.Unlock()
@@ -717,18 +719,20 @@ func (c *composit) check(position int, area image.Rectangle) bool {
 	// do not check against its own area
 	for i := widgePos; i < position; i++ {
 		c.Lock()
-		under, ok := c.composits[i]
+		under, ok := c.drawQueue[i]
 		c.Unlock()
 		if !ok {
 			clearPath = false
 			break
 		}
 
-		// already been drawn so doesn't matter
-		if under.composited {
+		// already been drawn so area does
+		// not matter
+		if under.drawn {
 			continue
 		}
 
+		// if any overlap then stop the search
 		if area.Overlaps(under.area) {
 			clearPath = false
 			break
@@ -741,7 +745,7 @@ type Pool struct {
 	// keep at 1 at the moment
 	AvailableMemeory int
 	sync.Mutex
-	c *composit
+	drawers *drawers
 }
 
 func (p *Pool) GetRunner() (runner poolRunner, available bool) {
@@ -755,10 +759,6 @@ func (p *Pool) GetRunner() (runner poolRunner, available bool) {
 		// remove the available runner
 		p.AvailableMemeory--
 	}
-	/*
-		lock try and get a runner
-
-	*/
 
 	return
 }
@@ -768,20 +768,12 @@ func (p *Pool) PutRunner(run poolRunner) {
 	p.Lock()
 	defer p.Unlock()
 	p.AvailableMemeory += run.memory
-	/*
-		lock etc
-	*/
+
 }
 
 type poolRunner struct {
 	memory int
 }
-
-/*
-
-sync pool, figure something out
-
-*/
 
 // chain builds a http.Handler composed of an inline middleware stack and endpoint
 // handler in the order they are passed.

@@ -173,7 +173,7 @@ func (t Config) Handle(resp tsg.Response, req *tsg.Request) {
 	b := resp.BaseImage().Bounds().Max
 
 	if b.In(image.Rect(0, 0, 600, 300)) { // Minimum size box we are going with
-		resp.Write(400, fmt.Sprintf("0171 the minimum size is 600 by 300, received an image of %v by %v", b.X, b.Y))
+		resp.Write(tsg.WidgetError, fmt.Sprintf("0171 the minimum size is 600 by 300, received an image of %v by %v", b.X, b.Y))
 		return
 	}
 
@@ -232,7 +232,7 @@ func (t Config) Handle(resp tsg.Response, req *tsg.Request) {
 	yStart := aPos((b.Y-objectHeight)/2) + yOff
 
 	if yStart < 0 || startPoint < 0 { // 0 means they're outside the box
-		resp.Write(400, fmt.Sprintf("0172 irregular sized box, the two sample interleave pattern will not fit within the constraints of %v, %v", b.X, b.Y))
+		resp.Write(tsg.WidgetError, fmt.Sprintf("0172 irregular sized box, the two sample interleave pattern will not fit within the constraints of %v, %v", b.X, b.Y))
 		return
 	}
 
@@ -247,7 +247,7 @@ func (t Config) Handle(resp tsg.Response, req *tsg.Request) {
 		xOff: xOff, xLength: xLength, lineOff: lineOff}
 	letterProperties.letterDrawer(resp.BaseImage(), letterColour, letterOrder, connections, letterGap, channelGap, yStart)
 
-	resp.Write(200, "success")
+	resp.Write(tsg.WidgetSuccess, "success")
 }
 
 type letterMetrics struct {

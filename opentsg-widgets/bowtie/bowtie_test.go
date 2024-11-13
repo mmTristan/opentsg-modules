@@ -18,23 +18,23 @@ import (
 
 func TestBowties(t *testing.T) {
 
-	simple := bowtieJSON{SegementCount: 8}
-	corners := bowtieJSON{SegementCount: 12}
-	colours := bowtieJSON{SegementCount: 12, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}} //, "#433F87"}} //, "#433F87"}}
-	all := bowtieJSON{SegementCount: 32, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
+	simple := Config{SegementCount: 8}
+	corners := Config{SegementCount: 12}
+	colours := Config{SegementCount: 12, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}} //, "#433F87"}} //, "#433F87"}}
+	all := Config{SegementCount: 32, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
 	all.CwRotation = "π*23/47"
 
 	explanation := []string{"8Segment", "12Segment", "colourSegments", "32Segments"}
 	testF := []string{"./testdata/swirl0.png", "./testdata/swirl1.png", "./testdata/swirl2.png", "./testdata/swirl3.png"}
 
-	bowties := []bowtieJSON{simple, corners, colours, all} //, all}
+	bowties := []Config{simple, corners, colours, all} //, all}
 
 	for i, s := range bowties {
 
 		cb := context.Background()
 		img := image.NewNRGBA64(image.Rect(0, 0, 200, 160))
 
-		examplejson.SaveExampleJson(s, widgetType, explanation[i], true)
+		examplejson.SaveExampleJson(s, WidgetType, explanation[i], true)
 
 		genErr := s.Generate(img, &cb)
 
@@ -69,7 +69,7 @@ func TestBowties(t *testing.T) {
 
 func TestOffsets(t *testing.T) {
 
-	all := bowtieJSON{SegementCount: 32, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
+	all := Config{SegementCount: 32, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
 
 	left := parameters.Offset{Offset: parameters.XYOffset{X: "-50"}}
 	offRight := parameters.Offset{Offset: parameters.XYOffset{X: "50px", Y: "-70"}}
@@ -87,7 +87,7 @@ func TestOffsets(t *testing.T) {
 		//examplejson.SaveExampleJson(s, widgetType, explanation[i], true)
 		all.Offset = off
 		genErr := all.Generate(img, &cb)
-		examplejson.SaveExampleJson(all, widgetType, explanation[i], true)
+		examplejson.SaveExampleJson(all, WidgetType, explanation[i], true)
 
 		file, _ := os.Open(fmt.Sprintf("./testdata/offset%v.png", i))
 		// Decode to get the colour values
@@ -119,13 +119,13 @@ func TestOffsets(t *testing.T) {
 
 func TestBlends(t *testing.T) {
 
-	simple := bowtieJSON{SegementCount: 4}
-	corners := bowtieJSON{SegementCount: 8}
-	colours := bowtieJSON{SegementCount: 8, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
+	simple := Config{SegementCount: 4}
+	corners := Config{SegementCount: 8}
+	colours := Config{SegementCount: 8, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
 
 	explanation := []string{"SinBowtie", "Sin8Segment", "SinColours"}
 
-	sins := []bowtieJSON{simple, corners, colours}
+	sins := []Config{simple, corners, colours}
 
 	for i, s := range sins {
 		s.Blend = "sin"
@@ -135,7 +135,7 @@ func TestBlends(t *testing.T) {
 		genErr := s.Generate(img, &cb)
 		// f, _ := os.Create(fmt.Sprintf("./testdata/blendSin%v.png", i))
 		// png.Encode(f, img)
-		examplejson.SaveExampleJson(s, widgetType, explanation[i], true)
+		examplejson.SaveExampleJson(s, WidgetType, explanation[i], true)
 
 		file, _ := os.Open(fmt.Sprintf("./testdata/blendSin%v.png", i))
 		// Decode to get the colour values
@@ -165,11 +165,11 @@ func TestBlends(t *testing.T) {
 }
 
 func TestErrors(t *testing.T) {
-	simple := bowtieJSON{SegementCount: 3}
-	badAng := bowtieJSON{SegementCount: 300}
+	simple := Config{SegementCount: 3}
+	badAng := Config{SegementCount: 300}
 	badAng.CwRotation = "math.Pi"
 
-	bowties := []bowtieJSON{simple, badAng} //, all}
+	bowties := []Config{simple, badAng} //, all}
 	errs := []string{"0DEV 4 or more segments required, received 3", "0DEV error calculating the rotational angle math.Pi is not a valid angle"}
 
 	for i, s := range bowties {
@@ -191,14 +191,14 @@ func TestErrors(t *testing.T) {
 
 func TestRotate(t *testing.T) {
 
-	simple := bowtieJSON{SegementCount: 4, Blend: "sin"}
-	all := bowtieJSON{SegementCount: 32, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
-	allOff := bowtieJSON{SegementCount: 32, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
+	simple := Config{SegementCount: 4, Blend: "sin"}
+	all := Config{SegementCount: 32, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
+	allOff := Config{SegementCount: 32, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
 	allOff.Offset = parameters.Offset{Offset: parameters.XYOffset{X: "50px", Y: "-70"}}
-	startAng := bowtieJSON{SegementCount: 4, Blend: "sin"}
+	startAng := Config{SegementCount: 4, Blend: "sin"}
 	startAng.StartAng = 180
 
-	rotates := []bowtieJSON{simple, all, allOff, startAng}
+	rotates := []Config{simple, all, allOff, startAng}
 
 	for i, rot := range rotates {
 
