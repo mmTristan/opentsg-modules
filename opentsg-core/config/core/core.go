@@ -25,6 +25,7 @@ const (
 	//	widgetbases  = "widget bases", 2}
 	frameHolders    testKey = "The key for holding all the generated json"
 	aliasKey        testKey = "base for aliases to run through out the program"
+	aliasKeyBox     testKey = "base for aliases to run through out the program, but with the box method"
 	lines           testKey = "the holder of the hashes of the name+content for line numbers and files"
 	addedWidgets    testKey = "the key to access the list of added widgets to find missed aliases"
 	factoryDir      testKey = "the directory of the main widget factory and everything is relative to"
@@ -114,6 +115,25 @@ func GetAlias(c context.Context) SyncMap {
 	return SyncMap{Mu: &newmu, Data: make(map[string]string)}
 }
 
+// SyncMap  is a map with a sync.Mutex to prevent concurrent writes.
+type SyncMapBox struct {
+	Data map[string]any
+	Mu   *sync.Mutex
+}
+
+// Get alias returns a map of the locations alias and their grid positions.
+func GetAliasBox(c context.Context) SyncMapBox {
+	Alias := c.Value(aliasKeyBox)
+	if Alias != nil {
+
+		return Alias.(SyncMapBox)
+	}
+	// else return an empty map
+	var newmu sync.Mutex
+
+	return SyncMapBox{Mu: &newmu, Data: make(map[string]any)}
+}
+
 // GetFrameWidgets returns a map of the alias
 func GetFrameWidgets(c context.Context) map[string]widgetContents {
 
@@ -138,6 +158,13 @@ func PutAlias(c context.Context) context.Context {
 	n := SyncMap{make(map[string]string), &sync.Mutex{}}
 
 	return context.WithValue(c, aliasKey, n)
+}
+
+// PutAlias inits a map of the alias in a context
+func PutAliasBox(c context.Context) context.Context {
+	n := SyncMapBox{make(map[string]any), &sync.Mutex{}}
+
+	return context.WithValue(c, aliasKeyBox, n)
 }
 
 // GetDir returns the directory that the base factory resides in.
