@@ -16,6 +16,7 @@ import (
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colourgen"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -24,6 +25,58 @@ func TestLegacy(t *testing.T) {
 	otsg.Handle("builtin.legacy", []byte("{}"), Legacy{})
 	fmt.Println(err)
 	otsg.Run("")
+
+}
+
+func TestTSIGWidget(t *testing.T) {
+	// set up a fill handler that changes location each time
+
+	area := `{
+    "type": "test.fill",
+    "grid": {
+        "location": "%s"
+    }
+	}`
+
+	areas := []string{"A1", "A0:a2", "r2c3", "R1C1:R3C3"}
+
+	expectedArea := [][]gridgen.Segmenter{
+		{{Name: "A001", Shape: image.Rectangle{Min: image.Point{X: 0, Y: 0}, Max: image.Point{X: 10, Y: 10}}, Tags: []string{}, ImportPosition: 1}},
+		{{Name: "A000", Shape: image.Rectangle{Min: image.Point{X: 0, Y: 0}, Max: image.Point{X: 10, Y: 10}}, Tags: []string{}}, {Name: "A001", Shape: image.Rectangle{Min: image.Point{X: 0, Y: 10}, Max: image.Point{X: 10, Y: 20}}, Tags: []string{}, ImportPosition: 1}},
+		{},
+		// some values are repeated across grids
+		{{Name: "A000", Shape: image.Rectangle{Min: image.Point{X: 0, Y: 0}, Max: image.Point{X: 10, Y: 10}}, Tags: []string{}, ImportPosition: 0},
+			{Name: "A001", Shape: image.Rectangle{Min: image.Point{X: 0, Y: 10}, Max: image.Point{X: 10, Y: 20}}, Tags: []string{}, ImportPosition: 1},
+			{Name: "A002", Shape: image.Rectangle{Min: image.Point{X: 10, Y: 0}, Max: image.Point{X: 25, Y: 15}}, Tags: []string{}, ImportPosition: 2},
+			{Name: "A003", Shape: image.Rectangle{Min: image.Point{X: 28, Y: 0}, Max: image.Point{X: 30, Y: 30}}, Tags: []string{}, ImportPosition: 3},
+			{Name: "A004", Shape: image.Rectangle{Min: image.Point{X: 20, Y: 20}, Max: image.Point{X: 30, Y: 30}}, Tags: []string{}, ImportPosition: 4}}, {}}
+
+	for i, a := range areas {
+		f, fErr := os.Create("./testdata/tsigLoaders/tsigFill.json")
+		_, wErr := f.Write([]byte(fmt.Sprintf(area, a)))
+
+		otsg, err := BuildOpenTSG("./testdata/tsigLoaders/tsigLoader.json", "", true, nil)
+		fmt.Println(err, fErr, wErr)
+		var gotArea []gridgen.Segmenter
+		otsg.HandleFunc("test.fill", HandlerFunc(func(r1 Response, r2 *Request) {
+
+			gotArea = r2.PatchProperties.Geometry
+		}))
+
+		otsg.Run("")
+
+		Convey("Calling openTSG with a tsig to ensure the correct values are returned", t, func() {
+			Convey(fmt.Sprintf("Getting the tsigs in the grid area of \"%s\"", a), func() {
+				Convey("no error is returned and we get the expected area", func() {
+					So(fErr, ShouldBeNil)
+					So(wErr, ShouldBeNil)
+					So(err, ShouldBeNil)
+					So(gotArea, ShouldResemble, expectedArea[i])
+
+				})
+			})
+		})
+	}
 
 }
 

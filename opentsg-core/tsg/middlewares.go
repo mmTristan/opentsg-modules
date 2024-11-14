@@ -5,9 +5,28 @@ import (
 	"fmt"
 	"image/draw"
 	"log/slog"
+	"os"
+	"path/filepath"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/validator"
 )
+
+// os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0777)
+
+func LogToFile(otsg *OpenTSG, opts slog.HandlerOptions, folder, jobID string) {
+
+	path := filepath.Join(folder, fmt.Sprintf("%s.log", jobID))
+
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0777)
+
+	if err != nil {
+		panic(err)
+	}
+
+	jSlog := slog.NewJSONHandler(f, &opts)
+	otsg.Use(Logger(slog.New(jSlog)))
+
+}
 
 // jsonValidator validates the input json request, against a schema.
 // It is designed to be the last middleware put on the handler stack.

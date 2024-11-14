@@ -104,11 +104,10 @@ func (tpg *OpenTSG) savefile(filename, framenumber string, base draw.Image, bitd
 	// open the file if not sth or the other
 
 	saveTarget, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0777)
+	defer saveTarget.Close()
 	if err != nil {
 		return fmt.Errorf("0051 %v", err)
 	}
-
-	defer saveTarget.Close()
 
 	fwErr := saveFunc(saveTarget, base, bitdepth)
 	if fwErr != nil {

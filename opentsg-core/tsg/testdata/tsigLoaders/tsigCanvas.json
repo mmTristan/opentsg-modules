@@ -1,0 +1,17 @@
+{
+    "type": "builtin.canvasoptions",
+    "name": [
+        "./invalidPath/out.png"
+    ],
+    "frameSize": {
+        "w": 1920,
+        "h": 1080
+    },
+    "geometry":"../../../gridgen/testdata/tpig/mock.json",
+    "linewidth": 1,
+    "filedepth": 16,
+    "gridColumns" : 3,
+    "gridRows":3, 
+    "backgroundFillColor":"rgb12(1656,1656,1656)" ,
+    "lineColor":"#000000"
+}

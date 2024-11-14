@@ -102,7 +102,7 @@ func flatmap(c *context.Context, tpigpath string) (canvasAndMask, error) {
 	// TPIGS layout will just be one deep for the moment
 
 	// Extract all the tile information
-	utilitySegements := make([]Segmenter, len(segmentLayout.Tilelayout))
+	utilitySegements := make([]*Segmenter, len(segmentLayout.Tilelayout))
 
 	locs := make([]image.Rectangle, len(segmentLayout.Tilelayout))
 
@@ -114,10 +114,10 @@ func flatmap(c *context.Context, tpigpath string) (canvasAndMask, error) {
 		// colour in flat at the same time
 		locs[i] = image.Rect(t.Layout.Flat.X, t.Layout.Flat.Y, t.Layout.Flat.X+t.Layout.Size.X, t.Layout.Flat.Y+t.Layout.Size.Y)
 
-		utilitySegements[i] = Segmenter{
+		utilitySegements[i] = &Segmenter{
 			Shape: locs[i],
 			Tags:  t.Tags,
-			Name:  t.Name, importPosition: i}
+			Name:  t.Name, ImportPosition: i}
 
 		// figure out the optimisation here, or error handling as not everything will be carved
 		carves := image.Rect(t.Layout.Carve.X, t.Layout.Carve.Y, t.Layout.Carve.X+t.Layout.Size.X, t.Layout.Carve.Y+t.Layout.Size.Y)
@@ -209,9 +209,9 @@ func splice(c *context.Context, x, y int, xscale, yscale float64) {
 	geometryHolder := (*c).Value(tilekey) // , utilitySegements)
 
 	// List the geometry per grid section
-	var sections map[string][]Segmenter
+	var sections map[string][]*Segmenter
 	if geometryHolder != nil {
-		geometry := geometryHolder.([]Segmenter)
+		geometry := geometryHolder.([]*Segmenter)
 		sections = splicetpig(geometry, x, y, xscale, yscale)
 	} else {
 		sections = splicegrid(x, y, xscale, yscale)
@@ -221,8 +221,8 @@ func splice(c *context.Context, x, y int, xscale, yscale float64) {
 	*c = cmid
 }
 
-func splicetpig(segments []Segmenter, x, y int, xscale, yscale float64) map[string][]Segmenter {
-	sections := make(map[string][]Segmenter)
+func splicetpig(segments []*Segmenter, x, y int, xscale, yscale float64) map[string][]*Segmenter {
+	sections := make(map[string][]*Segmenter)
 	for xpos := 0; xpos < x; xpos++ {
 
 		for ypos := 0; ypos < y; ypos++ {
@@ -231,7 +231,7 @@ func splicetpig(segments []Segmenter, x, y int, xscale, yscale float64) map[stri
 			gridCoord := fmt.Sprintf("%v%v", gridToScale(xpos), ypos)
 			gridRCCoord := fmt.Sprintf("R%vC%v", xpos+1, ypos+1)
 
-			matches := []Segmenter{}
+			matches := []*Segmenter{}
 			bounding := image.Rect(int(float64(xpos)*xscale), int(float64(ypos)*yscale), int(float64(xpos+1)*xscale), int(float64(ypos+1)*yscale))
 
 			// check every segment to see where if it is within the grid
@@ -249,8 +249,8 @@ func splicetpig(segments []Segmenter, x, y int, xscale, yscale float64) map[stri
 	return sections
 }
 
-func splicegrid(x, y int, xscale, yscale float64) map[string][]Segmenter {
-	sections := make(map[string][]Segmenter)
+func splicegrid(x, y int, xscale, yscale float64) map[string][]*Segmenter {
+	sections := make(map[string][]*Segmenter)
 	count := 0
 	for xpos := 0; xpos < x; xpos++ {
 
@@ -284,8 +284,8 @@ func splicegrid(x, y int, xscale, yscale float64) map[string][]Segmenter {
 				tagsRC = append(tagsRC, fmt.Sprintf("neighbour:R%vC%v", xpos+1, ypos+1))
 			}
 
-			sections[gridCoord] = []Segmenter{{Name: gridCoord, Shape: bounding, Tags: tagsC, importPosition: count}}
-			sections[gridRCCoord] = []Segmenter{{Name: gridRCCoord, Shape: bounding, Tags: tagsRC, importPosition: count}}
+			sections[gridCoord] = []*Segmenter{{Name: gridCoord, Shape: bounding, Tags: tagsC, ImportPosition: count}}
+			sections[gridRCCoord] = []*Segmenter{{Name: gridRCCoord, Shape: bounding, Tags: tagsRC, ImportPosition: count}}
 
 			count++
 		}
@@ -335,8 +335,9 @@ func GetGridGeometry(c *context.Context, coordinate string) ([]Segmenter, error)
 	// cleanse positions of duplicate entries
 
 	cleanorder := make(map[int]Segmenter)
+
 	for _, pos := range positions {
-		cleanorder[pos.importPosition] = pos
+		cleanorder[pos.ImportPosition] = *pos
 	}
 
 	// get the positions of all the ones called
@@ -352,7 +353,7 @@ func GetGridGeometry(c *context.Context, coordinate string) ([]Segmenter, error)
 		return keys[i] < keys[j]
 	})
 
-	// add teh values in order they were declared
+	// add the values in order they were declared
 	cleanSegments := make([]Segmenter, len(cleanorder))
 	for i, pos := range keys {
 		cleanSegments[i] = cleanorder[pos]
@@ -364,9 +365,9 @@ func GetGridGeometry(c *context.Context, coordinate string) ([]Segmenter, error)
 
 // getGridGeometry breaks the location into every grid location it covers.
 // And extracts the results from the map of coordiantes and their geometry.
-func getGridGeometry(c *context.Context, coordinate string) ([]Segmenter, error) {
+func getGridGeometry(c *context.Context, coordinate string) ([]*Segmenter, error) {
 	coordinate = strings.ToUpper(coordinate)
-	sections := (*c).Value(gridkey).(map[string][]Segmenter)
+	sections := (*c).Value(gridkey).(map[string][]*Segmenter)
 
 	// get all the sections
 	// if they are 1 grid return sections[coordinate]
@@ -389,7 +390,7 @@ func getGridGeometry(c *context.Context, coordinate string) ([]Segmenter, error)
 		x, y, err := gridSplit(coordinateLow)
 		if err != nil {
 
-			return []Segmenter{}, err
+			return []*Segmenter{}, err
 		}
 
 		offseted := segementWithOffset(image.Point{int(float64(-x) * squareX), int(float64(-y) * squareY)}, sections[coordinate])
@@ -401,16 +402,16 @@ func getGridGeometry(c *context.Context, coordinate string) ([]Segmenter, error)
 		x, y, err := gridSplit(grids[0])
 		if err != nil {
 
-			return []Segmenter{}, err
+			return []*Segmenter{}, err
 		}
 		xend, yend, err := gridSplit(grids[1])
 		if err != nil {
 
-			return []Segmenter{}, err
+			return []*Segmenter{}, err
 		}
 
 		// make sure the coordinates are in a valid direction
-		var segements []Segmenter
+		var segements []*Segmenter
 
 		if xend < x || yend < y {
 
@@ -441,7 +442,7 @@ func getGridGeometry(c *context.Context, coordinate string) ([]Segmenter, error)
 		xs, ys, xe, ye := 0, 0, 0, 0
 		fmt.Sscanf(coordinate, "R%dC%d:R%dC%d", &xs, &ys, &xe, &ye)
 
-		var segements []Segmenter
+		var segements []*Segmenter
 		if xe < xs || ye < ys {
 
 			return segements, fmt.Errorf(invalidCoordinates, coordinate, xs, ys, xe, ye)
@@ -469,18 +470,19 @@ func getGridGeometry(c *context.Context, coordinate string) ([]Segmenter, error)
 
 	default:
 
-		return []Segmenter{}, fmt.Errorf(invalidGrid, coordinate)
+		return []*Segmenter{}, fmt.Errorf(invalidGrid, coordinate)
 	}
 
 }
 
 // segment with offset applies an offset to a slice of Segmenter
-func segementWithOffset(offset image.Point, input []Segmenter) []Segmenter {
-	output := make([]Segmenter, len(input))
+func segementWithOffset(offset image.Point, input []*Segmenter) []*Segmenter {
+	output := make([]*Segmenter, len(input))
 
 	for i, seg := range input {
-		seg.Shape = seg.Shape.Add(offset)
-		output[i] = seg
+		outputMid := *seg
+		outputMid.Shape = outputMid.Shape.Add(offset)
+		output[i] = &outputMid
 	}
 
 	return output
@@ -505,5 +507,5 @@ type Segmenter struct {
 	Name           string
 	Shape          image.Rectangle
 	Tags           []string // neighbours will be included in a string? match to neighbours then
-	importPosition int
+	ImportPosition int
 }

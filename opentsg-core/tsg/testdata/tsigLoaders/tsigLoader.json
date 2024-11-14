@@ -1,0 +1,17 @@
+
+{
+    "include": [
+      {
+        "uri": "tsigCanvas.json",
+        "name": "canvas"
+      },
+      {
+        "uri": "tsigFill.json",
+        "name": "fill"
+      }
+    ],
+  "create":[{
+    "canvas":{},
+    "fill":{}}
+   ]
+}

@@ -3,7 +3,6 @@ package opentsgwidgets
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"testing"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
@@ -34,8 +33,8 @@ func TestXxx(t *testing.T) {
 	otsgh.Handle(nearblack.WidgetType, nearblack.Schema, nearblack.Config{})
 	otsgh.Handle(saturation.WidgetType, saturation.Schema, saturation.Config{})
 	otsgh.Handle(twosi.WidgetType, twosi.Schema, twosi.Config{})
-	jSlog := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
+
+	tsg.LogToFile(otsgh, slog.HandlerOptions{Level: slog.LevelDebug}, "./testdata/", "handler")
 	tsg.AddBaseEncoders(otsgh)
-	otsgh.Use(tsg.Logger(slog.New(jSlog)))
 	otsgh.Run("")
 }
