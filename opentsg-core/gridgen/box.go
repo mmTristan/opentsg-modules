@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+	"math"
 	"regexp"
 	"strconv"
 
@@ -95,7 +96,8 @@ type Box struct {
 	Y any `json:"y" yaml:"y"`
 	// bottom right
 	// if not used then the grid is 1 square
-	X2, Y2 any
+	X2 any `json:"x2" yaml:"x2"`
+	Y2 any `json:"y2" yaml:"y2"`
 
 	// width height
 	// can they be A or 1 etc. just mix it up
@@ -125,51 +127,6 @@ keep
 */
 
 // https://www.w3schools.com/css/css_boxmodel.asp
-func (b Box) generateBox(c *context.Context) (draw.Image, image.Point, draw.Image, error) {
-
-	// get the start point
-	/*
-		either xy or cx cy
-		 or useALias
-	*/
-	aliasMap := core.GetAlias(*c)
-	switch {
-	case b.UseAlias != "":
-		// @TODO update the alias to be the
-		// the image.Point, canvas size and a mask,
-		// if applicable
-		loc := aliasMap.Data[b.UseAlias]
-		if loc != "" {
-			// call the function again but with the required coordinates
-			mid, _ := gridSquareLocatorAndGenerator(loc, "", c)
-			return mid.GImage, image.Point{mid.X, mid.Y}, mid.GMask, nil
-		} else {
-
-			return nil, image.Point{}, nil, fmt.Errorf(invalidAlias, b.UseAlias)
-		}
-	case b.X != nil || b.Y != nil:
-
-	default:
-		// return no coordinate postion used
-	}
-
-	/*
-		get end locatoin
-
-		wh, r, or x2y2 for xy
-		wh, r, for cxcy
-	*/
-
-	/*
-		now we have the square image the mask is calculated
-		which is if radius or offsets (or both)
-	*/
-
-	// get the end point
-
-	// returns the mask, coordinate and base image and error
-	return nil, image.Point{}, nil, nil
-}
 
 /*
 
@@ -311,6 +268,31 @@ func (b Location) GetAreas(c *context.Context) (draw.Image, image.Point, draw.Im
 		colour.Draw(widgMask, widgMask.Bounds(), mask, tsgLocation, draw.Src)
 	}
 
+	if b.Box.BorderRadius != nil {
+
+		xSize, dim := xUnit, dimensions.X
+		if xSize > yUnit {
+			xSize = yUnit
+		}
+
+		if dim > dimensions.Y {
+			dim = dimensions.Y
+		}
+
+		r, err := anyToDist(b.Box.BorderRadius, dim, xSize)
+		if err != nil {
+			return nil, image.Point{}, nil, err
+		}
+		midMask := roundedMask(c, image.Rect(0, 0, width, height), int(r))
+		if widgMask == nil {
+			widgMask = midMask
+		} else {
+			// mask the tsig mask, with the rounded mask. Only in the bounds of the tsig mask.
+			draw.DrawMask(widgMask, widgMask.Bounds(), midMask, image.Point{}, widgMask, image.Point{}, draw.Src)
+		} // mask it?
+
+	}
+
 	widgetCanvas := ImageGenerator(*c, image.Rect(0, 0, width, height))
 
 	// log the whole location
@@ -321,6 +303,38 @@ func (b Location) GetAreas(c *context.Context) (draw.Image, image.Point, draw.Im
 	}
 
 	return widgetCanvas, tsgLocation, widgMask, nil
+}
+
+func roundedMask(c *context.Context, rect image.Rectangle, radius int) draw.Image {
+
+	base := ImageGenerator(*c, rect)
+	draw.Draw(base, base.Bounds(), &image.Uniform{&colour.CNRGBA64{A: 0xffff}}, image.Point{}, draw.Src)
+
+	startPoints := []image.Point{{radius, radius}, {radius, rect.Max.Y - radius},
+		{rect.Max.X - radius, radius}, {rect.Max.X - radius, rect.Max.Y - radius}}
+
+	dir := []image.Point{{-1, -1}, {-1, 1}, {1, -1}, {1, 1}}
+
+	for i, sp := range startPoints {
+
+		for x := 0; x <= radius; x++ {
+
+			for y := 0; y <= radius; y++ {
+				//	r := xy
+				r := xyToRadius(float64(x), float64(y))
+				if r > float64(radius) {
+					base.Set(sp.X+(dir[i].X*x), sp.Y+(dir[i].Y*y), &colour.CNRGBA64{})
+				}
+			}
+		}
+
+	}
+
+	return base
+}
+
+func xyToRadius(x, y float64) float64 {
+	return math.Sqrt(x*x + y*y)
 }
 
 type DistanceField struct {

@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	"image"
+	"image/color"
+	"image/draw"
+	"image/png"
+	"os"
 	"testing"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
@@ -50,6 +54,21 @@ func TestBox(t *testing.T) {
 				})
 			})
 		})
+
+	}
+
+	radiuses := []int{250, 150, 50}
+
+	for _, r := range radiuses {
+		base := image.Rect(0, 0, 500, 500)
+		msk := roundedMask(cPoint, base, r)
+
+		img := ImageGenerator(*cPoint, base)
+		draw.DrawMask(img, img.Bounds(), &image.Uniform{color.RGBA{R: 0xC2, G: 0xA6, B: 0x49, A: 0xff}}, image.Point{},
+			msk, image.Point{}, draw.Src)
+
+		f, _ := os.Create(fmt.Sprintf("./testdata/box/%v.png", r))
+		png.Encode(f, img)
 
 	}
 }
