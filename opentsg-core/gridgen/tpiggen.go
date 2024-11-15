@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/credentials"
 )
 
 type TPIGCompile struct {
@@ -65,11 +65,11 @@ type XY2D struct {
 	Y1 int `json:"Y1"`
 }
 
-func flatmap(c *context.Context, tpigpath string) (canvasAndMask, error) {
+func flatmap(c *context.Context, basePath, tpigpath string) (canvasAndMask, error) {
 
 	// update the path getting to be localised
-	basePath := core.GetDir(*c)
-	file, err := core.GetWebBytes(c, tpigpath)
+	// basePath := core.GetDir(*c)
+	file, err := credentials.GetWebBytes(c, tpigpath)
 	if err != nil {
 		fullpath := filepath.Join(basePath, tpigpath)
 		file, err = os.ReadFile(fullpath)
@@ -381,7 +381,7 @@ func getGridGeometry(c *context.Context, coordinate string) ([]*Segmenter, error
 	regRC := regexp.MustCompile(`^[Rr]([\d]{2,}|[1-9]{1})[Cc]([\d]{2,}|[1-9]{1})$`)
 	regRCArea := regexp.MustCompile(`^[Rr]([\d]{2,}|[1-9]{1})[Cc]([\d]{2,}|[1-9]{1}):[Rr]([\d]{2,}|[1-9]{1})[Cc]([\d]{2,}|[1-9]{1})$`)
 
-	aliasMap := core.GetAlias(*c)
+	aliasMap := GetAlias(*c)
 
 	// check what the location is
 	switch {

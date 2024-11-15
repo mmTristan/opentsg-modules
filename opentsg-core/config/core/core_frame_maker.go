@@ -14,6 +14,7 @@ import (
 	gonanoid "github.com/matoous/go-nanoid"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/internal/get"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
 	"github.com/peterbourgon/mergemap"
 	"gopkg.in/yaml.v3"
 )
@@ -39,9 +40,6 @@ are declared in this format, is the order they are run.
 */
 func FrameWidgetsGenerator(c context.Context, framePos int) (context.Context, []error) {
 	var allError []error
-
-	// generate a frameContext context to be returned
-	frameContext := context.Background()
 
 	defaultMetadata := map[string]string{"framenumber": intToLength(framePos, 4)}
 
@@ -149,6 +147,10 @@ func FrameWidgetsGenerator(c context.Context, framePos int) (context.Context, []
 
 	// fmt.Println(bases.metadataBucket)
 
+	// generate a frameContext context to be returned
+	// with the frame base from the beginning
+	frameContext := mainBase.frameBase
+
 	parentsOfWidgetsMap := SyncMap{make(map[string]string), &sync.Mutex{}}
 	// addedWidgets holds all the widgets that are assigned a widget so missed ones can be found
 	frameContext = context.WithValue(frameContext, addedWidgets, parentsOfWidgetsMap)
@@ -182,6 +184,7 @@ type widgetEssentials struct {
 	WType       string            `json:"type,omitempty" yaml:"type,omitempty"`
 	GridLoc     Grid              `json:"grid,omitempty" yaml:"grid,omitempty"`
 	ColourSpace colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
+	Loc         gridgen.Location  `json:"location,omitempty" yaml:"location,omitempty"`
 }
 
 // Grid gives the grid system with the coordinates and an alias
@@ -450,6 +453,8 @@ func (b *base) frameBytesAdder(createUpdate map[string]any, widgetBase json.RawM
 
 		holder.Data = raw
 		b.generatedFrameWidgets[dotPath] = holder
+
+		// update teh contents as they may hae changed
 	} else {
 		// create a new entry
 
@@ -1068,6 +1073,25 @@ func set(setMap map[string]any, keys []string, value interface{}, path string) e
 
 	return set(newM, keys[1:], value, path)
 }
+
+/*
+
+func jsonUpdater(baseJSON json.RawMessage, update map[string]any) ([]byte, error) {
+	base := make(map[string]interface{})
+	err := yaml.Unmarshal(baseJSON, &base)
+	if err != nil {
+
+		return nil, fmt.Errorf("%v", err)
+	}
+
+	combinedMap := mergemap.Merge(base, update)
+
+	props := combinedMap["props"]
+	// remove the key
+	delete(combinedMap, "props")
+
+	validator.SchemaValidator(nil, nil, "", nil)
+}*/
 
 // jsoncombiner overwrites basejson with addjson using mergemap
 func jsonCombiner(baseJSON, addJSON json.RawMessage) ([]byte, error) {

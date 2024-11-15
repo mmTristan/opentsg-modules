@@ -12,6 +12,7 @@ import (
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/validator"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/credentials"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -50,8 +51,15 @@ func FileImport(inputFile, profile string, debug bool, httpKeys ...string) (cont
 		return cont, 0, fmt.Errorf("0003 No frames declared in %s", inputFile)
 	}
 
+	// set up the cont with frame useful contets
+	frameCont := context.Background()
+	credentials.InitDecoder(&frameCont, profile, httpKeys...)
+	frameCont = gridgen.InitAliasBox(frameCont)
+
 	holder := base{importedFactories: make(map[string]factory), importedWidgets: make(map[string]json.RawMessage),
-		jsonFileLines: data, authBody: authDecoder, metadataParams: map[string][]string{}}
+		jsonFileLines: data, authBody: authDecoder, metadataParams: map[string][]string{},
+		frameBase: frameCont,
+	}
 
 	baseDir := filepath.Dir(inputFile)
 	err = holder.factoryInit(inputFactory, baseDir, "", []string{baseDir}, []int{})

@@ -10,13 +10,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/fogleman/gg"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/aces"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/canvaswidget"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colourgen"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
 )
 
 type gridContextKey string
@@ -31,115 +30,140 @@ const (
 	gridkey     gridContextKey = "tpig key holder for individual grids, shows what values they contain"
 	tilemaskkey gridContextKey = "tpig mask representing the shape of a tpig"
 	carvekey    gridContextKey = "contains the carving information for tpigs"
+	aliasKeyBox gridContextKey = "contains the alias map for the run of openTSG, but with the new box layout"
+	aliasKey    gridContextKey = "contains the alias map for the run of openTSG"
+	frameKey    gridContextKey = "log of the frame contents for this run"
 )
 
-var rows = canvaswidget.GetGridRows
-var cols = canvaswidget.GetGridColumns
-var getWidth = canvaswidget.GetLWidth
-var size = canvaswidget.GetPictureSize
-var imageType = canvaswidget.GetCanvasType
+type FrameConfiguration struct {
+	Rows       int
+	Cols       int
+	LineWidth  float64
+	ImageSize  image.Point
+	CanvasType string
+	CanvasFill string
+	LineColour string
+	ColorSpace colour.ColorSpace
+	//
+	Geometry string
+	//
+	BaseImage string
+}
+
+// var rows = canvaswidget.GetGridRows
+// var cols = canvaswidget.GetGridColumns
+// var getWidth = canvaswidget.GetLWidth
+
+// var size = canvaswidget.GetPictureSize
+// var imageType = canvaswidget.GetCanvasType
 
 // Colours
-var getFill = canvaswidget.GetFillColour
-var colourSpaceType = canvaswidget.GetBaseColourSpace
+// var getFill = canvaswidget.GetFillColour
+// var colourSpaceType = canvaswidget.GetBaseColourSpace
 
 type canvasAndMask struct {
 	canvas, mask draw.Image
 }
 
-func baseGen(c *context.Context, geomCanvas draw.Image) (draw.Image, error) {
+func baseGen(c *context.Context, geomCanvas draw.Image, frame FrameConfiguration) (draw.Image, error) {
 	var canvas draw.Image
+	cmid := context.WithValue(*c, frameKey, frame)
 	if geomCanvas == nil {
-		s := size(*c)
+		// s := size(*c)
 		// based on type do this and use aces as increased fidelity?
-		canvasSize := image.Rect(0, 0, s.X, s.Y)
-
+		// canvasSize := image.Rect(0, 0, s.X, s.Y)
+		canvasSize := image.Rect(0, 0, frame.ImageSize.X, frame.ImageSize.Y)
 		canvas = ImageGenerator(*c, canvasSize)
 	} else {
 		canvas = geomCanvas
 	}
 
 	background := &colour.CNRGBA64{R: 46080, G: 46080, B: 46080, A: 0xffff}
-	fillColour := getFill(*c)
-	if fillColour != "" { // check for user defined colours
-		background = colourgen.HexToColour(fillColour, colourSpaceType(*c))
+	// fillColour := getFill(*c)
+	if frame.CanvasFill != "" { // check for user defined colours
+		background = colourgen.HexToColour(frame.CanvasFill, frame.ColorSpace)
 		// background = colourgen.ConvertNRGBA64(col)
 	}
 
 	colour.Draw(canvas, canvas.Bounds(), &image.Uniform{background}, image.Point{}, draw.Src)
 	// make the squares sizes
-	x := cols(*c)
-	y := rows(*c)
-	if x == 0 || y == 0 {
-		return canvas, fmt.Errorf("0041 No columns or rows declared, got %v rows and %v columns", y, x)
+	//x := cols(*c)
+	//y := rows(*c)
+	if frame.Cols == 0 || frame.Rows == 0 {
+		return canvas, fmt.Errorf("0041 No columns or rows declared, got %v rows and %v columns", frame.Rows, frame.Cols)
 	}
 	// @TODO make these scale, not be whole numbers
 	// make sure the number is a whole number etc
-	squareX := float64(canvas.Bounds().Max.X) / float64(x)
-	squareY := float64(canvas.Bounds().Max.Y) / float64(y)
-	gridToScale(x) // Tell the user the valid list of coordinates, not used anymore
-	cmid := context.WithValue(*c, xkey, squareX)
+	squareX := float64(canvas.Bounds().Max.X) / float64(frame.Cols)
+	squareY := float64(canvas.Bounds().Max.Y) / float64(frame.Rows)
+	gridToScale(frame.Cols) // Tell the user the valid list of coordinates, not used anymore
+	cmid = context.WithValue(*c, xkey, squareX)
 	cmid = context.WithValue(cmid, ykey, squareY)
 	cmid = context.WithValue(cmid, sizekey, canvas.Bounds().Max)
 	*c = cmid
 
-	splice(c, x, y, squareX, squareY)
+	splice(c, frame.Cols, frame.Rows, squareX, squareY)
 
 	return canvas, nil
 }
 
 // ImageGenerator generates an image based off the configuration type.
 func ImageGenerator(c context.Context, canvasSize image.Rectangle) draw.Image {
-	base := imageType(c)
-	if base == "ACES" {
+	frameConfig := (c).Value(frameKey)
+	if frameConfig == nil {
+		frameConfig = FrameConfiguration{}
+	}
+	frame := frameConfig.(FrameConfiguration)
+	// base := imageType(c)
+	if frame.CanvasType == "ACES" {
 
 		return aces.NewARGBA(canvasSize)
 	}
 
-	space := colourSpaceType(c)
-	switch space {
+	// space := colourSpaceType(c)
+	switch frame.ColorSpace {
 	case colour.ColorSpace{}:
 		// if there's no colour space just use the base go images for performance
 		return image.NewNRGBA64(canvasSize)
 	default:
-		return colour.NewNRGBA64(space, canvasSize)
+		return colour.NewNRGBA64(frame.ColorSpace, canvasSize)
 	}
 
 }
 
-var baser = canvaswidget.GetBaseImage
-var geometry = canvaswidget.GetGeometry
+// var baser = canvaswidget.GetBaseImage
+// var geometry = canvaswidget.GetGeometry
 
 // Gridgen generates the base opentsg image for a frame, drawing the gridlines or
 // the specified base image. In both instances the grid lines are calculated for locations.
 // If an image has been used for the base then colour locations are also calculated.
-func GridGen(c *context.Context) (draw.Image, error) {
+func GridGen(c *context.Context, dir string, frame FrameConfiguration) (draw.Image, error) {
 	// if tpig
-	geom := geometry(*c)
+	// geom := geometry(*c)
 	var geomImg canvasAndMask
 
-	if geom != "" {
+	if frame.Geometry != "" {
 		// update the context and produce a mask to draw over the main image
 		// get it to generate a base image that supersedes the one given in s? This is then used as a base for the other methods so they can combine
 		var err error
-		geomImg, err = flatmap(c, geom)
+		geomImg, err = flatmap(c, dir, frame.Geometry)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	base := baser(*c)
-	if base != "" {
+	// base := baser(*c)
+	if frame.BaseImage != "" {
 
-		return artKeyGen(c, geomImg.canvas, base)
+		return artKeyGen(c, geomImg.canvas, frame.BaseImage, frame)
 	}
 
-	return gridGen(c, geomImg)
+	return gridGen(c, geomImg, frame)
 }
 
 // Gridgen generates a canvas using the information found in the config options
-func gridGen(c *context.Context, geomCanvas canvasAndMask) (draw.Image, error) {
-	canvas, err := baseGen(c, geomCanvas.canvas)
+func gridGen(c *context.Context, geomCanvas canvasAndMask, frame FrameConfiguration) (draw.Image, error) {
+	canvas, err := baseGen(c, geomCanvas.canvas, frame)
 	if err != nil {
 		return canvas, err
 	}
@@ -147,7 +171,7 @@ func gridGen(c *context.Context, geomCanvas canvasAndMask) (draw.Image, error) {
 	squareX := (*c).Value(xkey).(float64)
 	squareY := (*c).Value(ykey).(float64)
 	// make a grid frame for each generated module
-	width := getWidth(*c)
+	width := frame.LineWidth
 	// gImage := maskGen(squareX, squareY, width, c)
 	squares := make(map[image.Point]image.Image)
 
@@ -161,7 +185,7 @@ func gridGen(c *context.Context, geomCanvas canvasAndMask) (draw.Image, error) {
 			size := image.Point{X: int(x+squareX) - int(x), Y: int(y+squareY) - int(y)}
 			gImage, ok := squares[size]
 			if !ok {
-				gImage = maskGen(size.X, size.Y, width, c)
+				gImage = maskGen(size.X, size.Y, width, c, frame)
 				squares[size] = gImage
 			}
 
@@ -182,15 +206,15 @@ func gridGen(c *context.Context, geomCanvas canvasAndMask) (draw.Image, error) {
 	return canvas, nil
 }
 
-func maskGen(maxX, maxY int, width float64, c *context.Context) image.Image {
+func maskGen(maxX, maxY int, width float64, c *context.Context, frame FrameConfiguration) image.Image {
 	// make a canvas and change it to a gg context with the required set up
 	maskTailor := image.NewNRGBA64(image.Rect(0, 0, maxX, maxY))
 	// this is automaticall changed to rgb
 	cd := gg.NewContextForImage(maskTailor)
 	myBorder := &colour.CNRGBA64{R: 0, G: 0, B: 0, A: 0xffff}
-	colour := canvaswidget.GetLineColour(*c)
-	if colour != "" { // check for user defined colours
-		myBorder = colourgen.HexToColour(colour, colourSpaceType(*c))
+	// colour := canvaswidget.GetLineColour(*c)
+	if frame.LineColour != "" { // check for user defined colours
+		myBorder = colourgen.HexToColour(frame.LineColour, frame.ColorSpace)
 		// myBorder = colourgen.ConvertNRGBA64(col)
 	}
 
@@ -287,7 +311,7 @@ func gridSquareLocatorAndGenerator(gridString, alias string, c *context.Context)
 		calculations
 	*/
 
-	aliasMap := core.GetAlias(*c)
+	aliasMap := GetAlias(*c)
 	// TODO clean the switch statement by making everything a function of grid
 	switch {
 	case regSing.MatchString(gridString):
@@ -502,4 +526,30 @@ func pointToVal(grid []string) (int, int, int, int, error) {
 	}
 
 	return results[0], results[1], results[2], results[3], nil
+}
+
+// SyncMap  is a map with a sync.Mutex to prevent concurrent writes.
+type SyncMap struct {
+	Data map[string]string
+	Mu   *sync.Mutex
+}
+
+// PutAlias inits a map of the alias in a context
+func PutAlias(c context.Context) context.Context {
+	n := SyncMap{make(map[string]string), &sync.Mutex{}}
+
+	return context.WithValue(c, aliasKey, n)
+}
+
+// Get alias returns a map of the locations alias and their grid positions.
+func GetAlias(c context.Context) SyncMap {
+	Alias := c.Value(aliasKey)
+	if Alias != nil {
+
+		return Alias.(SyncMap)
+	}
+	// else return an empty map
+	var newmu sync.Mutex
+
+	return SyncMap{Mu: &newmu, Data: make(map[string]string)}
 }

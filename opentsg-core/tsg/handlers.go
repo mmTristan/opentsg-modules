@@ -16,6 +16,7 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/widgets"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/credentials"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
 	"gopkg.in/yaml.v3"
 )
@@ -94,7 +95,7 @@ type Request struct {
 // If the URI does not require any credentials then they are not used.
 func (r Request) SearchWithCredentials(URI string) ([]byte, error) {
 	if r.searchWithCredentials == nil {
-		return core.GetWebBytes(nil, URI)
+		return credentials.GetWebBytes(nil, URI)
 	}
 
 	return r.searchWithCredentials(URI)
@@ -307,7 +308,20 @@ func (tsg *OpenTSG) Run(mnt string) {
 				return // continue // skip to the next frame number
 			}
 			// generate the canvas of type image.Image
-			canvas, err := gridgen.GridGen(frameContext)
+			canvas, err := gridgen.GridGen(frameContext, core.GetDir(*frameContext),
+				gridgen.FrameConfiguration{
+
+					Rows:       canvaswidget.GetGridRows(*frameContext),
+					Cols:       canvaswidget.GetGridColumns(*frameContext),
+					LineWidth:  canvaswidget.GetLWidth(*frameContext),
+					ImageSize:  canvaswidget.GetPictureSize(*frameContext),
+					CanvasType: canvaswidget.GetCanvasType(*frameContext),
+					CanvasFill: canvaswidget.GetFillColour(*frameContext),
+					LineColour: canvaswidget.GetLineColour(*frameContext),
+					ColorSpace: canvaswidget.GetBaseColourSpace(*frameContext),
+					Geometry:   canvaswidget.GetGeometry(*frameContext),
+					BaseImage:  canvaswidget.GetBaseImage(*frameContext),
+				})
 			if err != nil {
 				tsg.logErrors(500, frameNo, jobID, err)
 				monit.incrementError(1)
@@ -414,7 +428,7 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 	// add the validator last
 	lineErrs := core.GetJSONLines(*c)
 	webSearch := func(URI string) ([]byte, error) {
-		return core.GetWebBytes(c, URI)
+		return credentials.GetWebBytes(c, URI)
 	}
 
 	// get the widgtes to be used

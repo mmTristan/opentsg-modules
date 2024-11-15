@@ -10,9 +10,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/canvaswidget"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -20,25 +18,35 @@ import (
 
 func TestGrids(t *testing.T) {
 
-	getWidth = func(c context.Context) float64 { return 1 }
-	size = func(c context.Context) image.Point { return image.Point{1000, 1000} }
-	imageType = func(c context.Context) string { return "" }
+	//getWidth = func(c context.Context) float64 { return 1 }
+	//size = func(c context.Context) image.Point { return image.Point{1000, 1000} }
+	// imageType = func(c context.Context) string { return "" }
 
 	// Colours
-	getFill = func(c context.Context) string { return "#ffffff" }
+	// getFill = func(c context.Context) string { return "#ffffff" }
+
+	f := FrameConfiguration{
+		ImageSize:  image.Point{1000, 1000},
+		LineWidth:  1,
+		CanvasType: "",
+		CanvasFill: "#ffffff",
+		Rows:       3,
+		Cols:       3,
+	}
 
 	sizes := []image.Point{{7, 23}, {8, 25}}
 	gridType := []string{"SqueezeGrid", "UniformGrid"}
 
 	for i, size := range sizes {
 
-		rows = func(c context.Context) int { return size.Y }
-		cols = func(c context.Context) int { return size.X }
-
+		//	rows = func(c context.Context) int { return size.Y }
+		//	cols = func(c context.Context) int { return size.X }
+		f.Rows = size.Y
+		f.Cols = size.X
 		c := context.Background()
 		cPoint := &c
 
-		base, err := GridGen(cPoint)
+		base, err := GridGen(cPoint, "./", f)
 
 		f, _ := os.Open("testdata/grids/" + gridType[i] + ".png")
 		baseVals, _ := png.Decode(f)
@@ -63,13 +71,15 @@ func TestGrids(t *testing.T) {
 	}
 
 	// reset everything for use with the other tests
-	rows = canvaswidget.GetGridRows
-	cols = canvaswidget.GetGridColumns
-	getWidth = canvaswidget.GetLWidth
-	size = canvaswidget.GetPictureSize
-	imageType = canvaswidget.GetCanvasType
-	// Colours
-	getFill = canvaswidget.GetFillColour
+	/*
+		rows = canvaswidget.GetGridRows
+		cols = canvaswidget.GetGridColumns
+		getWidth = canvaswidget.GetLWidth
+		size = canvaswidget.GetPictureSize
+		imageType = canvaswidget.GetCanvasType
+		// Colours
+		getFill = canvaswidget.GetFillColour
+	*/
 }
 
 // make a test for the json init stage
@@ -82,7 +92,13 @@ func TestPtoCanvas(t *testing.T) { // test the way [{}] are read etc
 	cmid := context.WithValue(c, xkey, squareX)
 	cmid = context.WithValue(cmid, ykey, squareY)
 	cmid = context.WithValue(cmid, sizekey, image.Point{1600, 900})
-	cmid = core.PutAlias(cmid)
+	f := FrameConfiguration{
+		Rows: 9,
+		Cols: 16,
+	}
+
+	cmid = context.WithValue(cmid, frameKey, f)
+	cmid = PutAlias(cmid)
 	cPoint := &cmid
 
 	// check size of single area then put through the alias and we get some sizes
@@ -91,8 +107,9 @@ func TestPtoCanvas(t *testing.T) { // test the way [{}] are read etc
 	expec := []image.Rectangle{image.Rect(0, 0, 100, 100), image.Rect(0, 0, 200, 200), image.Rect(0, 0, 100, 100),
 		image.Rect(0, 0, 26, 26), image.Rect(0, 0, 100, 100), image.Rect(0, 0, 800, 800), image.Rect(0, 0, 80, 80)}
 	expecP := []image.Point{{0, 100}, {0, 100}, {0, 100}, {27, 27}, {0, 100}, {100, 100}, {-27, -27}}
-	rows = func(context.Context) int { return 9 }
-	cols = func(context.Context) int { return 16 }
+	//	rows = func(context.Context) int { return 9 }
+	//	cols = func(context.Context) int { return 16 }
+
 	for i, size := range goodSize {
 		toCheck, pCheck, _, err := GridSquareLocatorAndGenerator(size, alias[i], cPoint)
 		Convey("Checking the differrent methods of string input make a map", t, func() {
@@ -155,14 +172,20 @@ func TestPtoCanvas(t *testing.T) { // test the way [{}] are read etc
 func TestGridGen(t *testing.T) {
 	// get my picture size
 	//// check the lines of halves and fulls
-	size = func(context.Context) image.Point { return image.Point{1600, 900} }
+	//size = func(context.Context) image.Point { return image.Point{1600, 900} }
 	widths := []float64{0.5, 1, 5}
 	targets := []string{"./testdata/halfgrid.png", "./testdata/onegrid.png", "./testdata/fivegrid.png"}
 
 	for i, w := range widths {
-		getWidth = func(context.Context) float64 { return w }
+		// getWidth = func(context.Context) float64 { return w }
 		valC := context.Background()
-		myImage, _ := GridGen(&valC)
+		myImage, _ := GridGen(&valC, "./", FrameConfiguration{
+			ImageSize: image.Point{1600, 900},
+			LineWidth: w,
+			Rows:      9,
+			Cols:      16,
+		})
+
 		f, _ := os.Open(targets[i])
 		baseVals, _ := png.Decode(f)
 
@@ -191,19 +214,19 @@ func TestArtKey(t *testing.T) {
 	//// check the lines of halves and fulls
 	// check the base is the same as the 4k image that goes in as an init
 	// check the points and image sizes are correct using art param afterwards
-	size = func(context.Context) image.Point { return image.Point{1600, 900} }
+	// 	size = func(context.Context) image.Point { return image.Point{1600, 900} }
 	//	widths := []float64{0.5, 1, 5}
 	targets := []image.Point{{3840, 2160}, {1920, 1080}, {7680, 4320}}
 	base := []string{"./testdata/base4k.png", "./testdata/hdresize.png", "./testdata/resize8k.png"}
-	rows = func(context.Context) int { return 9 }
-	cols = func(context.Context) int { return 16 }
+	// rows = func(context.Context) int { return 9 }
+	// cols = func(context.Context) int { return 16 }
 
 	expectedPoints := []image.Point{{156, 141}, {78, 70}, {312, 282}}
 	expectedBounds := []image.Rectangle{image.Rect(0, 0, 1129, 545), image.Rect(0, 0, 565, 273), image.Rect(0, 0, 2258, 1090)}
 	fmt.Println(targets)
 	for i, tar := range targets {
 		fmt.Println(i, tar)
-		size = func(context.Context) image.Point { return tar }
+		//	size = func(context.Context) image.Point { return tar }
 		f, _ := os.Open("./testdata/base4k.png")
 		baseVals, _ := png.Decode(f)
 		readImage := image.NewNRGBA64(baseVals.Bounds())
@@ -212,7 +235,12 @@ func TestArtKey(t *testing.T) {
 		fmt.Println(readImage.At(178, 1240))
 		valC := context.Background()
 		var mockgeom draw.Image
-		myImage, _ := artKeyGen(&valC, mockgeom, filename)
+		myImage, _ := artKeyGen(&valC, mockgeom, filename,
+			FrameConfiguration{
+				ImageSize: tar,
+				Rows:      9,
+				Cols:      16,
+			})
 
 		// make a hash of the pixels of each image
 		hnormal := sha256.New()

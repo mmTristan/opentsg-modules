@@ -16,6 +16,7 @@ func Example() {
 package credentials
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -38,6 +39,46 @@ var regGitH = regexp.MustCompilePOSIX(`https://github\.com/`)
 
 var regS3 = regexp.MustCompile(`^s3://[\w\-\.]{3,63}/`)
 var regS3AWS = regexp.MustCompile(`^http://s3\.amazonaws\.com/[\w\-\.]{3,63}/`)
+
+type contKey string
+
+const credentialsAuth contKey = "test"
+
+// InitDecoder adds the decoder body to context.
+// it is to be used in tandem with the GetWebBytes function.
+func InitDecoder(c *context.Context, s3Profile string, httpKeys ...string) error {
+
+	authDecoder, err := AuthInit(s3Profile, httpKeys...)
+
+	if err != nil {
+		return err
+	}
+
+	*c = context.WithValue(*c, credentialsAuth, authDecoder)
+
+	return nil
+}
+
+// GetWebBytes is a wrapper of `credentials` where the configuration body is stored in config.
+// This is to prevent several intialisations of the authbody or the data being passed around.
+func GetWebBytes(c *context.Context, uri string) ([]byte, error) {
+
+	var ok = false
+	var auth Decoder
+
+	if c != nil {
+		auth, ok = (*c).Value(credentialsAuth).(Decoder)
+	}
+	// if there is not an authorisation body make a new one with no credentials
+	if !ok {
+		var err error
+		auth, err = AuthInit("")
+		if err != nil {
+			return nil, err
+		}
+	}
+	return auth.Decode(uri)
+}
 
 // Decode returns the body of a url and an error if the information could not be extracted.
 func (d Decoder) Decode(url string) ([]byte, error) {

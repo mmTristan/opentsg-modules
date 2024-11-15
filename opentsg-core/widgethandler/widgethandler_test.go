@@ -61,7 +61,20 @@ func contMocker(file, target, extra string) (*context.Context, draw.Image) {
 	mockC := MetaDataInit(cFrame)
 	canvaswidget.LoopInit(mockC)
 
-	canvas, _ := gridgen.GridGen(mockC)
+	canvas, _ := gridgen.GridGen(mockC, "./",
+		gridgen.FrameConfiguration{
+
+			Rows:       canvaswidget.GetGridRows(*mockC),
+			Cols:       canvaswidget.GetGridColumns(*mockC),
+			LineWidth:  canvaswidget.GetLWidth(*mockC),
+			ImageSize:  canvaswidget.GetPictureSize(*mockC),
+			CanvasType: canvaswidget.GetCanvasType(*mockC),
+			CanvasFill: canvaswidget.GetFillColour(*mockC),
+			LineColour: canvaswidget.GetLineColour(*mockC),
+			ColorSpace: canvaswidget.GetBaseColourSpace(*mockC),
+			Geometry:   canvaswidget.GetGeometry(*mockC),
+			BaseImage:  canvaswidget.GetBaseImage(*mockC),
+		})
 
 	return mockC, canvas
 }

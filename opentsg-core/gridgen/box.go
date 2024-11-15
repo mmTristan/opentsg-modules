@@ -9,9 +9,9 @@ import (
 	"math"
 	"regexp"
 	"strconv"
+	"sync"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
 )
 
 /*
@@ -117,6 +117,32 @@ type Box struct {
 	BorderRadius any
 }
 
+// InitAliasBox inits a map of the alias in a context
+func InitAliasBox(c context.Context) context.Context {
+	n := SyncMapBox{make(map[string]any), &sync.Mutex{}}
+
+	return context.WithValue(c, aliasKeyBox, n)
+}
+
+// SyncMap  is a map with a sync.Mutex to prevent concurrent writes.
+type SyncMapBox struct {
+	Data map[string]any
+	Mu   *sync.Mutex
+}
+
+// Get alias returns a map of the locations alias and their grid positions.
+func GetAliasBox(c context.Context) SyncMapBox {
+	Alias := c.Value(aliasKeyBox)
+	if Alias != nil {
+
+		return Alias.(SyncMapBox)
+	}
+	// else return an empty map
+	var newmu sync.Mutex
+
+	return SyncMapBox{Mu: &newmu, Data: make(map[string]any)}
+}
+
 /*
 
 no shapes apart from square with rounded edges
@@ -159,7 +185,7 @@ func anyToLength(coordinate any) int {
 
 func (l Location) GridSquareLocatorAndGenerator(c *context.Context) (draw.Image, image.Point, draw.Image, error) {
 
-	alias := core.GetAliasBox(*c)
+	alias := GetAliasBox(*c)
 
 	if l.Box.UseAlias != "" {
 		alias.Mu.Lock()
@@ -190,10 +216,10 @@ func (l Location) GridSquareLocatorAndGenerator(c *context.Context) (draw.Image,
 
 func (b Location) GetAreas(c *context.Context) (draw.Image, image.Point, draw.Image, error) {
 	if b.Box.X == nil || b.Box.Y == nil {
-		//invalid coordiantes recived
+		//invalid coordinates received
 	}
 
-	aliasMap := core.GetAliasBox(*c)
+	aliasMap := GetAliasBox(*c)
 	dimensions := (*c).Value(sizekey).(image.Point)
 	xUnit := (*c).Value(xkey).(float64)
 	yUnit := (*c).Value(ykey).(float64)
@@ -270,19 +296,29 @@ func (b Location) GetAreas(c *context.Context) (draw.Image, image.Point, draw.Im
 
 	if b.Box.BorderRadius != nil {
 
-		xSize, dim := xUnit, dimensions.X
+		xSize, dim := xUnit, width
 		if xSize > yUnit {
 			xSize = yUnit
 		}
 
-		if dim > dimensions.Y {
-			dim = dimensions.Y
+		if dim > height {
+			dim = height
 		}
 
-		r, err := anyToDist(b.Box.BorderRadius, dim, xSize)
+		rad, err := anyToDist(b.Box.BorderRadius, dim, xSize)
+		r := int(rad)
 		if err != nil {
 			return nil, image.Point{}, nil, err
 		}
+
+		if r > width/2 {
+			r = width / 2
+		}
+
+		if r > height/2 {
+			r = height / 2
+		}
+
 		midMask := roundedMask(c, image.Rect(0, 0, width, height), int(r))
 		if widgMask == nil {
 			widgMask = midMask

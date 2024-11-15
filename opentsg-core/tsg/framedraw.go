@@ -192,7 +192,20 @@ func (tsg *OpenTSG) Draw(debug bool, mnt, logType string) {
 				return // continue // skip to the next frame number
 			}
 			// generate the canvas of type image.Image
-			canvas, err := gridgen.GridGen(frameContext)
+			canvas, err := gridgen.GridGen(frameContext, core.GetDir(*frameContext),
+				gridgen.FrameConfiguration{
+
+					Rows:       canvaswidget.GetGridRows(*frameContext),
+					Cols:       canvaswidget.GetGridColumns(*frameContext),
+					LineWidth:  canvaswidget.GetLWidth(*frameContext),
+					ImageSize:  canvaswidget.GetPictureSize(*frameContext),
+					CanvasType: canvaswidget.GetCanvasType(*frameContext),
+					CanvasFill: canvaswidget.GetFillColour(*frameContext),
+					LineColour: canvaswidget.GetLineColour(*frameContext),
+					ColorSpace: canvaswidget.GetBaseColourSpace(*frameContext),
+					Geometry:   canvaswidget.GetGeometry(*frameContext),
+					BaseImage:  canvaswidget.GetBaseImage(*frameContext),
+				})
 			if err != nil {
 				frameLog.PrintErrorMessage("F_CORE_opentsg_", err, debug)
 				// frameWait.Done()

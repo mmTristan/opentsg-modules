@@ -67,6 +67,7 @@ var incschema []byte
 // Processing structs
 type base struct {
 	authBody              credentials.Decoder
+	frameBase             context.Context
 	jsonFileLines         validator.JSONLines
 	importedFactories     map[string]factory
 	importedWidgets       map[string]json.RawMessage
@@ -96,48 +97,16 @@ type AliasIdentity struct {
 	ColourSpace colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
 }
 
-// SyncMap  is a map with a sync.Mutex to prevent concurrent writes.
-type SyncMap struct {
-	Data map[string]string
-	Mu   *sync.Mutex
-}
-
-// Get alias returns a map of the locations alias and their grid positions.
-func GetAlias(c context.Context) SyncMap {
-	Alias := c.Value(aliasKey)
-	if Alias != nil {
-
-		return Alias.(SyncMap)
-	}
-	// else return an empty map
-	var newmu sync.Mutex
-
-	return SyncMap{Mu: &newmu, Data: make(map[string]string)}
-}
-
-// SyncMap  is a map with a sync.Mutex to prevent concurrent writes.
-type SyncMapBox struct {
-	Data map[string]any
-	Mu   *sync.Mutex
-}
-
-// Get alias returns a map of the locations alias and their grid positions.
-func GetAliasBox(c context.Context) SyncMapBox {
-	Alias := c.Value(aliasKeyBox)
-	if Alias != nil {
-
-		return Alias.(SyncMapBox)
-	}
-	// else return an empty map
-	var newmu sync.Mutex
-
-	return SyncMapBox{Mu: &newmu, Data: make(map[string]any)}
-}
-
 // GetFrameWidgets returns a map of the alias
 func GetFrameWidgets(c context.Context) map[string]widgetContents {
 
 	return c.Value(baseKey).(map[string]widgetContents)
+}
+
+// SyncMap  is a map with a sync.Mutex to prevent concurrent writes.
+type SyncMap struct {
+	Data map[string]string
+	Mu   *sync.Mutex
 }
 
 // GetApplied widgets returns a syncMap that contains all the widget names that have been assigned an alias
@@ -151,20 +120,6 @@ func GetAppliedWidgets(c context.Context) SyncMap {
 func GetJSONLines(c context.Context) validator.JSONLines {
 
 	return c.Value(lines).(validator.JSONLines)
-}
-
-// PutAlias inits a map of the alias in a context
-func PutAlias(c context.Context) context.Context {
-	n := SyncMap{make(map[string]string), &sync.Mutex{}}
-
-	return context.WithValue(c, aliasKey, n)
-}
-
-// PutAlias inits a map of the alias in a context
-func PutAliasBox(c context.Context) context.Context {
-	n := SyncMapBox{make(map[string]any), &sync.Mutex{}}
-
-	return context.WithValue(c, aliasKeyBox, n)
 }
 
 // GetDir returns the directory that the base factory resides in.

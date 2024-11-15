@@ -113,6 +113,14 @@ func TestHandlerAdditions(t *testing.T) {
 
 func TestMethodFunctions(t *testing.T) {
 	// @TODO test the response and request methods
+
+	otsg, err := BuildOpenTSG("./testdata/testloader.json", "", true, nil)
+	otsg.HandleFunc("builtin.legacy", HandlerFunc(func(r1 Response, r2 *Request) {
+
+		r2.searchWithCredentials("")
+	}))
+	fmt.Println(err, "this err")
+	otsg.Run("")
 }
 
 // Run with the -race flag to ensure no shenanigans occur

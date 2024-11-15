@@ -12,16 +12,16 @@ import (
 	"regexp"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/credentials"
 	"github.com/nfnt/resize"
 	"golang.org/x/image/tiff"
 )
 
 // artkeyGen set the background of the canvas as the inputted image and generate a map of keys
 // that provide the points of the transparent areas with keys.
-func artKeyGen(c *context.Context, geomCanvas draw.Image, base string) (draw.Image, error) {
+func artKeyGen(c *context.Context, geomCanvas draw.Image, base string, frame FrameConfiguration) (draw.Image, error) {
 	// make the canvas to the user specification
-	canvas, err := baseGen(c, geomCanvas)
+	canvas, err := baseGen(c, geomCanvas, frame)
 	if err != nil {
 		return canvas, err
 	}
@@ -65,7 +65,7 @@ func artToCanvas(tag string, c *context.Context) (draw.Image, image.Point, draw.
 // key gen extracts the file from a http source then a local source
 func keyGen(c *context.Context, base string, bounds image.Point) (*image.NRGBA64, error) {
 
-	file, err := core.GetWebBytes(c, base)
+	file, err := credentials.GetWebBytes(c, base)
 	if err == nil {
 		return extract(file, base, bounds)
 	}
