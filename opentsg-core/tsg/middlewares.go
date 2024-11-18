@@ -17,7 +17,7 @@ func LogToFile(otsg *OpenTSG, opts slog.HandlerOptions, folder, jobID string) {
 
 	path := filepath.Join(folder, fmt.Sprintf("%s.log", jobID))
 
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0777)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0777)
 
 	if err != nil {
 		panic(err)

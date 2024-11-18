@@ -32,9 +32,22 @@ func ExtractAllWidgets(c *context.Context) map[core.AliasIdentity]json.RawMessag
 	tagBytes := make(map[core.AliasIdentity]json.RawMessage)
 	for k, wf := range frameWidgets {
 		// skip factories that don't have types
-		if wf.Tag != "" {
-			tagBytes[core.AliasIdentity{FullName: k, ZPos: wf.Pos, WType: wf.Tag, GridAlias: wf.Alias, Location: wf.Location, ColourSpace: wf.ColourSpace}] = wf.Data
-		}
+
+		tagBytes[core.AliasIdentity{FullName: k, ZPos: wf.Pos, WType: wf.Tag, GridAlias: wf.Alias, Location: wf.Location, ColourSpace: wf.ColourSpace}] = wf.Data
+
+	}
+
+	return tagBytes
+}
+
+func ExtractAllWidgetsHandle(c *context.Context) map[core.AliasIdentityHandle]json.RawMessage {
+
+	frameWidgets := core.GetFrameWidgetsHandle(*c)
+	tagBytes := make(map[core.AliasIdentityHandle]json.RawMessage)
+	for k, wf := range frameWidgets {
+		// skip factories that don't have types
+		tagBytes[core.AliasIdentityHandle{FullName: k, ZPos: wf.Pos, WidgetEssentials: wf.WidgetEssentials}] = wf.Data
+
 	}
 
 	return tagBytes
@@ -57,7 +70,6 @@ func ExtractWidgetStructs[T any](ftype string, schema []byte, c *context.Context
 	for key, val := range get {
 		k := key.FullName
 		var baseWidg T
-
 		// check it passes the schema
 		err := validator.SchemaValidator(schema, val, k, lineErrs)
 		if err != nil {
@@ -86,7 +98,7 @@ func MissingWidgetCheck(c context.Context) map[core.AliasIdentity]string {
 	// update name map
 	missed := make(map[core.AliasIdentity]string)
 	for widgetName, content := range bases {
-		if appliedWidgets.Data[widgetName] == "" && content.Tag != "" { // if it wasn't assigned a tag and isn't a factory
+		if appliedWidgets.Data[widgetName] == "" { // if it wasn't assigned a tag and isn't a factory
 			missed[core.AliasIdentity{FullName: widgetName, ZPos: content.Pos}] = widgetName
 		}
 	}

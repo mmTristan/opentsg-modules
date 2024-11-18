@@ -14,6 +14,7 @@ import (
 	gonanoid "github.com/matoous/go-nanoid"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/internal/get"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/config/validator"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
 	"github.com/peterbourgon/mergemap"
 	"gopkg.in/yaml.v3"
@@ -27,6 +28,14 @@ type mustacheKey struct {
 type data struct {
 	Dimensions []int            `json:"dimensions" yaml:"dimensions"`
 	Data       []map[string]any `json:"data" yaml:"data"`
+}
+
+// each json has factory has a tag that defines the widget it represents
+type widgetEssentials struct {
+	WType       string            `json:"type,omitempty" yaml:"type,omitempty"`
+	GridLoc     Grid              `json:"grid,omitempty" yaml:"grid,omitempty"`
+	ColourSpace colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
+	Loc         gridgen.Location  `json:"location,omitempty" yaml:"location,omitempty"`
 }
 
 // FrameWidgetsGenerator runs the create frame for the given position. Applying any updates required and generating any
@@ -111,7 +120,7 @@ func FrameWidgetsGenerator(c context.Context, framePos int) (context.Context, []
 	// Metadata update of the base widget
 	for k, wc := range bases.generatedFrameWidgets {
 		// if it is widget to be updated
-		if wc.Tag != "" {
+		if wc.Widget {
 			metadata, _, err := bases.metadataGetter(map[string]any{}, k, defaultMetadata)
 			if err != nil {
 				allError = append(allError, err) // skip to next widget
@@ -174,13 +183,190 @@ func FrameWidgetsGenerator(c context.Context, framePos int) (context.Context, []
 	return frameContext, allError
 }
 
+// FrameWidgetsGenerator runs the create frame for the given position. Applying any updates required and generating any
+// extra json from data. It returns an initial context with all the frame and configuration information.
+/*
+The widgets are found by depth first tree traversal, where properties are passed by property and not value.
+
+This means each include statement is searched when it is found and the order widgets
+are declared in this format, is the order they are run.
+
+*/
+func FrameWidgetsGeneratorHandle(c context.Context, framePos int) (context.Context, []error) {
+	var allError []error
+
+	defaultMetadata := map[string]string{"framenumber": intToLength(framePos, 4)}
+
+	// extract the base info
+	all, ok := c.Value(updates).(factory)
+	if !ok {
+		return nil, []error{fmt.Errorf("0DEV context not configured, please ensure the context from FileImport is used")}
+	}
+
+	mainBase, ok := c.Value(frameHolders).(base)
+	if !ok {
+		return nil, []error{fmt.Errorf("0DEV context not configured, please ensure the context from FileImport is used")}
+	}
+
+	// create a clean map for each frame to prevent overwrite errors. Line holder is only to be read from
+	bases := base{importedFactories: make(map[string]factory),
+		importedWidgets: make(map[string]json.RawMessage),
+		jsonFileLines:   mainBase.jsonFileLines,
+		metadataParams:  mainBase.metadataParams,
+		metadataBucket:  make(map[string]map[string]any)}
+	for k, v := range mainBase.importedFactories {
+		bases.importedFactories[k] = v
+	}
+	for k, v := range mainBase.importedWidgets {
+		bases.importedWidgets[k] = v
+	}
+
+	bases.generatedFrameWidgets = make(map[string]widgetContents)
+	rawUpdate := all.Create[framePos]
+
+	z := 0
+	// generate all the rawjson and their name/relarive position
+	errs, delayUpdates := bases.createWidgets(rawUpdate, defaultMetadata, "", []int{}, 0, &z)
+	if len(errs) != 0 {
+		// append the errors to be handled by the core/draw
+		allError = append(allError, errs...)
+	}
+
+	// update the array paths
+	for _, delayUpdate := range delayUpdates {
+
+		parent := regexp.MustCompile(`^[\w\.]{1,255}(\[[\d]{1,3}:{0,1}[\d]{0,3}\]){1,}$`)
+		var updates []string
+		var err error
+		if parent.MatchString(delayUpdate.target) {
+			updates, err = arrayGetter(delayUpdate.target, bases.generatedFrameWidgets)
+		} else {
+			updates, err = dotGetter(delayUpdate.target, bases.generatedFrameWidgets)
+		}
+		if err != nil {
+			allError = append(allError, err)
+		}
+
+		for _, update := range updates {
+			frameBase := bases.generatedFrameWidgets[update]
+			// if it has data then update, the headers do not contain any json data
+			if len(frameBase.Data) != 0 {
+				ibody, _ := yaml.Marshal(delayUpdate.body)
+				frameBase.Data, err = jsonCombiner(frameBase.Data, ibody)
+				if err != nil {
+
+					allError = append(allError, fmt.Errorf("0035 when updating the widget %v from the %s : %v ", update, delayUpdate, err))
+				}
+				bases.generatedFrameWidgets[update] = frameBase
+			}
+		}
+	}
+
+	// Metadata update of the base widget
+	for k, wc := range bases.generatedFrameWidgets {
+		// if it is widget to be updated
+		if wc.Widget {
+			metadata, _, err := bases.metadataGetter(map[string]any{}, k, defaultMetadata)
+			if err != nil {
+				allError = append(allError, err) // skip to next widget
+
+				continue
+			}
+
+			var widget map[string]any
+			yaml.Unmarshal(wc.Data, &widget)
+
+			updatedWidget, err := objectMustacheUpdater(widget, metadata, k, "", defaultMetadata)
+			if err != nil {
+				allError = append(allError, err)
+			} else {
+				updatedByte, _ := yaml.Marshal(updatedWidget)
+				wc.Data = updatedByte
+				bases.generatedFrameWidgets[k] = wc
+			}
+		}
+	}
+
+	cleanWidgets := make(map[string]WidgetContents)
+	for k, wc := range bases.generatedFrameWidgets {
+
+		if wc.Widget {
+			var base map[string]any
+			// what to do if there's an error?
+			// empty json bytes
+			yaml.Unmarshal(wc.Data, &base)
+
+			properties, ok := base["props"]
+			if !ok {
+				properties = WidgetEssentials{}
+			}
+			props, _ := json.Marshal(properties)
+			// get the props
+			validator.SchemaValidator([]byte(`{}`), props, k, mainBase.jsonFileLines)
+
+			// then parse it
+			var essential WidgetEssentials
+			json.Unmarshal(props, &essential)
+			// delete the widget relevant stuff
+			delete(base, "props")
+			baseBytes, _ := yaml.Marshal(base)
+
+			widg := WidgetContents{baseBytes,
+				wc.Pos, wc.arrayPos, essential,
+			}
+			// apply to new bosy
+			cleanWidgets[k] = widg
+
+		}
+	}
+	// after getting all the updates apply the metadata to the base widgets.
+	/*
+
+		pseudo code
+
+		loop through every update. Get the relevant metadata, from parents to child.
+		apply the updates with the object
+
+		then carry on
+
+	*/
+
+	// fmt.Println(bases.metadataBucket)
+
+	// generate a frameContext context to be returned
+	// with the frame base from the beginning
+	frameContext := mainBase.frameBase
+
+	parentsOfWidgetsMap := SyncMap{make(map[string]string), &sync.Mutex{}}
+	// addedWidgets holds all the widgets that are assigned a widget so missed ones can be found
+	frameContext = context.WithValue(frameContext, addedWidgets, parentsOfWidgetsMap)
+	// base key gives the frame for each run
+	frameContext = context.WithValue(frameContext, baseKey, cleanWidgets)
+	// alias key contains the global section for all the aliases in gridgen
+	frameContext = context.WithValue(frameContext, aliasKey, c.Value(aliasKey))
+	// factorydir has the factory the open bit was called in, so far for use in the add iamge widget
+	frameContext = context.WithValue(frameContext, factoryDir, c.Value(factoryDir))
+	// lines holds the hash of the lines of al the json values
+	frameContext = context.WithValue(frameContext, lines, mainBase.jsonFileLines)
+	// mmReaderAuth holds any auth information used in the system
+	frameContext = context.WithValue(frameContext, credentialsAuth, mainBase.authBody)
+	// add the frame position
+	frameContext = context.WithValue(frameContext, poskey, framePos)
+
+	// if debug {
+	// tree(bases.generatedFrameWidgets)
+	//}
+	// add an ability to just dump the frame and let the user see
+	return frameContext, allError
+}
+
 type jsonUpdate struct {
 	target string
 	body   map[string]any
 }
 
 // each json has factory has a tag that defines the widget it represents
-type widgetEssentials struct {
+type WidgetEssentials struct {
 	WType       string            `json:"type,omitempty" yaml:"type,omitempty"`
 	GridLoc     Grid              `json:"grid,omitempty" yaml:"grid,omitempty"`
 	ColourSpace colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
@@ -464,6 +650,7 @@ func (b *base) frameBytesAdder(createUpdate map[string]any, widgetBase json.RawM
 			return fmt.Errorf("0036 error when updating the widget %v: %v", dotPath, err)
 		}
 
+		// @TODO remove when handlers are fully implemented
 		var id widgetEssentials
 		err = yaml.Unmarshal(raw, &id)
 		if err != nil {
@@ -474,9 +661,11 @@ func (b *base) frameBytesAdder(createUpdate map[string]any, widgetBase json.RawM
 		if id.WType == "" {
 			id.WType, _ = gonanoid.Nanoid() // generate a random id so widgets can't pick it up with delibrate names
 		}
-		b.generatedFrameWidgets[dotPath] = widgetContents{Data: raw, Pos: *zPos, arrayPos: positions, Tag: id.WType,
+		b.generatedFrameWidgets[dotPath] = widgetContents{Data: raw, Pos: *zPos, arrayPos: positions, Widget: true,
 			Location: id.GridLoc.Location, Alias: id.GridLoc.Alias, ColourSpace: id.ColourSpace,
+			Tag: id.WType,
 		}
+
 		*zPos++
 	}
 
@@ -721,6 +910,7 @@ func (b base) dataToFrame(jsonBase json.RawMessage, results []arrayValues, data 
 				continue
 			}
 
+			//@TODO remove when handlers fully implemented
 			var id widgetEssentials
 			err = yaml.Unmarshal(newbase, &id)
 			if err != nil {
@@ -735,7 +925,7 @@ func (b base) dataToFrame(jsonBase json.RawMessage, results []arrayValues, data 
 				errs = append(errs, fmt.Errorf("0015 %s has already been generated for the parent %s", parent[:len(parent)-1]+result.name, parent[:len(parent)-1]))
 			} else {
 				b.generatedFrameWidgets[parent[:len(parent)-1]+result.name] = widgetContents{
-					Data: newbase, Pos: *zPos, arrayPos: append(pos, result.effectiveArray...), Tag: id.WType,
+					Data: newbase, Pos: *zPos, arrayPos: append(pos, result.effectiveArray...), Widget: true, Tag: id.WType,
 					Location: id.GridLoc.Location, Alias: id.GridLoc.Alias}
 				*zPos++
 			}

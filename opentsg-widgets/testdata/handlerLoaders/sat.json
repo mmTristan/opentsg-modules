@@ -1,0 +1,22 @@
+{
+    "type": "builtin.ebu3373/saturation",
+    "colors": [
+        "red",
+        "green",
+        "blue"
+    ],
+    "grid": {
+        "location": "ev146:nt205"
+    },
+    "props": {
+        "type": "builtin.ebu3373/saturation",
+        "location": {
+            "box": {
+                "x": 151,
+                "y": 146,
+                "x2" :384,
+                "y2" : 206
+            }
+        }
+    }
+}

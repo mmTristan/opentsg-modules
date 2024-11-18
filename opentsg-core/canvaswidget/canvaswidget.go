@@ -3,6 +3,7 @@ package canvaswidget
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/draw"
@@ -12,6 +13,7 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/widgets"
+	"gopkg.in/yaml.v3"
 )
 
 type key struct {
@@ -76,6 +78,48 @@ const WType = "builtin.canvasoptions"
 // Loop init extracts and applies the canvas properties for each frame.
 // This is to be run as the first step after generating the frame widgets,
 // because other modules rely on this information for generating their own structs.
+func LoopInitHandle(frameContext *context.Context) []error {
+	conf := widgets.ExtractAllWidgetsHandle(frameContext)
+
+	canvas := make([]json.RawMessage, 0)
+	for widg, v := range conf {
+		if widg.WType == WType {
+			canvas = append(canvas, v)
+		}
+
+	}
+
+	//if errs != nil {
+	//	return errs
+	// }
+	globParams := ConfigVals{}
+
+	switch len(canvas) {
+	case 1:
+		for _, v := range canvas {
+			err := yaml.Unmarshal(v, &globParams)
+			if err != nil {
+				return []error{fmt.Errorf("error extracting %s widget: %s", WType, err)}
+			}
+		}
+
+	case 0:
+		return []error{fmt.Errorf("0061 no \"%s\" widget has been loaded, can not configure openTSG", WType)}
+
+	default:
+
+		return []error{fmt.Errorf("0061 too many \"%s\" widgets have been loaded (Got %v wanted 1), can not configure openTSG", WType, len(canvas))}
+	}
+
+	midC := context.WithValue(*frameContext, generatedConfig, globParams)
+	*frameContext = midC // update the context pointer
+
+	return []error{}
+}
+
+// Loop init extracts and applies the canvas properties for each frame.
+// This is to be run as the first step after generating the frame widgets,
+// because other modules rely on this information for generating their own structs.
 func LoopInit(frameContext *context.Context) []error {
 	conf, errs := widgets.ExtractWidgetStructs[ConfigVals](WType, baseschema, frameContext)
 
@@ -83,7 +127,6 @@ func LoopInit(frameContext *context.Context) []error {
 		return errs
 	}
 	globParams := ConfigVals{}
-
 	switch len(conf) {
 	case 1:
 		for _, v := range conf {

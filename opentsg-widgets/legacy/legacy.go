@@ -41,6 +41,7 @@ func (l Legacy) Handle(resp tsg.Response, req *tsg.Request) {
 		// This one should be placed last as it is checking for missed names,
 		// however order doesn't matter for concurrent functions with the wait groups.
 		widgethandler.MockMissedGen)
+
 	if err != nil {
 
 		resp.Write(500, err.Error())

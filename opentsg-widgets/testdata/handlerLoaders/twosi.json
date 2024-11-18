@@ -1,0 +1,19 @@
+{
+    "type": "builtin.ebu3373/twosi",
+    "grid": {
+        "location": "a146:eu205"
+    },
+    "colorSpace": {"ColorSpace" : "p3"},
+    "props": {
+        "type": "builtin.ebu3373/twosi",
+        "location": {
+            "box": {
+                "x": 0,
+                "y": 146,
+                "x2" :151,
+                "y2" : 206
+            }
+        },
+        "colorSpace": {"ColorSpace" : "p3"}
+    }
+}

@@ -288,7 +288,7 @@ func (tsg *OpenTSG) Run(mnt string) {
 			}()
 
 			// update metadata to be included in the frame context
-			frameConfigCont, errs := core.FrameWidgetsGenerator(tsg.internal, frameNo)
+			frameConfigCont, errs := core.FrameWidgetsGeneratorHandle(tsg.internal, frameNo)
 
 			// this is important for showing missed widget updates
 			// log the errors
@@ -298,7 +298,7 @@ func (tsg *OpenTSG) Run(mnt string) {
 			}
 
 			frameContext := &frameConfigCont
-			errs = canvaswidget.LoopInit(frameContext)
+			errs = canvaswidget.LoopInitHandle(frameContext)
 
 			if len(errs) > 0 {
 				// log.Fatal
@@ -423,7 +423,7 @@ type profile struct {
 func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *monitor) {
 
 	// set up the core context functions
-	allWidgets := widgets.ExtractAllWidgets(c)
+	allWidgets := widgets.ExtractAllWidgetsHandle(c)
 	c = MetaDataInit(*c)
 	// add the validator last
 	lineErrs := core.GetJSONLines(*c)
@@ -433,7 +433,7 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 
 	// get the widgtes to be used
 	// and intialiae the metadata
-	allWidgetsArr := make([]core.AliasIdentity, len(allWidgets))
+	allWidgetsArr := make([]core.AliasIdentityHandle, len(allWidgets))
 	for alias, data := range allWidgets {
 
 		allWidgetsArr[alias.ZPos] = alias
@@ -485,18 +485,13 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 			p.WID = widgProps.FullName
 			p.Wtype = widgProps.WType
 
-			if widgProps.WType == "" {
-				// end middle widgets that are not part of the z order
-				return
-			}
-
 			handlers, handlerExists := tsg.handlers[allWidgetsArr[i].WType]
 			// make a function so the handler is returned
 			// @TODO skip the handler and come back to it later
 
 			var Han Handler
 			var resp response
-			req := Request{JobID: gonanoid.MustID(16), getWidgetMetadata: extractFunc}
+			req := Request{JobID: gonanoid.MustID(16), getWidgetMetadata: extractFunc, PatchProperties: PatchProperties{WidgetFullID: widgProps.FullName, WidgetType: widgProps.WType}}
 			var gridCanvas, mask draw.Image
 			var imgLocation image.Point
 
@@ -548,7 +543,8 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 					return
 				}
 
-				gridCanvas, imgLocation, mask, err = gridgen.GridSquareLocatorAndGenerator(widgProps.Location, widgProps.GridAlias, c)
+				gridCanvas, imgLocation, mask, err = widgProps.Loc.GridSquareLocatorAndGenerator(c)
+
 				// when the function am error is returned,
 				// the function just becomes return an error
 				if err != nil {
@@ -556,7 +552,7 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 					return
 				}
 
-				flats, err := gridgen.GetGridGeometry(c, widgProps.Location)
+				flats, err := widgProps.Loc.GetGridGeometry(c)
 				if err != nil {
 					Han = GenErrorHandler(400, err.Error())
 					return
@@ -566,7 +562,6 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 
 				// set up the requests
 				// and chain the middleware for the handler
-
 				pp := PatchProperties{WidgetType: widgProps.WType,
 					WidgetFullID: widgProps.FullName,
 					Dimensions:   gridCanvas.Bounds(),
@@ -646,6 +641,7 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 	}
 
 	wg.Wait()
+
 }
 
 type drawQueue struct {

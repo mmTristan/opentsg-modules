@@ -8,6 +8,7 @@ import (
 	"image/draw"
 	"math"
 	"regexp"
+	"sort"
 	"strconv"
 	"sync"
 
@@ -71,7 +72,7 @@ type Location struct {
 	// keep the Alias from last time
 	Alias string
 	//
-	Box Box
+	Box Box `json:"box" yaml:"box"`
 }
 
 // implement hsl(0, 100%, 50%);
@@ -114,7 +115,7 @@ type Box struct {
 	// border radius - what css uses
 	// https://prykhodko.medium.com/css-border-radius-how-does-it-work-bfdf23792ac2
 	// taps out at 50% - keep it the simple version to start
-	BorderRadius any
+	BorderRadius any `json:"border-radius" yaml:"border-radius"`
 }
 
 // InitAliasBox inits a map of the alias in a context
@@ -215,94 +216,32 @@ func (l Location) GridSquareLocatorAndGenerator(c *context.Context) (draw.Image,
 }
 
 func (b Location) GetAreas(c *context.Context) (draw.Image, image.Point, draw.Image, error) {
-	if b.Box.X == nil || b.Box.Y == nil {
-		//invalid coordinates received
-	}
 
-	aliasMap := GetAliasBox(*c)
-	dimensions := (*c).Value(sizekey).(image.Point)
-	xUnit := (*c).Value(xkey).(float64)
-	yUnit := (*c).Value(ykey).(float64)
-
-	y, err := anyToDist(b.Box.Y, dimensions.Y, yUnit)
-	if err != nil {
-		return nil, image.Point{}, nil, err
-	}
-
-	x, err := anyToDist(b.Box.X, dimensions.X, xUnit)
-	if err != nil {
-		return nil, image.Point{}, nil, err
-	}
-
-	var endY float64
-
-	// switch the width in order of precedence
-	switch {
-	case b.Box.Y2 != nil:
-		endY, err = anyToDist(b.Box.Y2, dimensions.Y, yUnit)
-	case b.Box.Height != nil:
-		var mid float64
-		mid, err = anyToDist(b.Box.Height, dimensions.Y, yUnit)
-		endY = y + mid
-	default:
-		// default is one y unit
-		endY = y + yUnit
-		// height is one
-	}
+	dims, tsgLocation, err := b.CalcArea(c)
 
 	if err != nil {
 		return nil, image.Point{}, nil, err
 	}
-
-	var endX float64
-
-	// switch the width in order of precedence
-	switch {
-	case b.Box.X2 != nil:
-		endX, err = anyToDist(b.Box.X2, dimensions.X, xUnit)
-	case b.Box.Width != nil:
-		var mid float64
-		mid, err = anyToDist(b.Box.Width, dimensions.X, xUnit)
-		endX = x + mid
-	default:
-		// default is one y unit
-		endX = x + xUnit
-		// height is one
-	}
-
-	if err != nil {
-		return nil, image.Point{}, nil, err
-	}
-
-	width := int(endX) - int(x)
-	height := int(endY) - int(y)
-	tsgLocation := image.Point{X: int(x), Y: int(y)}
-
-	// get the area that the widget covers
-
-	//ignore the XY coordinate power user
-	//	if (((gb.X + generatedGridInfo.X) > maxBounds.X) || (gb.Y+generatedGridInfo.Y) > maxBounds.Y) && !regXY.MatchString(gridString) {
-	//
-	//			return emptyGrid, fmt.Errorf(errBounds, maxBounds, gb.X+generatedGridInfo.X, gb.Y+generatedGridInfo.Y)
-	//	}
 
 	mask := (*c).Value(tilemaskkey)
 	var widgMask draw.Image
 	if mask != nil {
 		mask := mask.(draw.Image)
-		widgMask = ImageGenerator(*c, image.Rect(0, 0, width, height))
+		widgMask = ImageGenerator(*c, dims)
 		colour.Draw(widgMask, widgMask.Bounds(), mask, tsgLocation, draw.Src)
 	}
 
+	xUnit := (*c).Value(xkey).(float64)
+	yUnit := (*c).Value(ykey).(float64)
 	if b.Box.BorderRadius != nil {
 
-		xSize, dim := xUnit, width
+		xSize, dim := xUnit, dims.Max.X
 		if xSize > yUnit {
 			xSize = yUnit
 		}
 
-		if dim > height {
-			dim = height
+		if dim > dims.Max.Y {
+			dim = dims.Max.Y
 		}
 
 		rad, err := anyToDist(b.Box.BorderRadius, dim, xSize)
@@ -311,15 +250,15 @@ func (b Location) GetAreas(c *context.Context) (draw.Image, image.Point, draw.Im
 			return nil, image.Point{}, nil, err
 		}
 
-		if r > width/2 {
-			r = width / 2
+		if r > dims.Max.X/2 {
+			r = dims.Max.X / 2
 		}
 
-		if r > height/2 {
-			r = height / 2
+		if r > dims.Max.Y/2 {
+			r = dims.Max.Y / 2
 		}
 
-		midMask := roundedMask(c, image.Rect(0, 0, width, height), int(r))
+		midMask := roundedMask(c, dims, int(r))
 		if widgMask == nil {
 			widgMask = midMask
 		} else {
@@ -329,16 +268,84 @@ func (b Location) GetAreas(c *context.Context) (draw.Image, image.Point, draw.Im
 
 	}
 
-	widgetCanvas := ImageGenerator(*c, image.Rect(0, 0, width, height))
+	widgetCanvas := ImageGenerator(*c, dims)
 
 	// log the whole location
 	if b.Alias != "" {
+		aliasMap := GetAliasBox(*c)
 		aliasMap.Mu.Lock() // prevent concurrent map writes
 		aliasMap.Data[b.Alias] = b
 		aliasMap.Mu.Unlock()
 	}
 
 	return widgetCanvas, tsgLocation, widgMask, nil
+}
+
+func (l Location) CalcArea(c *context.Context) (image.Rectangle, image.Point, error) {
+	if l.Box.X == nil || l.Box.Y == nil {
+		//invalid coordinates received
+		return image.Rectangle{}, image.Point{}, fmt.Errorf("inavlid coordinates of x %v and y %v received", l.Box.X, l.Box.Y)
+	}
+
+	dimensions := (*c).Value(sizekey).(image.Point)
+	xUnit := (*c).Value(xkey).(float64)
+	yUnit := (*c).Value(ykey).(float64)
+
+	y, err := anyToDist(l.Box.Y, dimensions.Y, yUnit)
+	if err != nil {
+		return image.Rectangle{}, image.Point{}, err
+	}
+
+	x, err := anyToDist(l.Box.X, dimensions.X, xUnit)
+	if err != nil {
+		return image.Rectangle{}, image.Point{}, err
+	}
+
+	var endY float64
+
+	// switch the width in order of precedence
+	switch {
+	case l.Box.Y2 != nil:
+		endY, err = anyToDist(l.Box.Y2, dimensions.Y, yUnit)
+	case l.Box.Height != nil:
+		var mid float64
+		mid, err = anyToDist(l.Box.Height, dimensions.Y, yUnit)
+		endY = y + mid
+	default:
+		// default is one y unit
+		endY = y + yUnit
+		// height is one
+	}
+
+	if err != nil {
+		return image.Rectangle{}, image.Point{}, err
+	}
+
+	var endX float64
+
+	// switch the width in order of precedence
+	switch {
+	case l.Box.X2 != nil:
+		endX, err = anyToDist(l.Box.X2, dimensions.X, xUnit)
+	case l.Box.Width != nil:
+		var mid float64
+		mid, err = anyToDist(l.Box.Width, dimensions.X, xUnit)
+		endX = x + mid
+	default:
+		// default is one y unit
+		endX = x + xUnit
+		// height is one
+	}
+
+	if err != nil {
+		return image.Rectangle{}, image.Point{}, err
+	}
+
+	width := int(endX) - int(x)
+	height := int(endY) - int(y)
+	tsgLocation := image.Point{X: int(x), Y: int(y)}
+
+	return image.Rect(0, 0, width, height), tsgLocation, nil
 }
 
 func roundedMask(c *context.Context, rect image.Rectangle, radius int) draw.Image {
@@ -441,9 +448,9 @@ func anyToDist(a any, dimension int, unitWidth float64) (float64, error) {
 		if err != nil {
 			return 0, fmt.Errorf("extracting %s as a percentage : %v", dist, err.Error())
 		}
-		fmt.Println(perc)
+		// fmt.Println(perc)
 		totalWidth := (perc / 100) * float64(dimension)
-		fmt.Println(totalWidth, dimension)
+		//	fmt.Println(totalWidth, dimension)
 		// @TOOD include the dimensions
 		return totalWidth, nil
 	case grid.MatchString(dist):
@@ -456,7 +463,53 @@ func anyToDist(a any, dimension int, unitWidth float64) (float64, error) {
 		// @TOOD include the dimensions
 		return totalWidth, nil
 	default:
-		return 0, fmt.Errorf("unknown coordiante use %s", dist)
+		return 0, fmt.Errorf("unknown coordinate use %s", dist)
 	}
+
+}
+
+// Get GridGeometry returns the geometry of a grid coordiante, localised to those grid coordinates.
+// This is for use with widgets that utilise geometry.
+// if not tsigs were called in the set up phase then a tsig that
+// fills the area is given
+func (l Location) GetGridGeometry(c *context.Context) ([]Segmenter, error) {
+
+	bounds, tsgPoint, err := l.CalcArea(c)
+	if err != nil {
+
+		return nil, err
+	}
+
+	// set the bounds to cover the area
+	bounds = bounds.Add(tsgPoint)
+	geometry := (*c).Value(tilekey)
+
+	var geometryHolder []*Segmenter
+	if geometry != nil {
+		geometryHolder = geometry.([]*Segmenter)
+	} else {
+		return []Segmenter{{Shape: bounds, Tags: []string{"autogenerated"}}}, nil
+	}
+	matches := []*Segmenter{}
+	for _, g := range geometryHolder {
+		if bounds.Overlaps(g.Shape) {
+			matches = append(matches, g)
+		}
+	}
+
+	offsetMatches := make([]Segmenter, len(matches))
+
+	for i, match := range matches {
+		mid := *match
+		// go for negative offsets
+		mid.Shape = mid.Shape.Add(image.Point{-tsgPoint.X, -tsgPoint.Y})
+		offsetMatches[i] = mid
+	}
+
+	sort.Slice(offsetMatches, func(i, j int) bool {
+		return offsetMatches[i].ImportPosition < offsetMatches[j].ImportPosition
+	})
+
+	return offsetMatches, err
 
 }

@@ -2,34 +2,34 @@
 {
     "include": [
         {
-            "uri": "legacyLoaders/bars.json",
+            "uri": "handlerLoaders/bars.json",
             "name": "bars"
           },
           {
-            "uri": "legacyLoaders/sat.json",
+            "uri": "handlerLoaders/sat.json",
             "name": "saturation"
           },
           {
-            "uri": "legacyLoaders/twosi.json",
+            "uri": "handlerLoaders/twosi.json",
             "name": "twosi"
           },
           {
-            "uri": "legacyLoaders/nb.json",
+            "uri": "handlerLoaders/nb.json",
             "name": "black"
           },
           {
-            "uri": "legacyLoaders/luma.json",
+            "uri": "handlerLoaders/luma.json",
             "name": "lum"
           },
       {
-        "uri": "legacyLoaders/base.json",
+        "uri": "handlerLoaders/base.json",
         "name": "canvas"
       }
     ],
   "create":[{
     
         "canvas":{    "name": [
-            "./testdata/legacyLoaders/ebuHandler{{framenumber}}.png"
+            "./testdata/handlerLoaders/ebuHandler{{framenumber}}.png"
         ]},
         "bars":{},
         "saturation":{},

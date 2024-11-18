@@ -1,0 +1,22 @@
+{
+    "props": {
+        "type": "builtin.canvasoptions"},
+    "name": [
+        "./legacyLoaders/ebuHandler{{framenumber}}.png"
+    ],
+    "ColorSpace": {"ColorSpace" : "rec709"},
+    "frameSize": {
+        "w": 3840,
+        "h": 2160
+    },
+    "linewidth": 0,
+    "filedepth": 16,
+    "gridColumns" : 384,
+    "gridRows":216, 
+    "backgroundFillColor":"rgb12(1656,1656,1656)" ,
+    "lineColor":"#00FF00",
+    "frame analytics" : {
+        "configuration": {"enabled":true},
+        "average color": {"enabled":true}
+      }
+}

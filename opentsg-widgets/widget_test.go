@@ -21,6 +21,7 @@ func TestXxx(t *testing.T) {
 	otsg, _ := tsg.BuildOpenTSG("./testdata/legacyloader.json", "", true, &tsg.RunnerConfiguration{RunnerCount: 6, ProfilerEnabled: true})
 	otsg.AddCustomWidgets(twosi.SIGenerate, nearblack.NBGenerate, bars.BarGen, saturation.SatGen, luma.Generate, zoneplate.ZoneGen)
 	otsg.Handle("builtin.legacy", []byte("{}"), legacy.Legacy{})
+	tsg.LogToFile(otsg, slog.HandlerOptions{Level: slog.LevelDebug}, "./testdata/", "og")
 	//otsg.HandleFunc("builtin.canvasoptions", func(r1 tsg.Response, r2 *tsg.Request) { fmt.Println("ring a ding") })
 	otsg.Run("")
 

@@ -76,15 +76,29 @@ type base struct {
 	metadataBucket        map[string]map[string]any
 }
 
-// widgetContents is the content of each widget within a frame and its position in the run order
 type widgetContents struct {
 	Data        json.RawMessage
 	Pos         int
 	arrayPos    []int
 	Tag         string
+	Widget      bool
 	Location    string
 	Alias       string
 	ColourSpace colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
+}
+
+type WidgetContents struct {
+	Data     json.RawMessage
+	Pos      int
+	arrayPos []int
+	WidgetEssentials
+}
+
+// AliasIdentity is the name and zposition of a widget. Where zposition is the widgets position in the global array of widgets
+type AliasIdentityHandle struct {
+	FullName string
+	ZPos     int
+	WidgetEssentials
 }
 
 // AliasIdentity is the name and zposition of a widget. Where zposition is the widgets position in the global array of widgets
@@ -101,6 +115,12 @@ type AliasIdentity struct {
 func GetFrameWidgets(c context.Context) map[string]widgetContents {
 
 	return c.Value(baseKey).(map[string]widgetContents)
+}
+
+// GetFrameWidgets returns a map of the alias
+func GetFrameWidgetsHandle(c context.Context) map[string]WidgetContents {
+
+	return c.Value(baseKey).(map[string]WidgetContents)
 }
 
 // SyncMap  is a map with a sync.Mutex to prevent concurrent writes.

@@ -1,0 +1,18 @@
+{
+    "type": "builtin.ebu3373/luma",
+    "grid": {
+        "location": "a116:nt125"
+    },
+    "props": {
+        "type": "builtin.ebu3373/luma",
+        "location": {
+            "box": {
+                "x": 0,
+                "y": 116,
+                "width":"100%",
+                "y2" : 126
+                         
+            }
+        }
+    }
+}

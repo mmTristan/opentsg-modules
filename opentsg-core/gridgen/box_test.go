@@ -145,3 +145,47 @@ func TestBox(t *testing.T) {
 
 	}
 }
+
+func TestBoxTSIG(t *testing.T) {
+	tpigs := "./testdata/tpig/mock.json"
+
+	c := context.Background()
+	f := FrameConfiguration{
+		ImageSize: image.Point{30, 30},
+		Rows:      3,
+		Cols:      3,
+	}
+
+	c = context.WithValue(c, frameKey, f)
+	cp := &c
+	dest, _ := flatmap(cp, "./", tpigs)
+	baseGen(cp, dest.canvas, f)
+
+	splice(cp, 3, 3, 10, 10)
+
+	gridtarget := []Location{{Box: Box{X: 0, Y: 1}}, {Box: Box{X: 0, Y: 0, Y2: 2}}, {Box: Box{X: 1, Y: 2}},
+		{Box: Box{X: 0, Y: 0, X2: 3, Y2: 3}},
+	} //"A1", "A0:a2", "r2c3", "R1C1:R3C3"}
+	expectedSegment := [][]Segmenter{
+		{{Name: "A001", Shape: image.Rectangle{Min: image.Point{X: 0, Y: 0}, Max: image.Point{X: 10, Y: 10}}, Tags: []string{}, ImportPosition: 1}},
+		{{Name: "A000", Shape: image.Rectangle{Min: image.Point{X: 0, Y: 0}, Max: image.Point{X: 10, Y: 10}}, Tags: []string{}}, {Name: "A001", Shape: image.Rectangle{Min: image.Point{X: 0, Y: 10}, Max: image.Point{X: 10, Y: 20}}, Tags: []string{}, ImportPosition: 1}},
+		{},
+		// some values are repeated across grids
+		{{Name: "A000", Shape: image.Rectangle{Min: image.Point{X: 0, Y: 0}, Max: image.Point{X: 10, Y: 10}}, Tags: []string{}, ImportPosition: 0},
+			{Name: "A001", Shape: image.Rectangle{Min: image.Point{X: 0, Y: 10}, Max: image.Point{X: 10, Y: 20}}, Tags: []string{}, ImportPosition: 1},
+			{Name: "A002", Shape: image.Rectangle{Min: image.Point{X: 10, Y: 0}, Max: image.Point{X: 25, Y: 15}}, Tags: []string{}, ImportPosition: 2},
+			{Name: "A003", Shape: image.Rectangle{Min: image.Point{X: 28, Y: 0}, Max: image.Point{X: 30, Y: 30}}, Tags: []string{}, ImportPosition: 3},
+			{Name: "A004", Shape: image.Rectangle{Min: image.Point{X: 20, Y: 20}, Max: image.Point{X: 30, Y: 30}}, Tags: []string{}, ImportPosition: 4}}, {}}
+	for i, gt := range gridtarget {
+		s, e := gt.GetGridGeometry(cp)
+
+		Convey("Checking tpig segements are returned from the grids", t, func() {
+			Convey(fmt.Sprintf("extracting the values in grid %v", gt), func() {
+				Convey("An array of segemnets related to the grid positions is returned", func() {
+					So(e, ShouldBeNil)
+					So(s, ShouldResemble, expectedSegment[i])
+				})
+			})
+		})
+	}
+}
