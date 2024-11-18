@@ -1,7 +1,10 @@
 {
+    "props":{
     "type": "test.fill",
-    "grid": {
-        "location": "a"
-    },
+	"location":{
+	    "box":{
+		"useAlias":"a"}
+		}
+	},
     "fill":"#0000ff"
 }

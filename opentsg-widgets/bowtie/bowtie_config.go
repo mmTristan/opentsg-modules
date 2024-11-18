@@ -3,15 +3,15 @@ package bowtie
 import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/parameters"
+	"github.com/mrmxf/opentsg-modules/opentsg-widgets/utils/parameters"
 
 	_ "embed"
 )
 
 type Config struct {
-	SegementCount  int      `json:"segmentCount,omitempty" yaml:"segmentCount,omitempty"`
-	SegmentColours []string `json:"segmentColors,omitempty" yaml:"segmentColors,omitempty"`
-	Blend          string   `json:"blend,omitempty" yaml:"blend,omitempty"`
+	SegementCount  int                    `json:"segmentCount,omitempty" yaml:"segmentCount,omitempty"`
+	SegmentColours []parameters.HexString `json:"segmentColors,omitempty" yaml:"segmentColors,omitempty"`
+	Blend          string                 `json:"blend,omitempty" yaml:"blend,omitempty"`
 
 	//////// defaults
 	ColourSpace *colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`

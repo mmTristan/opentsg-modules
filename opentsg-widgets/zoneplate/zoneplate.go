@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colourgen"
 	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
@@ -81,7 +80,7 @@ func (z ZConfig) Handle(resp tsg.Response, req *tsg.Request) {
 	if len(z.Colors) > 0 {
 		colours := make([]colour.CNRGBA64, len(z.Colors))
 		for i, c := range z.Colors {
-			colours[i] = *colourgen.HexToColour(c, req.PatchProperties.ColourSpace)
+			colours[i] = *c.ToColour(req.PatchProperties.ColourSpace)
 		}
 
 		ztc = func(zone float64) colour.CNRGBA64 {
@@ -172,7 +171,7 @@ func (z ZConfig) Generate(canvas draw.Image, opts ...any) error {
 	if len(z.Colors) > 0 {
 		colours := make([]colour.CNRGBA64, len(z.Colors))
 		for i, c := range z.Colors {
-			colours[i] = *colourgen.HexToColour(c, colour.ColorSpace{})
+			colours[i] = *c.ToColour(colour.ColorSpace{})
 		}
 
 		ztc = func(zone float64) colour.CNRGBA64 {

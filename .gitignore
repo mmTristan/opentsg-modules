@@ -1,4 +1,5 @@
 **/*.csv
+**/*.mhl
 **/*.xml
 clogrc/core
 clogrc/tmp/*

@@ -1,5 +1,6 @@
 {
-    "type": "builtin.canvasoptions",
+    "props" :{
+        "type": "builtin.canvasoptions"},
     "name": [
         "./testdata/handlerLoaders/racer.png"
     ],

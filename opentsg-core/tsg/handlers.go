@@ -437,7 +437,7 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 	for alias, data := range allWidgets {
 
 		allWidgetsArr[alias.ZPos] = alias
-		put(c, alias.FullName, data)
+		put(c, alias.WidgetEssentials, alias.FullName, data)
 
 	}
 
@@ -461,7 +461,6 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 	// zPos := &zpos
 	// var zPosLock sync.Mutex
 	//	var canvasLock sync.Mutex
-
 	for i := 0; i < len(allWidgets); i++ {
 
 		// get a runner to run the widget
@@ -821,7 +820,7 @@ type metadata struct {
 
 // Put adds the information used to generate widget to the metadata
 // is unexported to keep the information immutable
-func put(c *context.Context, alias string, rawYaml []byte) error {
+func put(c *context.Context, widetProps core.WidgetEssentials, alias string, rawYaml []byte) error {
 
 	// prevent concurrent writes
 	imageGeneration := (*c).Value(metaKey).(metadata)
@@ -836,6 +835,19 @@ func put(c *context.Context, alias string, rawYaml []byte) error {
 
 		return fmt.Errorf("0201 Error inserting metadata %v", err)
 	}
+
+	wpb, err := yaml.Marshal(widetProps)
+	if err != nil {
+		return fmt.Errorf("0201 Error converting properties metadata to bytes %v", err)
+	}
+
+	var props map[string]any
+	err = yaml.Unmarshal(wpb, &props)
+	if err != nil {
+		return fmt.Errorf("0201 Error inserting properties metadata %v", err)
+	}
+	md["props"] = props
+
 	imageGeneration.data[alias] = md
 
 	// imageGeneration.data[widget] = alias

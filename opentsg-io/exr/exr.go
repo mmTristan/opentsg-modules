@@ -8,7 +8,7 @@ import (
 	"io"
 	"math"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/aces"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/x448/float16"
 )
 
@@ -129,11 +129,11 @@ func Encode(w io.Writer, in image.Image) error {
 	case *image.NRGBA64:
 
 		data = saveNRGBA64(dst, pixSize, alpha)
-	case *aces.ARGBA:
+	case *colour.ARGBA:
 
 		data = saveARGBA128(dst, pixSize, alpha)
 	default:
-		return fmt.Errorf("image of unkown type only images of type *image.NRGBA64 and *aces.ARGBA can be saved")
+		return fmt.Errorf("image of unkown type only images of type *image.NRGBA64 and *colour.ARGBA can be saved")
 	}
 
 	// write the image bytes
@@ -190,7 +190,7 @@ func saveNRGBA64(base *image.NRGBA64, pixSize uint32, alpha bool) []byte {
 	return body.Bytes()
 }
 
-func saveARGBA128(base *aces.ARGBA, pixSize uint32, alpha bool) []byte {
+func saveARGBA128(base *colour.ARGBA, pixSize uint32, alpha bool) []byte {
 	dir := binary.LittleEndian
 	b := base.Bounds().Max
 	var body bytes.Buffer

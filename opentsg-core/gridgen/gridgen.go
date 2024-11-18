@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"image"
+	"image/color"
 	"image/draw"
 	"math"
 	"regexp"
@@ -13,9 +14,7 @@ import (
 	"sync"
 
 	"github.com/fogleman/gg"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/aces"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colourgen"
 )
 
 type gridContextKey string
@@ -41,8 +40,8 @@ type FrameConfiguration struct {
 	LineWidth  float64
 	ImageSize  image.Point
 	CanvasType string
-	CanvasFill string
-	LineColour string
+	CanvasFill color.Color
+	LineColour color.Color
 	ColorSpace colour.ColorSpace
 	//
 	Geometry string
@@ -78,10 +77,10 @@ func baseGen(c *context.Context, geomCanvas draw.Image, frame FrameConfiguration
 		canvas = geomCanvas
 	}
 
-	background := &colour.CNRGBA64{R: 46080, G: 46080, B: 46080, A: 0xffff}
 	// fillColour := getFill(*c)
-	if frame.CanvasFill != "" { // check for user defined colours
-		background = colourgen.HexToColour(frame.CanvasFill, frame.ColorSpace)
+	var background color.Color = &colour.CNRGBA64{R: 46080, G: 46080, B: 46080, A: 0xffff}
+	if frame.CanvasFill != nil { // check for user defined colours
+		background = frame.CanvasFill
 		// background = colourgen.ConvertNRGBA64(col)
 	}
 
@@ -117,7 +116,7 @@ func ImageGenerator(c context.Context, canvasSize image.Rectangle) draw.Image {
 	// base := imageType(c)
 	if frame.CanvasType == "ACES" {
 
-		return aces.NewARGBA(canvasSize)
+		return colour.NewARGBA(canvasSize)
 	}
 
 	// space := colourSpaceType(c)
@@ -211,10 +210,10 @@ func maskGen(maxX, maxY int, width float64, c *context.Context, frame FrameConfi
 	maskTailor := image.NewNRGBA64(image.Rect(0, 0, maxX, maxY))
 	// this is automaticall changed to rgb
 	cd := gg.NewContextForImage(maskTailor)
-	myBorder := &colour.CNRGBA64{R: 0, G: 0, B: 0, A: 0xffff}
+	var myBorder color.Color = &colour.CNRGBA64{R: 0, G: 0, B: 0, A: 0xffff}
 	// colour := canvaswidget.GetLineColour(*c)
-	if frame.LineColour != "" { // check for user defined colours
-		myBorder = colourgen.HexToColour(frame.LineColour, frame.ColorSpace)
+	if frame.LineColour != nil { // check for user defined colours
+		myBorder = frame.LineColour
 		// myBorder = colourgen.ConvertNRGBA64(col)
 	}
 

@@ -72,7 +72,7 @@ type Location struct {
 	// keep the Alias from last time
 	Alias string
 	//
-	Box Box `json:"box" yaml:"box"`
+	Box Box `json:"box,omitempty" yaml:"box,omitempty"`
 }
 
 // implement hsl(0, 100%, 50%);
@@ -88,26 +88,27 @@ as fetures will deffo be missing
 type Box struct {
 	// use a predeclared alias
 	// alias must be declared before
-	UseAlias   string
-	UseGridKey string `json:"useGridKey"`
+	UseAlias   string `json:"useAlias,omitempty" yaml:"useAlias,omitempty"`
+	UseGridKey string `json:"useGridKey,omitempty" yaml:"useGridKey,omitempty"`
 
 	// top left coordinates
 	// actually any
-	X any `json:"x" yaml:"x"`
-	Y any `json:"y" yaml:"y"`
+	X any `json:"x,omitempty" yaml:"x,omitempty"`
+	Y any `json:"y,omitempty" yaml:"y,omitempty"`
 	// bottom right
 	// if not used then the grid is 1 square
-	X2 any `json:"x2" yaml:"x2"`
-	Y2 any `json:"y2" yaml:"y2"`
+	X2 any `json:"x2,omitempty" yaml:"x2,omitempty"`
+	Y2 any `json:"y2,omitempty" yaml:"y2,omitempty"`
 
 	// width height
 	// can they be A or 1 etc. just mix it up
-	Width  any `json:"width" yaml:"width"`
-	Height any `json:"height" yaml:"width"`
+	Width  any `json:"width,omitempty" yaml:"width,omitempty"`
+	Height any `json:"height,omitempty" yaml:"height,omitempty"`
 
 	// centre values
 	// width
-	XAlignment, YAlignment string // default top left but let them choose
+	XAlignment string `json:"xAlignment,omitempty" yaml:"xAlignment,omitempty"`
+	YAlignment string `json:"yAlignment,omitempty" yaml:"yAlignment,omitempty"` // default top left but let them choose
 	// or masks like this. Leave masks out for the moment?
 	//  mask-image: radial-gradient(circle, black 50%, rgba(0, 0, 0, 0.5) 50%);
 
@@ -115,7 +116,7 @@ type Box struct {
 	// border radius - what css uses
 	// https://prykhodko.medium.com/css-border-radius-how-does-it-work-bfdf23792ac2
 	// taps out at 50% - keep it the simple version to start
-	BorderRadius any `json:"border-radius" yaml:"border-radius"`
+	BorderRadius any `json:"border-radius,omitempty" yaml:"border-radius,omitempty"`
 }
 
 // InitAliasBox inits a map of the alias in a context
@@ -198,6 +199,8 @@ func (l Location) GridSquareLocatorAndGenerator(c *context.Context) (draw.Image,
 			if mid, ok := item.(Location); ok {
 				return mid.GridSquareLocatorAndGenerator(c)
 			}
+		} else {
+			return nil, image.Point{}, nil, fmt.Errorf("\"%s\" is not a valid grid alias", l.Box.UseAlias)
 		}
 	}
 

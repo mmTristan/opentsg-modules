@@ -1,8 +1,15 @@
 {
-    "type": "test.fill",
-    "grid": {
-        "location": "a0:e4"
-    },
-    "fill":"#00ff00",
-    "mdObject":400.003
+    "fill": "green",
+    "mdObject": 400.003,
+    "props": {
+        "type": "test.fill",
+        "location": {
+            "box": {
+                "x": 0,
+                "y": 0,
+                "width": 5,
+                "height": 5
+            }
+        }
+    }
 }

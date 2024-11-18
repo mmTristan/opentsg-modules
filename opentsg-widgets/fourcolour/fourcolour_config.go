@@ -3,11 +3,13 @@ package fourcolour
 import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
+
+	"github.com/mrmxf/opentsg-modules/opentsg-widgets/utils/parameters"
 )
 
 type Config struct {
-	Colourpallette    []string          `json:"colors" yaml:"colors"`
-	ColourSpace       colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
+	Colourpallette    []parameters.HexString `json:"colors" yaml:"colors"`
+	ColourSpace       colour.ColorSpace      `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
 	config.WidgetGrid `yaml:",inline"`
 }
 

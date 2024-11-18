@@ -15,7 +15,6 @@ import (
 	"testing"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colourgen"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -31,14 +30,17 @@ func TestLegacy(t *testing.T) {
 func TestTSIGWidget(t *testing.T) {
 	// set up a fill handler that changes location each time
 
-	area := `{
-    "type": "test.fill",
-    "grid": {
-        "location": "%s"
-    }
-	}`
+	areas := []gridgen.Location{{Box: gridgen.Box{X: 0, Y: 1}}, {Box: gridgen.Box{X: 0, Y: 0, Y2: 2}}, {Box: gridgen.Box{X: 1, Y: 2}},
+		{Box: gridgen.Box{X: 0, Y: 0, X2: 3, Y2: 3}},
+	}
 
-	areas := []string{"A1", "A0:a2", "r2c3", "R1C1:R3C3"}
+	area := `{
+		"type": "test.fill",
+		"props":{
+		    "type": "test.fill",
+			"location":%s
+		}
+}			`
 
 	expectedArea := [][]gridgen.Segmenter{
 		{{Name: "A001", Shape: image.Rectangle{Min: image.Point{X: 0, Y: 0}, Max: image.Point{X: 10, Y: 10}}, Tags: []string{}, ImportPosition: 1}},
@@ -53,7 +55,9 @@ func TestTSIGWidget(t *testing.T) {
 
 	for i, a := range areas {
 		f, fErr := os.Create("./testdata/tsigLoaders/tsigFill.json")
-		_, wErr := f.Write([]byte(fmt.Sprintf(area, a)))
+		abytes, _ := json.Marshal(a)
+
+		_, wErr := f.Write([]byte(fmt.Sprintf(area, abytes)))
 
 		otsg, err := BuildOpenTSG("./testdata/tsigLoaders/tsigLoader.json", "", true, nil)
 		fmt.Println(err, fErr, wErr)
@@ -66,7 +70,7 @@ func TestTSIGWidget(t *testing.T) {
 		otsg.Run("")
 
 		Convey("Calling openTSG with a tsig to ensure the correct values are returned", t, func() {
-			Convey(fmt.Sprintf("Getting the tsigs in the grid area of \"%s\"", a), func() {
+			Convey(fmt.Sprintf("Getting the tsigs in the grid area of \"%s\"", string(abytes)), func() {
 				Convey("no error is returned and we get the expected area", func() {
 					So(fErr, ShouldBeNil)
 					So(wErr, ShouldBeNil)
@@ -128,7 +132,7 @@ func TestRaceConditions(t *testing.T) {
 	// run with plenty of runners to ensure all the go routines are running at once
 	otsg, buildErr := BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true, &RunnerConfiguration{RunnerCount: 5})
 	otsg.Handle("test.fill", []byte("{}"), Filler{})
-	jSlog := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{})
+	jSlog := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
 	AddBaseEncoders(otsg)
 	otsg.Use(Logger(slog.New(jSlog)))
 	otsg.Run("")
@@ -147,7 +151,7 @@ func TestRaceConditions(t *testing.T) {
 
 	// Assign the colour to the correct type of image NGRBA64 and replace the colour values
 	controlImage := image.NewNRGBA64(controlVals.Bounds())
-	colour.Draw(controlImage, controlImage.Bounds(), baseVals, image.Point{0, 0}, draw.Over)
+	colour.Draw(controlImage, controlImage.Bounds(), controlVals, image.Point{0, 0}, draw.Over)
 
 	// Make a hash of the pixels of each image
 	hnormal := sha256.New()
@@ -163,6 +167,8 @@ func TestRaceConditions(t *testing.T) {
 			})
 		})
 	})
+
+	os.Remove("./testdata/handlerLoaders/racer.png")
 }
 
 // JSONLog is the key fields of the json slogger
@@ -183,6 +189,7 @@ func TestMiddlewares(t *testing.T) {
 	otsg.Run("")
 
 	var outMessage JSONLog
+	fmt.Println(buf.String())
 	jErr := json.Unmarshal(buf.Bytes(), &outMessage)
 
 	// @TODO check the messages are correct
@@ -275,8 +282,9 @@ func TestMetadata(t *testing.T) {
 	AddBaseEncoders(otsg)
 
 	search := []string{"cs.blue", "cs.red", "cs.green", "cs.green"}
-	fields := []string{"type", "grid", "mdObject", "grid.location"}
-	expected := []any{"test.fill", map[string]any{"location": "a0:d3"}, 400.003, "a0:e4"}
+	fields := []string{"props.type", "props.location.box", "mdObject", "props.location.box.x"}
+	expected := []any{"test.fill", map[string]any{"height": 4, "width": 4, "x": 0, "y": 0},
+		400.003, 0}
 
 	for i, salias := range search {
 
@@ -315,7 +323,16 @@ type Filler struct {
 
 func (f Filler) Handle(r Response, _ *Request) {
 
-	fill := colourgen.HexToColour(f.Fill, colour.ColorSpace{})
+	var fill colour.Color
+	switch f.Fill {
+	case "red":
+		fill = &colour.CNRGBA64{R: 0xff << 8, A: 0xffff}
+	case "blue":
+		fill = &colour.CNRGBA64{B: 0xff << 8, A: 0xffff}
+	case "green":
+		fill = &colour.CNRGBA64{G: 0xff << 8, A: 0xffff}
+	}
+
 	colour.Draw(r.BaseImage(), r.BaseImage().Bounds(), &image.Uniform{fill}, image.Point{}, draw.Over)
 
 	r.Write(200, "success")
@@ -355,22 +372,24 @@ func TestErrors(t *testing.T) {
 
 	errors := []string{
 		`{
+		"props":{
     "type": "test.fills",
-    "grid": {
-        "location": "a0:f5"
-    },
+	},
     "fill":"#0000ff"
 }`,
 		`{
+    "props":{
     "type": "test.fill",
-    "grid": {
-        "location": "a"
-    },
+	"location":{
+	    "box":{
+		"useAlias":"a"}
+		}
+	},
     "fill":"#0000ff"
 }`}
 
 	expectedErrs := []string{"No handler found for widgets of type \"test.fills\" for widget path \"err\"",
-		"0046 a is not a valid grid alias"}
+		"\"a\" is not a valid grid alias"}
 
 	for i, e := range errors {
 		f, fErr := os.Create("./testdata/handlerLoaders/err.json")

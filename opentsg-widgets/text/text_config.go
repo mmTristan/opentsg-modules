@@ -2,7 +2,7 @@ package text
 
 import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colourgen"
+	"github.com/mrmxf/opentsg-modules/opentsg-widgets/utils/parameters"
 )
 
 // TextboxProperties contains all the properties for generating a textbox
@@ -51,7 +51,7 @@ func WithFont(font string) func(t *TextboxProperties) {
 func WithTextColourString(colour string) func(t *TextboxProperties) {
 
 	return func(t *TextboxProperties) {
-		c := colourgen.HexToColour(colour, t.colourSpace)
+		c := parameters.HexToColour(colour, t.colourSpace)
 		t.textColour = c
 	}
 }
@@ -68,7 +68,7 @@ func WithTextColour(colour *colour.CNRGBA64) func(t *TextboxProperties) {
 func WithBackgroundColourString(colour string) func(t *TextboxProperties) {
 
 	return func(t *TextboxProperties) {
-		c := colourgen.HexToColour(colour, t.colourSpace)
+		c := parameters.HexToColour(colour, t.colourSpace)
 		t.backgroundColour = c
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"image"
+	"image/color"
 	"image/draw"
 	"image/png"
 	"os"
@@ -29,7 +30,7 @@ func TestGrids(t *testing.T) {
 		ImageSize:  image.Point{1000, 1000},
 		LineWidth:  1,
 		CanvasType: "",
-		CanvasFill: "#ffffff",
+		CanvasFill: color.NRGBA64{R: 0xff << 8, G: 0xff << 8, B: 0xff << 8, A: 0xffff},
 		Rows:       3,
 		Cols:       3,
 	}

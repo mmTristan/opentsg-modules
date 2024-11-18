@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -51,7 +52,8 @@ func TestMissed(t *testing.T) {
 	typeWrapper(c2, types, "missed")
 	missed := MissingWidgetCheck(c2)
 	// actualMiss := map[core.AliasIdentity]string{{FullName: "types", ZPos: 0}: "types"}
-	actualMiss := map[core.AliasIdentity]string{}
+	// actualMiss := map[core.AliasIdentity]string{}
+	actualMiss := map[core.AliasIdentity]string{core.AliasIdentity{FullName: "types", ZPos: 0, WType: "", Location: "", GridAlias: "", ColourSpace: colour.ColorSpace{ColorSpace: "", TransformType: "", Primaries: colour.Primaries{Red: colour.XY{X: 0, Y: 0}, Green: colour.XY{X: 0, Y: 0}, Blue: colour.XY{X: 0, Y: 0}, WhitePoint: colour.XY{X: 0, Y: 0}}}}: "types"}
 	Convey("Checking that missed structs are found", t, func() {
 		Convey("using ./testdata/types_loader.json as the input file then not searching for the widget type", func() {
 			Convey(fmt.Sprintf("The missed map of %v is returned", actualMiss), func() {

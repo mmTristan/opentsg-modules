@@ -1,44 +1,13 @@
 // Package colourgen generates rgb values
-package colourgen
+package parameters
 
 import (
 	"fmt"
 	"image/color"
 	"regexp"
-	"strings"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 )
-
-// AssignRGBValues takes a string and the rgb value and returns a [3]int array of the rgb values for a colour.
-// The only valid colours are grey, red, green and blue,
-// the black and white colours are constants for the time being.
-func AssignRGBValues(colour string, rgb, maxBlack, maxWhite int) ([3]int, error) {
-	switch strings.ToLower(colour) {
-	case "grey", "gray": // "black", "white",
-
-		return [3]int{rgb, rgb, rgb}, nil
-
-	case "black":
-
-		return [3]int{maxBlack, maxBlack, maxBlack}, nil
-	case "white":
-
-		return [3]int{maxWhite, maxWhite, maxWhite}, nil
-	case "red":
-
-		return [3]int{rgb, 0, 0}, nil
-	case "green":
-
-		return [3]int{0, rgb, 0}, nil
-	case "blue":
-
-		return [3]int{0, 0, rgb}, nil
-	default:
-
-		return [3]int{0, 0, 0}, fmt.Errorf("%s Non specific colour called, rgb values set at 0", colour)
-	}
-}
 
 // HexToColour takes a string and returns a colour value, extracting the rgba values from the string. When no alpha channel
 // is found the alpha is set to be the max 16 bit value.
@@ -86,11 +55,18 @@ func HexToColour(colorCode string, space colour.ColorSpace) *colour.CNRGBA64 {
 
 		return cssrgba12(colorCode)
 	default:
-		base = &colour.CNRGBA64{}
+		// base = &colour.CNRGBA64{}
+		return nil
 	}
 
 	base.ColorSpace = space
 	return base
+}
+
+type HexString string
+
+func (h HexString) ToColour(space colour.ColorSpace) *colour.CNRGBA64 {
+	return HexToColour(string(h), space)
 }
 
 func rrggbb(hex string) *colour.CNRGBA64 {

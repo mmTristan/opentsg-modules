@@ -9,7 +9,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mrmxf/opentsg-modules/opentsg-core/aces"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -66,7 +66,7 @@ func TestACESWrite(t *testing.T) {
 	for i, v := range vals {
 
 		// generate a box of certain colours
-		box := aces.NewARGBA(image.Rect(0, 0, 100, 100))
+		box := colour.NewARGBA(image.Rect(0, 0, 100, 100))
 		colors := make(map[int]color.NRGBA64)
 		colors[0] = color.NRGBA64{R: v, A: 0xffff}
 		colors[1] = color.NRGBA64{G: v, A: 0xffff}

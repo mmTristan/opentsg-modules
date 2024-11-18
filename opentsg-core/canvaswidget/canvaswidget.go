@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"image/color"
 	"image/draw"
 
 	_ "embed"
@@ -13,6 +14,7 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/widgets"
+	"github.com/mrmxf/opentsg-modules/opentsg-widgets/utils/parameters"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,20 +28,20 @@ var (
 
 // ConfigVals is the go struct of all the configuration values that may be called by an input.
 type ConfigVals struct {
-	Type        string            `json:"type" yaml:"type"`
-	Name        []string          `json:"name,omitempty" yaml:"name,omitempty"`
-	ColourSpace colour.ColorSpace `json:"ColorSpace,omitempty" yaml:"ColorSpace,omitempty"`
-	Framesize   config.Framesize  `json:"frameSize,omitempty" yaml:"frameSize,omitempty"`
-	LineWidth   float64           `json:"linewidth,omitempty" yaml:"linewidth,omitempty"`
-	FileDepth   int               `json:"filedepth,omitempty" yaml:"filedepth,omitempty"`
-	GridRows    int               `json:"gridRows,omitempty" yaml:"gridRows,omitempty"`
-	GridColumns int               `json:"gridColumns,omitempty" yaml:"gridColumns,omitempty"`
-	BaseImage   string            `json:"baseImage,omitempty" yaml:"baseImage,omitempty"`
-	Geometry    string            `json:"geometry,omitempty" yaml:"geometry,omitempty"`
-	LineColor   string            `json:"lineColor,omitempty" yaml:"lineColor,omitempty"`
-	Background  string            `json:"backgroundFillColor,omitempty" yaml:"backgroundFillColor,omitempty"`
-	ImageType   string            `json:"imageType,omitempty" yaml:"imageType,omitempty"`
-	Analytics   analytics         `json:"frame analytics" yaml:"frame analytics"`
+	Type        string               `json:"type" yaml:"type"`
+	Name        []string             `json:"name,omitempty" yaml:"name,omitempty"`
+	ColourSpace colour.ColorSpace    `json:"ColorSpace,omitempty" yaml:"ColorSpace,omitempty"`
+	Framesize   config.Framesize     `json:"frameSize,omitempty" yaml:"frameSize,omitempty"`
+	LineWidth   float64              `json:"linewidth,omitempty" yaml:"linewidth,omitempty"`
+	FileDepth   int                  `json:"filedepth,omitempty" yaml:"filedepth,omitempty"`
+	GridRows    int                  `json:"gridRows,omitempty" yaml:"gridRows,omitempty"`
+	GridColumns int                  `json:"gridColumns,omitempty" yaml:"gridColumns,omitempty"`
+	BaseImage   string               `json:"baseImage,omitempty" yaml:"baseImage,omitempty"`
+	Geometry    string               `json:"geometry,omitempty" yaml:"geometry,omitempty"`
+	LineColor   parameters.HexString `json:"lineColor,omitempty" yaml:"lineColor,omitempty"`
+	Background  parameters.HexString `json:"backgroundFillColor,omitempty" yaml:"backgroundFillColor,omitempty"`
+	ImageType   string               `json:"imageType,omitempty" yaml:"imageType,omitempty"`
+	Analytics   analytics            `json:"frame analytics" yaml:"frame analytics"`
 }
 
 type analytics struct {
@@ -224,17 +226,17 @@ func GetGeometry(c context.Context) string {
 }
 
 // GetFillColour returns the colour string of the background
-func GetFillColour(c context.Context) string {
+func GetFillColour(c context.Context) color.Color {
 	g := contToConf(c)
 
-	return g.Background
+	return g.Background.ToColour(g.ColourSpace)
 }
 
 // GetLineColour returns the user defined colour string sof the grid lines
-func GetLineColour(c context.Context) string {
+func GetLineColour(c context.Context) color.Color {
 	g := contToConf(c)
 
-	return g.LineColor
+	return g.LineColor.ToColour(g.ColourSpace)
 }
 
 // GetPictureSize returns the image size as an image.Point so it can be used without

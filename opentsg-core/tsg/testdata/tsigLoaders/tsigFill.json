@@ -1,6 +1,7 @@
 {
-    "type": "test.fill",
-    "grid": {
-        "location": "R1C1:R3C3"
-    }
-	}
+		"type": "test.fill",
+		"props":{
+		    "type": "test.fill",
+			"location":{"Alias":"","box":{"x":0,"y":0,"x2":3,"y2":3}}
+		}
+}			

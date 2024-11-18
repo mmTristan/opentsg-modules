@@ -2,7 +2,11 @@
     "type" : "builtin.legacy",
     "fileLocation" : "./testdata/legacyLoaders/loadergrid.json",
     "mnt":"./testdata",
-    "grid": {
-        "location": "a1"
-    }
+   "props" : {
+    "type" : "builtin.legacy",
+        "location": {
+            "box" :{ "x":0, "y":0}
+        }
+   }
+    
 }

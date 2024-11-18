@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colourgen"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
 	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
@@ -58,7 +57,7 @@ func (c Config) Handle(resp tsg.Response, req *tsg.Request) {
 		colours = make([]*colour.CNRGBA64, len(c.SegmentColours))
 
 		for i, cstring := range c.SegmentColours {
-			col := colourgen.HexToColour(cstring, req.PatchProperties.ColourSpace)
+			col := cstring.ToColour(req.PatchProperties.ColourSpace)
 			colours[i] = col
 		}
 
@@ -176,7 +175,7 @@ func (s Config) Generate(canvas draw.Image, opts ...any) error {
 		colours = make([]*colour.CNRGBA64, len(s.SegmentColours))
 
 		for i, cstring := range s.SegmentColours {
-			col := colourgen.HexToColour(cstring, *s.ColourSpace)
+			col := cstring.ToColour(*s.ColourSpace)
 			colours[i] = col
 		}
 

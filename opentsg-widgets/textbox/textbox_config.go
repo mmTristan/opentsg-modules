@@ -5,6 +5,7 @@ import (
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
+	"github.com/mrmxf/opentsg-modules/opentsg-widgets/utils/parameters"
 )
 
 type TextboxJSON struct {
@@ -12,10 +13,10 @@ type TextboxJSON struct {
 	Text []string `json:"text,omitempty" yaml:"text,omitempty"`
 
 	config.WidgetGrid `yaml:",inline"`
-	ColourSpace       colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
-	Border            string            `json:"borderColor,omitempty" yaml:"borderColor,omitempty"`
-	BorderSize        float64           `json:"borderSize,omitempty" yaml:"borderSize,omitempty"`
-	Font              string            `json:"font,omitempty" yaml:"font,omitempty"`
+	ColourSpace       colour.ColorSpace    `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
+	Border            parameters.HexString `json:"borderColor,omitempty" yaml:"borderColor,omitempty"`
+	BorderSize        float64              `json:"borderSize,omitempty" yaml:"borderSize,omitempty"`
+	Font              string               `json:"font,omitempty" yaml:"font,omitempty"`
 
 	Back       string `json:"backgroundColor,omitempty" yaml:"backgroundColor,omitempty"`
 	Textc      string `json:"textColor,omitempty" yaml:"textColor,omitempty"`

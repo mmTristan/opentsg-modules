@@ -11,13 +11,12 @@ import (
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/canvaswidget"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colourgen"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
 	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/parameters"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/text"
+	"github.com/mrmxf/opentsg-modules/opentsg-widgets/utils/parameters"
 	"gonum.org/v1/gonum/mat"
 
 	_ "embed"
@@ -51,9 +50,9 @@ type Config struct {
 }
 
 type graticule struct {
-	TextColor       string `json:"textColor,omitempty"`
-	GraticuleColour string `json:"graticuleColor,omitempty"`
-	Position        string `json:"position,omitempty"`
+	TextColor       string               `json:"textColor,omitempty"`
+	GraticuleColour parameters.HexString `json:"graticuleColor,omitempty"`
+	Position        string               `json:"position,omitempty"`
 	// Width           anglegen.Parameter is this needed?
 
 }
@@ -363,7 +362,7 @@ func (r Config) generateText(box draw.Image, xSize, ySize float64, label string)
 		r.Graticule.GraticuleColour = "#f0f0f0"
 	}
 
-	gratColour := colourgen.HexToColour(r.Graticule.GraticuleColour, r.ColourSpace)
+	gratColour := r.Graticule.GraticuleColour.ToColour(r.ColourSpace)
 
 	// draw text here
 	var textBox *image.NRGBA64

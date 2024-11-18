@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colourgen"
+
 	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/widgethandler"
@@ -42,7 +42,7 @@ func (tb TextboxJSON) Handle(resp tsg.Response, req *tsg.Request) {
 		borderwidth = int(width)
 	}
 
-	borderColour := colourgen.HexToColour(tb.Border, tb.ColourSpace)
+	borderColour := tb.Border.ToColour(tb.ColourSpace)
 	colour.Draw(resp.BaseImage(), image.Rect(0, 0, borderwidth, resp.BaseImage().Bounds().Max.Y), &image.Uniform{borderColour}, image.Point{}, draw.Src)
 	colour.Draw(resp.BaseImage(), image.Rect(0, 0, resp.BaseImage().Bounds().Max.X, borderwidth), &image.Uniform{borderColour}, image.Point{}, draw.Src)
 	colour.Draw(resp.BaseImage(), image.Rect(resp.BaseImage().Bounds().Max.X-borderwidth, 0, resp.BaseImage().Bounds().Max.X, resp.BaseImage().Bounds().Max.Y), &image.Uniform{borderColour}, image.Point{}, draw.Src)
@@ -87,7 +87,7 @@ func (tb TextboxJSON) Generate(canvas draw.Image, opts ...any) error {
 		borderwidth = int(width)
 	}
 
-	borderColour := colourgen.HexToColour(tb.Border, tb.ColourSpace)
+	borderColour := tb.Border.ToColour(tb.ColourSpace)
 	colour.Draw(canvas, image.Rect(0, 0, borderwidth, canvas.Bounds().Max.Y), &image.Uniform{borderColour}, image.Point{}, draw.Src)
 	colour.Draw(canvas, image.Rect(0, 0, canvas.Bounds().Max.X, borderwidth), &image.Uniform{borderColour}, image.Point{}, draw.Src)
 	colour.Draw(canvas, image.Rect(canvas.Bounds().Max.X-borderwidth, 0, canvas.Bounds().Max.X, canvas.Bounds().Max.Y), &image.Uniform{borderColour}, image.Point{}, draw.Src)

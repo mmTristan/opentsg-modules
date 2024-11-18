@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/colourgen"
 	errhandle "github.com/mrmxf/opentsg-modules/opentsg-core/errHandle"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
@@ -37,7 +36,7 @@ func (f Config) Handle(resp tsg.Response, req *tsg.Request) {
 	pallette := make([]color.Color, len(f.Colourpallette))
 
 	for i, c := range f.Colourpallette {
-		pallette[i] = colourgen.HexToColour(c, f.ColourSpace)
+		pallette[i] = c.ToColour(f.ColourSpace)
 	}
 
 	flats := req.PatchProperties.Geometry
@@ -97,7 +96,7 @@ func (f Config) Generate(canvas draw.Image, opt ...any) error {
 	pallette := make([]color.Color, len(f.Colourpallette))
 
 	for i, c := range f.Colourpallette {
-		pallette[i] = colourgen.HexToColour(c, f.ColourSpace)
+		pallette[i] = c.ToColour(f.ColourSpace)
 	}
 
 	var c *context.Context

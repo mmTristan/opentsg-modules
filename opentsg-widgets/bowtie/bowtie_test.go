@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/parameters"
 	examplejson "github.com/mrmxf/opentsg-modules/opentsg-widgets/exampleJson"
+	"github.com/mrmxf/opentsg-modules/opentsg-widgets/utils/parameters"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -20,8 +20,8 @@ func TestBowties(t *testing.T) {
 
 	simple := Config{SegementCount: 8}
 	corners := Config{SegementCount: 12}
-	colours := Config{SegementCount: 12, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}} //, "#433F87"}} //, "#433F87"}}
-	all := Config{SegementCount: 32, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
+	colours := Config{SegementCount: 12, SegmentColours: []parameters.HexString{"#C2A649", "#9A3A73", "#91B645", "#433F87"}} //, "#433F87"}} //, "#433F87"}}
+	all := Config{SegementCount: 32, SegmentColours: []parameters.HexString{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
 	all.CwRotation = "π*23/47"
 
 	explanation := []string{"8Segment", "12Segment", "colourSegments", "32Segments"}
@@ -69,7 +69,7 @@ func TestBowties(t *testing.T) {
 
 func TestOffsets(t *testing.T) {
 
-	all := Config{SegementCount: 32, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
+	all := Config{SegementCount: 32, SegmentColours: []parameters.HexString{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
 
 	left := parameters.Offset{Offset: parameters.XYOffset{X: "-50"}}
 	offRight := parameters.Offset{Offset: parameters.XYOffset{X: "50px", Y: "-70"}}
@@ -121,7 +121,7 @@ func TestBlends(t *testing.T) {
 
 	simple := Config{SegementCount: 4}
 	corners := Config{SegementCount: 8}
-	colours := Config{SegementCount: 8, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
+	colours := Config{SegementCount: 8, SegmentColours: []parameters.HexString{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
 
 	explanation := []string{"SinBowtie", "Sin8Segment", "SinColours"}
 
@@ -192,8 +192,8 @@ func TestErrors(t *testing.T) {
 func TestRotate(t *testing.T) {
 
 	simple := Config{SegementCount: 4, Blend: "sin"}
-	all := Config{SegementCount: 32, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
-	allOff := Config{SegementCount: 32, SegmentColours: []string{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
+	all := Config{SegementCount: 32, SegmentColours: []parameters.HexString{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
+	allOff := Config{SegementCount: 32, SegmentColours: []parameters.HexString{"#C2A649", "#9A3A73", "#91B645", "#433F87"}}
 	allOff.Offset = parameters.Offset{Offset: parameters.XYOffset{X: "50px", Y: "-70"}}
 	startAng := Config{SegementCount: 4, Blend: "sin"}
 	startAng.StartAng = 180

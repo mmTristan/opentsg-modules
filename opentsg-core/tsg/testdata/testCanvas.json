@@ -1,5 +1,7 @@
 {
-    "type": "builtin.canvasoptions",
+    "props":{
+        "type": "builtin.canvasoptions"
+    },
     "name": [
         "./testdata/legacyLoaders/ebuold{{framenumber}}.png"
     ],

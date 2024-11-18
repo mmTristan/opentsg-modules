@@ -1,4 +1,4 @@
-package colourgen
+package parameters
 
 import (
 	"fmt"
@@ -49,36 +49,12 @@ func TestBadHex(t *testing.T) {
 	for i := range badIn {
 		// these check if they somehow make it through the initial json regex that no value is returned
 		genC := HexToColour(badIn[i], colour.ColorSpace{})
+		var out *colour.CNRGBA64
+
 		Convey("Checking an invalid hex code is fenced by regex", t, func() {
 			Convey(fmt.Sprintf("using a %s as the hex colour", badIn[i]), func() {
 				Convey("No Colour is returned as g is an invalid hex code", func() {
-					So(genC, ShouldResemble, &colour.CNRGBA64{R: 0, G: 0, B: 0, A: 0})
-				})
-			})
-		})
-	}
-}
-
-func TestAssign(t *testing.T) {
-
-	colourCheck := []string{"grey", "black", "white", "red", "green", "blue"}
-	expectedOutput := [][3]int{
-		{200, 200, 200},
-		{0, 0, 0},
-		{4095, 4095, 4095},
-		{200, 0, 0},
-		{0, 200, 0},
-		{0, 0, 200},
-	}
-
-	for i := range colourCheck {
-		// these check if they somehow make it through the initial json regex that no value is returned
-		testRGB, err := AssignRGBValues(colourCheck[i], 200, 0, 4095)
-		Convey("Checking an invalid hex code is fenced by regex", t, func() {
-			Convey(fmt.Sprintf("using a %s as the hex colour", "R"), func() {
-				Convey("No Colour is returned as g is an invalid hex code", func() {
-					So(testRGB, ShouldResemble, expectedOutput[i])
-					So(err, ShouldBeNil)
+					So(genC, ShouldResemble, out)
 				})
 			})
 		})

@@ -5,7 +5,7 @@ import (
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/parameters"
+	"github.com/mrmxf/opentsg-modules/opentsg-widgets/utils/parameters"
 )
 
 type Config struct {

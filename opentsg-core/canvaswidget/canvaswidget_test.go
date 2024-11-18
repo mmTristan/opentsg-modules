@@ -6,6 +6,7 @@ import (
 	"image"
 	"testing"
 
+	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config/core"
 	. "github.com/smartystreets/goconvey/convey"
@@ -31,7 +32,9 @@ func TestStructExtraction(t *testing.T) {
 		GetGridRows(testContext), GetGridColumns(testContext), GetBaseImage(testContext), GetFillColour(testContext), GetLineColour(testContext),
 		GetLWidth(testContext)}
 	results := []any{16, "NRGBA64", []string{"testname.png"}, image.Point{4096, 2160},
-		16, 1, "test.png", "#247AE0", "#CCDDAA", 23.4}
+		16, 1, "test.png", &colour.CNRGBA64{R: 9216, G: 31232, B: 57344, A: 65535, ColorSpace: colour.ColorSpace{ColorSpace: "", TransformType: "", Primaries: colour.Primaries{Red: colour.XY{X: 0, Y: 0}, Green: colour.XY{X: 0, Y: 0}, Blue: colour.XY{X: 0, Y: 0}, WhitePoint: colour.XY{X: 0, Y: 0}}}},
+		&colour.CNRGBA64{R: 52224, G: 56576, B: 43520, A: 65535, ColorSpace: colour.ColorSpace{ColorSpace: "", TransformType: "", Primaries: colour.Primaries{Red: colour.XY{X: 0, Y: 0}, Green: colour.XY{X: 0, Y: 0}, Blue: colour.XY{X: 0, Y: 0}, WhitePoint: colour.XY{X: 0, Y: 0}}}},
+		23.4}
 
 	for i, got := range extractedFromCont {
 		Convey(fmt.Sprintf("Checking that values can be extracted from the base using a function of %s", funcNames[i]), t, func() {

@@ -11,9 +11,9 @@ import (
 	"testing"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
-	"github.com/mrmxf/opentsg-modules/opentsg-core/parameters"
 	examplejson "github.com/mrmxf/opentsg-modules/opentsg-widgets/exampleJson"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/text"
+	"github.com/mrmxf/opentsg-modules/opentsg-widgets/utils/parameters"
 	"github.com/nfnt/resize"
 
 	. "github.com/smartystreets/goconvey/convey"

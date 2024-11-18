@@ -1,5 +1,4 @@
-// package aces adds aces support for changing between different colour spaces
-package aces
+package colour
 
 import (
 	"image"
