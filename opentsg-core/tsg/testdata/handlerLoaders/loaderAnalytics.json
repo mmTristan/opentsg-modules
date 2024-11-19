@@ -1,0 +1,15 @@
+{
+    "include": [
+      {
+        "uri": "orderloaderAnalytics.json",
+        "name": "cs"
+      },
+      {
+        "uri": "baseAnalytics.json",
+        "name": "canvas"
+      }
+    ],
+  "create":[{
+    "canvas":{},
+    "cs":{}}]
+}

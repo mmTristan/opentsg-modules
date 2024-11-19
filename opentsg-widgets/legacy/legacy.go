@@ -21,21 +21,24 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 )
 
+// Legacy contains the simple input profile to be used
+// for running the old version of openTSG.
 type Legacy struct {
-	// the location of the loader
+	// the location of the loader to be loaded into openTSG
 	FileLocation string `json:"fileLocation" yaml:"fileLocation"`
 	// mnt is the mount point of the folder
 	MNT string `json:"mnt" yaml:"mnt"`
 }
 
+// Handle runs the legacy version of openTSG as an independent widget
 func (l Legacy) Handle(resp tsg.Response, req *tsg.Request) {
 
 	otsg, err := tsg.BuildOpenTSG(l.FileLocation, "", true, &tsg.RunnerConfiguration{RunnerCount: 6, ProfilerEnabled: true})
 	otsg.AddCustomWidgets(twosi.SIGenerate, nearblack.NBGenerate, bars.BarGen, saturation.SatGen,
 		luma.Generate, textbox.TBGenerate,
 		gradients.RampGenerate, noise.NGenerator, widgethandler.MockCanvasGen,
-		addimage.ImageGen,                //  bars.BarGen, saturation.SatGen,
-		framecount.CountGen, qrgen.QrGen, //  twosi.SIGenerate, nearblack.NBGenerate,luma.Generate,
+		addimage.ImageGen,
+		framecount.CountGen, qrgen.QrGen,
 		fourcolour.FourColourGenerator, geometrytext.LabelGenerator,
 		bowtie.SwirlGen, resize.Gen,
 		// This one should be placed last as it is checking for missed names,

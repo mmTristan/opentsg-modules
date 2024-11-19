@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	Library = map[ColorSpace]map[ColorSpace]func(color.Color) color.Color{
+	library = map[ColorSpace]map[ColorSpace]func(color.Color) color.Color{
 		{ColorSpace: "inverse"}: {
 			ColorSpace{ColorSpace: "rec709"}: inverse},
 	}
@@ -35,16 +35,6 @@ var (
 	}
 )
 
-/* demo struct ideas
-type lut1D struct {
-}
-type lut3D struct {
-}
-
-type lut interface {
-	lut1D | lut3D
-}*/
-
 // transform transforms a colour from an input colourspace to
 // an output colour space.
 func transform(input, output ColorSpace, inputColor color.Color) color.Color {
@@ -66,23 +56,23 @@ func getTransform(input, output ColorSpace) func(color.Color) color.Color {
 
 	/*
 
-		get multiple transforms, how would luts differ from a matrix
+			get multiple transforms, how would luts differ from a matrix
 
-		how do we allow multiple types of transformation e.g. clipping and transformation matrix
+			how do we allow multiple types of transformation e.g. clipping and transformation matrix
 
-		keep one matri for everything. Make a way to have strings and strcuts as part of the library
+			keep one matri for everything. Make a way to have strings and strcuts as part of the library
 
-	*/
 
-	/*
-		get the input transform type, if one isn't found check the output
 
-		if none go through in order of precedence. If there is a transofr type go through and check
+		/*
+			get the input transform type, if one isn't found check the output
+
+			if none go through in order of precedence. If there is a transofr type go through and check
 	*/
 
 	// Also generate a method of going from x to y with matrices
 
-	if fc, ok := Library[input][output]; ok {
+	if fc, ok := library[input][output]; ok {
 		return fc
 	}
 

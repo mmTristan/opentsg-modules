@@ -34,18 +34,28 @@ const (
 	frameKey    gridContextKey = "log of the frame contents for this run"
 )
 
+// FrameConfiguration contains the configuration
+// options for each frame.
 type FrameConfiguration struct {
-	Rows       int
-	Cols       int
-	LineWidth  float64
-	ImageSize  image.Point
+	// Rows is how many grid rows
+	Rows int
+	// Cols is how many grid columns
+	Cols int
+	// What is the width of the lines
+	LineWidth float64
+	// FrameSize is the size of the frame
+	FrameSize image.Point
+	// CanvasType - "ACES" or "" for default
 	CanvasType string
+	// What Color is the canvas
 	CanvasFill color.Color
+	// what colour are the grid lines
 	LineColour color.Color
+	// colour space of the frame
 	ColorSpace colour.ColorSpace
-	//
+	// A path to a tsig file
 	Geometry string
-	//
+	// A path to an image file
 	BaseImage string
 }
 
@@ -71,7 +81,7 @@ func baseGen(c *context.Context, geomCanvas draw.Image, frame FrameConfiguration
 		// s := size(*c)
 		// based on type do this and use aces as increased fidelity?
 		// canvasSize := image.Rect(0, 0, s.X, s.Y)
-		canvasSize := image.Rect(0, 0, frame.ImageSize.X, frame.ImageSize.Y)
+		canvasSize := image.Rect(0, 0, frame.FrameSize.X, frame.FrameSize.Y)
 		canvas = ImageGenerator(*c, canvasSize)
 	} else {
 		canvas = geomCanvas
@@ -133,11 +143,12 @@ func ImageGenerator(c context.Context, canvasSize image.Rectangle) draw.Image {
 // var baser = canvaswidget.GetBaseImage
 // var geometry = canvaswidget.GetGeometry
 
-// Gridgen generates the base opentsg image for a frame, drawing the gridlines or
-// the specified base image. In both instances the grid lines are calculated for locations.
+// Gridgen generates the base openTSG image for a frame, drawing the gridlines or
+// the specified base image. In both instances the grid coordinate system are calculated
+// and drawn as lines.
 // If an image has been used for the base then colour locations are also calculated.
 func GridGen(c *context.Context, dir string, frame FrameConfiguration) (draw.Image, error) {
-	// if tpig
+	// if tsig
 	// geom := geometry(*c)
 	var geomImg canvasAndMask
 
@@ -262,7 +273,7 @@ type grid struct {
 }
 
 // GridSquareLocatorAndGenerator converts the grid and alias string into a canvas the size of the grid,
-// the location generated is the upper left most corner of the grid, which must be placed on the testcard and any masks that are required for non square
+// the location generated is the upper left most corner of the grid, along with any masks that are required for non square
 // grids.
 func GridSquareLocatorAndGenerator(gridString, alias string, c *context.Context) (draw.Image, image.Point, draw.Image, error) {
 	regArt := regexp.MustCompile(`^key:[\w]{3,10}$`)

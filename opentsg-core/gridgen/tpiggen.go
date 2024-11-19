@@ -17,47 +17,48 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/credentials"
 )
 
-type TPIGCompile struct {
-	TPIGS      []Imports  `json:"tpig include"`
+// TSIG is the top level TSIG struct for importing 3d geometry
+type TSIG struct {
+	Tilelayout []TileLayout `json:"Tile layout"`
+	// Dimensions of the flat image and any carving
 	Dimensions Dimensions `json:"Dimensions"`
-}
-
-type Imports struct {
-	Include string `json:"uri"`
-	Alias   string `json:"alias"`
-}
-
-type TPIG struct {
-	Tilelayout []Tilelayout    `json:"Tile layout"`
-	Dimensions Dimensions      `json:"Dimensions"`
-	Carve      map[string]XY2D `json:"Carve"`
+	// Layout of any carved widgets
+	Carve map[string]XY2D `json:"Carve"`
 	// NAme?
 }
 
-type Tilelayout struct {
+// TileLayout contains the layout of each individual tsig tile
+type TileLayout struct {
 	Name       string    `json:"Name"`
 	Tags       []string  `json:"Tags"`
 	Neighbours []string  `json:"Neighbours"`
 	Layout     Positions `json:"Layout"`
 }
 
+// Positions list the XY coordinates
+// of the tsig in its different locations in pixels
 type Positions struct {
-	Carve XY `json:"Carve"`
-	Flat  XY `json:"Flat"`
-	Size  XY `json:"XY"`
+	Carve      XY `json:"Carve"`
+	Flat       XY `json:"Flat"`
+	Dimensions XY `json:"XY"`
 }
 
+// Dimensions contains the information for the
+// size of each TSIG destination
 type Dimensions struct {
 	Carve XY2D `json:"Carve"`
 	Flat  XY2D `json:"Flat"`
 }
 
+// The XY position
+// and the carve destination, if required
 type XY struct {
 	Destination string `json:"Destination,omitempty"`
 	X           int    `json:"X"`
 	Y           int    `json:"Y"`
 }
 
+// XY"D contains the 2d dimensions
 type XY2D struct {
 	X0 int `json:"X0"`
 	Y0 int `json:"Y0"`
@@ -78,7 +79,7 @@ func flatmap(c *context.Context, basePath, tpigpath string) (canvasAndMask, erro
 		}
 	}
 
-	var segmentLayout TPIG
+	var segmentLayout TSIG
 	err = json.Unmarshal(file, &segmentLayout)
 	if err != nil {
 		return canvasAndMask{}, fmt.Errorf("0DEV error extracting the TPIG file %v", err)
@@ -112,7 +113,7 @@ func flatmap(c *context.Context, basePath, tpigpath string) (canvasAndMask, erro
 		// carve is an array of the original and the destination
 
 		// colour in flat at the same time
-		locs[i] = image.Rect(t.Layout.Flat.X, t.Layout.Flat.Y, t.Layout.Flat.X+t.Layout.Size.X, t.Layout.Flat.Y+t.Layout.Size.Y)
+		locs[i] = image.Rect(t.Layout.Flat.X, t.Layout.Flat.Y, t.Layout.Flat.X+t.Layout.Dimensions.X, t.Layout.Flat.Y+t.Layout.Dimensions.Y)
 
 		utilitySegements[i] = &Segmenter{
 			Shape: locs[i],
@@ -120,7 +121,7 @@ func flatmap(c *context.Context, basePath, tpigpath string) (canvasAndMask, erro
 			Name:  t.Name, ImportPosition: i}
 
 		// figure out the optimisation here, or error handling as not everything will be carved
-		carves := image.Rect(t.Layout.Carve.X, t.Layout.Carve.Y, t.Layout.Carve.X+t.Layout.Size.X, t.Layout.Carve.Y+t.Layout.Size.Y)
+		carves := image.Rect(t.Layout.Carve.X, t.Layout.Carve.Y, t.Layout.Carve.X+t.Layout.Dimensions.X, t.Layout.Carve.Y+t.Layout.Dimensions.Y)
 		// extract the carve for each area, appending it to the carve map
 		carved := carveSegements[t.Layout.Carve.Destination]
 
@@ -156,21 +157,20 @@ func flatmap(c *context.Context, basePath, tpigpath string) (canvasAndMask, erro
 // Carve checks if the resulting image needs to be carved.
 // Returning the carved image and amended target names for each carve
 // , as well as the original image
-func Carve(c *context.Context, canvas draw.Image, target []string) []ImageLocation {
+func Carve(c *context.Context, canvas draw.Image, target []string) []CarvedImagePaths {
 	// take in the flat image and generate filename(tpigname).extension using string manipulation
 	// save the flat and carved images at the moment
 
 	/*
 		get segments and carve information from a map
 		create a mask of the complete thing to run over the whole bit
-
 	*/
 	carveTargets := (*c).Value(carvekey)
 	// .(map[string]carver)
 
 	if carveTargets != nil {
 		carveTargets := carveTargets.(map[string]carvedImageLayout)
-		carvedTargets := make([]ImageLocation, len(carveTargets)+1)
+		carvedTargets := make([]CarvedImagePaths, len(carveTargets)+1)
 
 		count := 0
 		for name, ct := range carveTargets {
@@ -189,16 +189,16 @@ func Carve(c *context.Context, canvas draw.Image, target []string) []ImageLocati
 				names[i] = strings.Join(parts, ".")
 			}
 
-			carvedTargets[count] = ImageLocation{Image: carved, Location: names}
+			carvedTargets[count] = CarvedImagePaths{Image: carved, Location: names}
 			count++
 		}
 		// add the full image at the end just for a flat debug
-		carvedTargets[count] = ImageLocation{Image: canvas, Location: target}
+		carvedTargets[count] = CarvedImagePaths{Image: canvas, Location: target}
 		return carvedTargets
 	}
 
 	// return the original image if there's nothing to carve
-	return []ImageLocation{{Image: canvas, Location: target}}
+	return []CarvedImagePaths{{Image: canvas, Location: target}}
 
 }
 
@@ -488,7 +488,9 @@ func segementWithOffset(offset image.Point, input []*Segmenter) []*Segmenter {
 	return output
 }
 
-type ImageLocation struct {
+// CarvedImagePaths contains the base image and paths
+// for saving a carved image
+type CarvedImagePaths struct {
 	Image    draw.Image
 	Location []string
 }

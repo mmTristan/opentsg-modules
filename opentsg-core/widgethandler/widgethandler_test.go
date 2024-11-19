@@ -66,7 +66,7 @@ func contMocker(file, target, extra string) (*context.Context, draw.Image) {
 			Rows:       canvaswidget.GetGridRows(*mockC),
 			Cols:       canvaswidget.GetGridColumns(*mockC),
 			LineWidth:  canvaswidget.GetLWidth(*mockC),
-			ImageSize:  canvaswidget.GetPictureSize(*mockC),
+			FrameSize:  canvaswidget.GetPictureSize(*mockC),
 			CanvasType: canvaswidget.GetCanvasType(*mockC),
 			CanvasFill: canvaswidget.GetFillColour(*mockC),
 			LineColour: canvaswidget.GetLineColour(*mockC),

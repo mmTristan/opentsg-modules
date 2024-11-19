@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -21,7 +22,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Handler is the OpenTSG interface for generating widgets
+// Handler is the OpenTSG interface for handling widgets.
+// The handler bytes are parsed into an object that runs the Handle method.
 type Handler interface {
 	Handle(Response, *Request)
 }
@@ -117,7 +119,7 @@ func (r Request) GenerateSubImage(baseImg draw.Image, bounds image.Rectangle) dr
 
 // GetWidget searches the metadata of a frame, for the alias and then recursivley searches through the keys to find nested values.
 // The keys are a dotpath, if the key is invalid a nil value is returned.
-// if the alias is "" then all the metadata is returned.
+// if the alias is "" then all the metadata for the frame is returned.
 func (r Request) GetWidgetMetadata(alias, metadataField string) any {
 	if r.getWidgetMetadata == nil {
 		return nil
@@ -152,6 +154,7 @@ type FrameProperties struct {
 	FrameDimensions image.Point
 }
 
+// Response is the response of the handler
 type Response interface {
 	// Write a response to signal
 	// the end of the widget and to handle any errors.
@@ -183,7 +186,8 @@ func (r *response) BaseImage() draw.Image {
 	return r.baseImg
 }
 
-// StatusCode is the OpenTSG status code
+// StatusCode is the OpenTSG status code.
+// Status codes contain implicit log levels.
 type StatusCode float64
 
 const (
@@ -198,34 +202,9 @@ const (
 	WidgetWarning = StatusCode(400.001)
 )
 
-// ensure the final 3 digits are printed
+// String prints the status code as 000.0000, ensuring the final 3 digits are printed
 func (s StatusCode) String() string {
 	return fmt.Sprintf("%.3f", s)
-}
-
-// Legacy runs the old OpenTSG handler methods
-// This version is currently ony used for testing.
-type Legacy struct {
-	// the location of the loader
-	FileLocation string `json:"fileLocation" yaml:"fileLocation"`
-	// mnt is the mount point of the folder
-	MNT string `json:"mnt" yaml:"mnt"`
-}
-
-func (l Legacy) Handle(resp Response, req *Request) {
-
-	otsg, err := BuildOpenTSG(l.FileLocation, "", true, nil)
-
-	if err != nil {
-
-		resp.Write(500, err.Error())
-		return
-	}
-
-	// run the old program as normal
-	otsg.Draw(true, l.MNT, "stdout")
-
-	resp.Write(200, "")
 }
 
 // logErrors runs the internal errors as a handler
@@ -255,10 +234,10 @@ func (tsg *OpenTSG) Run(mnt string) {
 	wg.Add(tsg.framecount)
 
 	// hookdata is a large map that contains all the metadata across the run.
-	//var locker sync.Mutex
-	//hookdata := syncmap{&locker, make(map[string]any)}
+	var locker sync.Mutex
+	hookdata := syncmap{&locker, make(map[string]any)}
 
-	// runFile := time.Now().Format("2006-01-02T15:04:05")
+	runFile := time.Now().Format("2006-01-02T15:04:05")
 
 	for frameLoopNo := 0; frameLoopNo < imageNo; frameLoopNo++ {
 		// make an internal function
@@ -314,7 +293,7 @@ func (tsg *OpenTSG) Run(mnt string) {
 					Rows:       canvaswidget.GetGridRows(*frameContext),
 					Cols:       canvaswidget.GetGridColumns(*frameContext),
 					LineWidth:  canvaswidget.GetLWidth(*frameContext),
-					ImageSize:  canvaswidget.GetPictureSize(*frameContext),
+					FrameSize:  canvaswidget.GetPictureSize(*frameContext),
 					CanvasType: canvaswidget.GetCanvasType(*frameContext),
 					CanvasFill: canvaswidget.GetFillColour(*frameContext),
 					LineColour: canvaswidget.GetLineColour(*frameContext),
@@ -334,13 +313,13 @@ func (tsg *OpenTSG) Run(mnt string) {
 
 			// get the metadata and add it onto the map for this frame
 			// @TODO update with the new metadata context
-			/*md, _ := metaHook(canvas, frameContext)
+			md, _ := metaHookHandle(canvas, frameContext)
 			if len(md) != 0 { // only save if there actually is metadata
 				i4 := intToLength(frameNo, 4)
 				hookdata.syncer.Lock()
 				hookdata.data[fmt.Sprintf("frame %s", i4)] = md
 				hookdata.syncer.Unlock()
-			}*/
+			}
 
 			/*transformation station here where images can be moved to carved bits etc*/
 
@@ -360,21 +339,17 @@ func (tsg *OpenTSG) Run(mnt string) {
 	wg.Wait()
 	fmt.Println("")
 
-	/*
+	// move to a metadatahandler function
 
-		move to a metadatahandler function
-			if debug {
-				// generate the metadata folder, if it has had any generated data
-				if len(hookdata.data) != 0 {
-					// write a better name for identfying
-					metaLocation, _ := filepath.Abs(mnt + "./" + runFile + ".yaml")
-					md, _ := os.Create(metaLocation)
-					b, _ := yaml.Marshal(hookdata.data)
-					md.Write(b)
-				}
-			}
+	// generate the metadata folder, if it has had any generated data
+	if len(hookdata.data) != 0 {
+		// write a better name for identfying
+		metaLocation, _ := filepath.Abs(mnt + "./" + runFile + ".yaml")
+		md, _ := os.Create(metaLocation)
+		b, _ := yaml.Marshal(hookdata.data)
+		md.Write(b)
+	}
 
-	*/
 }
 
 // CanvasSave saves the file according to the extensions provided
@@ -424,7 +399,7 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 
 	// set up the core context functions
 	allWidgets := widgets.ExtractAllWidgetsHandle(c)
-	c = MetaDataInit(*c)
+	MetaDataInit(c)
 	// add the validator last
 	lineErrs := core.GetJSONLines(*c)
 	webSearch := func(URI string) ([]byte, error) {
@@ -660,6 +635,9 @@ func GenErrorHandler(code StatusCode, errMessage string) Handler {
 	})
 }
 
+// CompleteZ marks a z value as written.
+// if the z value is the current z value then the z is incremented to the
+// next z value that hasn't run. This may not be z+=1 increase
 func (p *Pool) CompleteZ(z int) {
 	p.drawers.Lock()
 	// @TODO check for doubles
@@ -678,6 +656,7 @@ func (p *Pool) CompleteZ(z int) {
 
 }
 
+// LogDrawArea logs the z position and area a widget is writing to
 func (p *Pool) LogDrawArea(position int, area image.Rectangle) {
 	p.drawers.Lock()
 	// @TODO check for doubles
@@ -750,6 +729,7 @@ func (c *drawers) check(position int, area image.Rectangle) bool {
 	return clearPath
 }
 
+// Pool is the runner pool for running individual widgets
 type Pool struct {
 	// keep at 1 at the moment
 	AvailableMemeory int
@@ -757,6 +737,8 @@ type Pool struct {
 	drawers *drawers
 }
 
+// Get a runner from the pool.
+// if no runners are available then check again later.
 func (p *Pool) GetRunner() (runner poolRunner, available bool) {
 
 	p.Lock()
@@ -772,6 +754,7 @@ func (p *Pool) GetRunner() (runner poolRunner, available bool) {
 	return
 }
 
+// PutRunner puts a runner back into the pool
 func (p *Pool) PutRunner(run poolRunner) {
 
 	p.Lock()
@@ -857,11 +840,11 @@ func put(c *context.Context, widetProps core.WidgetEssentials, alias string, raw
 
 // metaDataInit adds the metadata to the global context for that frame. This needs to be called
 // before the widgets are run so that metadata can be stored.
-func MetaDataInit(c context.Context) *context.Context {
+func MetaDataInit(c *context.Context) {
 	// MD is the metadata context of widget - alias - json(map[string] interface{})
 	md := metadata{make(map[string]map[string]interface{}), &sync.Mutex{}}
-	valC := context.WithValue(c, metaKey, md)
-	return &valC
+	*c = context.WithValue(*c, metaKey, md)
+
 }
 
 // Extract searches the metadata for an alias and then recursivley searches through the keys to find nested values.

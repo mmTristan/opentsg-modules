@@ -29,6 +29,7 @@ type syncmap struct {
 	data   map[string]any
 }
 
+// OpenTSG is the engine for running openTSG
 type OpenTSG struct {
 	internal   context.Context
 	framecount int
@@ -50,7 +51,7 @@ type RunnerConfiguration struct {
 	// RunnerCount is the amount of runners (go routines)
 	// that openTSG can use at anyone time
 	RunnerCount int
-	//
+	// Enable the profiler
 	ProfilerEnabled bool
 }
 
@@ -129,6 +130,7 @@ func (tsg *OpenTSG) AddCustomWidgets(widgets ...func(chan draw.Image, bool, *con
 }
 
 // Draw generates the images for each array section of the json array and applies it to the test card grid.
+// This is the legacy version of OTSG
 func (tsg *OpenTSG) Draw(debug bool, mnt, logType string) {
 	imageNo := tsg.framecount
 
@@ -198,7 +200,7 @@ func (tsg *OpenTSG) Draw(debug bool, mnt, logType string) {
 					Rows:       canvaswidget.GetGridRows(*frameContext),
 					Cols:       canvaswidget.GetGridColumns(*frameContext),
 					LineWidth:  canvaswidget.GetLWidth(*frameContext),
-					ImageSize:  canvaswidget.GetPictureSize(*frameContext),
+					FrameSize:  canvaswidget.GetPictureSize(*frameContext),
 					CanvasType: canvaswidget.GetCanvasType(*frameContext),
 					CanvasFill: canvaswidget.GetFillColour(*frameContext),
 					LineColour: canvaswidget.GetLineColour(*frameContext),
@@ -358,6 +360,22 @@ func metaHook(input draw.Image, c *context.Context) (map[string]any, error) {
 	return metaDataMap, nil
 }
 
+// metaHook extracts all the user chosen metadata from a frame and its context.
+func metaHookHandle(input draw.Image, c *context.Context) (map[string]any, error) {
+	metaDataMap := make(map[string]any)
+
+	if canvaswidget.GetMetaAverage(*c) {
+		metaDataMap["Average Image Colour"] = averageCalc(input)
+	}
+
+	if canvaswidget.GetMetaConfiguration(*c) {
+		metaDataMap["Frame Configuration"] = extractMetadata(c, "", "")
+	}
+	// return some hook stats
+
+	return metaDataMap, nil
+}
+
 func averageCalc(targetImg draw.Image) any {
 	count := 0
 	b := targetImg.Bounds().Max
@@ -383,19 +401,11 @@ func averageCalc(targetImg draw.Image) any {
 
 }
 
-// Unmarshal se
+// Unmarshal unmarshals creates a function that unmarsahals yaml bytes
+// into the handler type. This must be initialised with a struct.
 func Unmarshal(Han Handler) func(input []byte) (Handler, error) {
 
 	return func(input []byte) (Handler, error) {
-		/*
-			x := Gen
-			//	v := reflect.ValueOf(&x)
-			v := reflect.New(reflect.TypeOf(Gen))
-			fmt.Println(reflect.TypeOf(&Gen))
-			fmt.Println(v.Type(), "HERE", v.Interface(), v.Kind(), v.Elem().Type())
-			yaml.Unmarshal([]byte("{\"input\":\"yes\"}"), v.Interface())
-			fmt.Println(x, reflect.TypeOf(x), "HERES", v.Elem().Interface())*/
-
 		// copy the underlying type to generate a new value
 		// that points to the type that implements the handler method and not
 		// just the handler method itself

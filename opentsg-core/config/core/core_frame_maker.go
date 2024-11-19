@@ -46,6 +46,8 @@ The widgets are found by depth first tree traversal, where properties are passed
 This means each include statement is searched when it is found and the order widgets
 are declared in this format, is the order they are run.
 
+This is the legacy version
+
 */
 func FrameWidgetsGenerator(c context.Context, framePos int) (context.Context, []error) {
 	var allError []error
@@ -183,7 +185,7 @@ func FrameWidgetsGenerator(c context.Context, framePos int) (context.Context, []
 	return frameContext, allError
 }
 
-// FrameWidgetsGenerator runs the create frame for the given position. Applying any updates required and generating any
+// FrameWidgetsGeneratorHandle runs the create frame for the given position. Applying any updates required and generating any
 // extra json from data. It returns an initial context with all the frame and configuration information.
 /*
 The widgets are found by depth first tree traversal, where properties are passed by property and not value.
@@ -365,7 +367,8 @@ type jsonUpdate struct {
 	body   map[string]any
 }
 
-// each json has factory has a tag that defines the widget it represents
+// WidgetEssentials contains the essential properties for each widget.
+// These are removed and stored as a sidecar to the widget when the widgets are parsed.
 type WidgetEssentials struct {
 	WType       string            `json:"type,omitempty" yaml:"type,omitempty"`
 	GridLoc     Grid              `json:"grid,omitempty" yaml:"grid,omitempty"`
@@ -374,6 +377,7 @@ type WidgetEssentials struct {
 }
 
 // Grid gives the grid system with the coordinates and an alias
+// this is the legacy version
 type Grid struct {
 	Location string `json:"location,omitempty" yaml:"location,omitempty"`
 	Alias    string `json:"alias,omitempty" yaml:"alias,omitempty"`

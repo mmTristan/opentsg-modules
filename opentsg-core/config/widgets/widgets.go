@@ -26,6 +26,8 @@ func widgetFactory(tag string, c *context.Context) map[core.AliasIdentity]json.R
 	return tagBytes
 }
 
+// ExtractAllWidgets returns every widget used in a frame.
+// This is the legacy version of the function.
 func ExtractAllWidgets(c *context.Context) map[core.AliasIdentity]json.RawMessage {
 
 	frameWidgets := core.GetFrameWidgets(*c)
@@ -40,6 +42,8 @@ func ExtractAllWidgets(c *context.Context) map[core.AliasIdentity]json.RawMessag
 	return tagBytes
 }
 
+// ExtractAllWidgets returns every widget used in a frame. Each widget contains its
+// properties and is the
 func ExtractAllWidgetsHandle(c *context.Context) map[core.AliasIdentityHandle]json.RawMessage {
 
 	frameWidgets := core.GetFrameWidgetsHandle(*c)
@@ -53,7 +57,8 @@ func ExtractAllWidgetsHandle(c *context.Context) map[core.AliasIdentityHandle]js
 	return tagBytes
 }
 
-// ExtractWidgetStructs uses generics to generate the maps for each frame,
+// ExtractWidgetStructs uses generics to extract the widgets of type x, into
+// their struct,
 // an error is returned for failed the validations.
 // It is used by widget handler module to get the maps for each widget, and kept in config to utilise the context
 func ExtractWidgetStructs[T any](ftype string, schema []byte, c *context.Context) (map[core.AliasIdentity]T, []error) {
@@ -61,7 +66,7 @@ func ExtractWidgetStructs[T any](ftype string, schema []byte, c *context.Context
 	base := make(map[core.AliasIdentity]T)
 	var errors []error
 
-	names := core.GetAppliedWidgets(*c) // get the names and file locations
+	names := core.GetAliasMap(*c) // get the names and file locations
 	lineErrs := core.GetJSONLines(*c)
 	names.Mu.Lock() // prevent concurrent map writes
 
@@ -94,7 +99,7 @@ func ExtractWidgetStructs[T any](ftype string, schema []byte, c *context.Context
 // of the image generation.
 func MissingWidgetCheck(c context.Context) map[core.AliasIdentity]string {
 	bases := core.GetFrameWidgets(c)
-	appliedWidgets := core.GetAppliedWidgets(c)
+	appliedWidgets := core.GetAliasMap(c)
 	// update name map
 	missed := make(map[core.AliasIdentity]string)
 	for widgetName, content := range bases {

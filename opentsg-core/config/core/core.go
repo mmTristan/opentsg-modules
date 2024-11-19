@@ -87,6 +87,7 @@ type widgetContents struct {
 	ColourSpace colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
 }
 
+// WidgetContents contains the raw widget properties
 type WidgetContents struct {
 	Data     json.RawMessage
 	Pos      int
@@ -94,14 +95,17 @@ type WidgetContents struct {
 	WidgetEssentials
 }
 
-// AliasIdentity is the name and zposition of a widget. Where zposition is the widgets position in the global array of widgets
+// AliasIdentity is the name and zposition of a widget. Where zposition is the widgets position in the global array of widgets.
+// As well as any other properties associated with the widget
 type AliasIdentityHandle struct {
 	FullName string
 	ZPos     int
 	WidgetEssentials
 }
 
-// AliasIdentity is the name and zposition of a widget. Where zposition is the widgets position in the global array of widgets
+// AliasIdentity is the name and zposition of a widget. Where zposition is the widgets position in the global array of widgets.
+// As well as any other properties associated with the widget
+// This is the legacy version
 type AliasIdentity struct {
 	FullName    string
 	ZPos        int
@@ -111,13 +115,15 @@ type AliasIdentity struct {
 	ColourSpace colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
 }
 
-// GetFrameWidgets returns a map of the alias
+// GetFrameWidgets returns a map of all the widgets and their properties
+// This is the legacy version
 func GetFrameWidgets(c context.Context) map[string]widgetContents {
 
 	return c.Value(baseKey).(map[string]widgetContents)
 }
 
-// GetFrameWidgets returns a map of the alias
+// GetFrameWidgets returns  a map of all the widgets and their properties
+// this contains the widgets "props" properties.
 func GetFrameWidgetsHandle(c context.Context) map[string]WidgetContents {
 
 	return c.Value(baseKey).(map[string]WidgetContents)
@@ -129,8 +135,8 @@ type SyncMap struct {
 	Mu   *sync.Mutex
 }
 
-// GetApplied widgets returns a syncMap that contains all the widget names that have been assigned an alias
-func GetAppliedWidgets(c context.Context) SyncMap {
+// GetAliasMap returns a syncMap that contains all the widget names that have been assigned an alias
+func GetAliasMap(c context.Context) SyncMap {
 
 	return c.Value(addedWidgets).(SyncMap)
 }

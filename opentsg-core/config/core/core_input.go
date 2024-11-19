@@ -155,7 +155,8 @@ func (b *base) factoryInit(jsonFactory factory, mainPath, parent string, factory
 	return nil
 }
 
-// The resource search algorthim
+// FileSearch searches for a factory file. Checking http sources, then http sources appended to the parent path.
+// Then it searches local files, before appending the file path onto the parent paths.
 func FileSearch(authBody credentials.Decoder, uri, mainPath string, parentPaths []string) (fileBytes []byte, folderFilePath string, fileErr error) {
 	fileBytes, fileErr = authBody.Decode(uri)
 

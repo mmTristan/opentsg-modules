@@ -27,7 +27,7 @@ func TestGrids(t *testing.T) {
 	// getFill = func(c context.Context) string { return "#ffffff" }
 
 	f := FrameConfiguration{
-		ImageSize:  image.Point{1000, 1000},
+		FrameSize:  image.Point{1000, 1000},
 		LineWidth:  1,
 		CanvasType: "",
 		CanvasFill: color.NRGBA64{R: 0xff << 8, G: 0xff << 8, B: 0xff << 8, A: 0xffff},
@@ -181,7 +181,7 @@ func TestGridGen(t *testing.T) {
 		// getWidth = func(context.Context) float64 { return w }
 		valC := context.Background()
 		myImage, _ := GridGen(&valC, "./", FrameConfiguration{
-			ImageSize: image.Point{1600, 900},
+			FrameSize: image.Point{1600, 900},
 			LineWidth: w,
 			Rows:      9,
 			Cols:      16,
@@ -238,7 +238,7 @@ func TestArtKey(t *testing.T) {
 		var mockgeom draw.Image
 		myImage, _ := artKeyGen(&valC, mockgeom, filename,
 			FrameConfiguration{
-				ImageSize: tar,
+				FrameSize: tar,
 				Rows:      9,
 				Cols:      16,
 			})

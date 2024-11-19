@@ -66,7 +66,7 @@ func (a *ARGBA) PixOffset(x, y int) int {
 	return (y-a.Rect.Min.Y)*a.Stride + (x-a.Rect.Min.X)*16
 }
 
-// At returns the colour at X,y
+// At returns the colour at x,y
 func (a *ARGBA) At(x, y int) color.Color {
 	if !(image.Point{x, y}.In(a.Rect)) {
 		return RGBA128{}

@@ -19,10 +19,12 @@ type fileAndLocation struct {
 
 // JsonLine is the map used to store the file locations and line number for each json object value.
 // The xxh64 hash of the bytes of each value on a line are used as the keys.
+// Multiple identical values would then be stored with the same hash and have an option of
+// file locations.
 type JSONLines map[uint64]fileAndLocation
 
 // Liner extracts all the keys from a json file with the line number(s) at which they occur and updates positions
-// with their values. This is designed to be repeated for several files for one map.
+// with their values. Each file should be written into the same JSONLines object
 func Liner(file []byte, fileName, assignType string, positions JSONLines) error {
 
 	// yaml node contains the line number for each node
@@ -236,9 +238,9 @@ func posAdder(file, header string, line int, xxh64 uint64, positions JSONLines) 
 	}
 }
 
-// schemaValidator checks if json input is allowed with the relevant schema. It returns the line number of the error using the
+// schemaValidator validates a json input against the relevant schema. It returns the line number of any errors using the
 // JsonLines Map.
-func SchemaValidator(schema, input []byte, loc string, fileLines JSONLines) []error {
+func SchemaValidator(schema, input []byte, inputID string, fileLines JSONLines) []error {
 	schemaLoader := gojsonschema.NewBytesLoader(schema)
 	// cleanse input to json if initially yaml
 	if !json.Valid(input) { // if not json open it as yaml and save as json
@@ -246,13 +248,13 @@ func SchemaValidator(schema, input []byte, loc string, fileLines JSONLines) []er
 		err := yaml.Unmarshal(input, &clean)
 		if err != nil {
 
-			return []error{fmt.Errorf("0030 extracting %s: %v", loc, err)}
+			return []error{fmt.Errorf("0030 extracting %s: %v", inputID, err)}
 		}
 
 		input, err = json.Marshal(clean)
 		if err != nil {
 
-			return []error{fmt.Errorf("0031 cannot convert yaml to json at %s: %v", loc, err)}
+			return []error{fmt.Errorf("0031 cannot convert yaml to json at %s: %v", inputID, err)}
 		}
 	}
 
@@ -261,10 +263,10 @@ func SchemaValidator(schema, input []byte, loc string, fileLines JSONLines) []er
 	if err != nil {
 
 		// this stops go trying to do anything that results in a nasty crash
-		return []error{fmt.Errorf("0025 Invalid json input for the alias %s. The following error occurred %v", loc, err)}
+		return []error{fmt.Errorf("0025 Invalid json input for the alias %s. The following error occurred %v", inputID, err)}
 	} else if !result.Valid() {
 
-		return errorExtractor(result.Errors(), input, loc, fileLines)
+		return errorExtractor(result.Errors(), input, inputID, fileLines)
 	}
 
 	return nil

@@ -13,6 +13,8 @@ import (
 
 // os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0777)
 
+// LogToFile attaches a json slogging middleware to openTSG that writes to file of jobid.log
+// If the file already exists it is appended to.
 func LogToFile(otsg *OpenTSG, opts slog.HandlerOptions, folder, jobID string) {
 
 	path := filepath.Join(folder, fmt.Sprintf("%s.log", jobID))
@@ -54,7 +56,7 @@ func jSONValidator(loggedJson validator.JSONLines, schema []byte, id string) fun
 	}
 }
 
-// Logger initialises a slogger wrapper,
+// Logger initialises a slogger wrapper, that
 // records every write() call during the tsg run.
 func Logger(logger *slog.Logger) func(Handler) Handler {
 

@@ -22,9 +22,14 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-io/tiffup"
 )
 
+// Encoder is a function for encoding the openTSG output into a
+// specified format.
 type Encoder func(io.Writer, image.Image, EncodeOptions) error
 
+// EncodeOptions contains an extra options for encoding a file
 type EncodeOptions struct {
+	// the target bitdepth an image is saved to
+	// only relevant for DPX files
 	BitDepth int
 }
 
@@ -293,11 +298,11 @@ func EncodeCSVFile(w io.Writer, toDraw image.Image, _ EncodeOptions) error {
 /*
 Add base encoders adds the following file encoders to an OpenTSG object:
 
-- dpx
-- csv
-- png
-- exr
-- tiff (as tiff and tif)
+  - dpx
+  - csv
+  - png
+  - exr
+  - tiff (as tiff and tif)
 */
 func AddBaseEncoders(tsg *OpenTSG) {
 

@@ -27,7 +27,7 @@ func TestTpigGeometry(t *testing.T) {
 
 	c := context.Background()
 	f := FrameConfiguration{
-		ImageSize: image.Point{30, 30},
+		FrameSize: image.Point{30, 30},
 		Rows:      3,
 		Cols:      3,
 	}
@@ -139,7 +139,7 @@ func TestGridGeometry(t *testing.T) {
 
 	c := context.Background()
 	f := FrameConfiguration{
-		ImageSize: image.Point{30, 30},
+		FrameSize: image.Point{30, 30},
 		Rows:      3,
 		Cols:      3,
 	}

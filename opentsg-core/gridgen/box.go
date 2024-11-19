@@ -2,7 +2,6 @@ package gridgen
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"image"
 	"image/draw"
@@ -16,74 +15,24 @@ import (
 )
 
 /*
+Location is the location information of a widget.
 
-
-
-
-design ideas
-
-    "grid": {
-        "alias": " NotherNameForThisLocation",
-        "location": "(200,1700)-(3640,1900)"
-    },
-
-	becomes
-
-    "box": {
-        "alias": " noiseBox",
-        "bounds": {"x":R1, "y":C100, "w":B, "h":3}
-    },
-
-	grid coordinates are the default unit of what is used
-	explicit coordinate is relative card
-
-    "box": {
-        "alias": " noiseBox2",
-        "bounds": {"x":5%, "y":20%, "x2":34%, "y2":40%}
-    },
-
-
-	"box": {
-        "alias": " noiseBox2",
-        "coordinates": {"x":"200px", "y":1700px, "x2":8000px, "y2":4000px}
-    },
-
-{"x":200px, "y":1700px, "w":3640px, "h":1900px} implicitly a top-left pinned box because it has 4 properties x, y, w, h
-{"x":200, "y":1700, "x2":3640, "y2":1900} implicitly a corner pinned box because it has 4 properties x, y, x2, y2
-{"cx":200, "cy":1700, "x2":3640, "y2":1900} do the
-
-{"cx":200, "cy":1700, "radius":20px}
-
-edge antiasliasing questions
-inheritance positions questions
-
-format for xy coordinates
-
-it its coordinate then
-
-x,y as pixels. Each value is the grid, no sub grid componenets yet
-
-so 16,16 would then be used. Bin off A1, R1C1?
-
+It contains the box properties in css style for drawing shapes.
 */
-
 type Location struct {
 
-	// keep the Alias from last time
-	Alias string
-	//
+	// What is the alias for this location
+	Alias string `json:"alias" yaml:"alias"`
+	// CSS style fields for drawing the box
 	Box Box `json:"box,omitempty" yaml:"box,omitempty"`
 }
 
-// implement hsl(0, 100%, 50%);
-
-// keep these ideas in mind https://www.w3schools.com/css/css_boxmodel.asp
 /*
-remove margin, padding and border as there will not be that mich need
+Box implements the box properties of a widget.
+The XY coordinates start at 0,0 in the top left of the canvas.
 
-thoughts - sa y the limits so people dont think this is a dierect css import
-as fetures will deffo be missing
-
+It tries to adhere to css style of a box https://www.w3schools.com/css/css_boxmodel.asp
+Not every property is implemented however.
 */
 type Box struct {
 	// use a predeclared alias
@@ -92,7 +41,6 @@ type Box struct {
 	UseGridKey string `json:"useGridKey,omitempty" yaml:"useGridKey,omitempty"`
 
 	// top left coordinates
-	// actually any
 	X any `json:"x,omitempty" yaml:"x,omitempty"`
 	Y any `json:"y,omitempty" yaml:"y,omitempty"`
 	// bottom right
@@ -100,26 +48,22 @@ type Box struct {
 	X2 any `json:"x2,omitempty" yaml:"x2,omitempty"`
 	Y2 any `json:"y2,omitempty" yaml:"y2,omitempty"`
 
-	// width height
-	// can they be A or 1 etc. just mix it up
+	// Width and Height take second priority to
+	// x2 ans y2 if they are called
 	Width  any `json:"width,omitempty" yaml:"width,omitempty"`
 	Height any `json:"height,omitempty" yaml:"height,omitempty"`
 
-	// centre values
-	// width
+	// xAlignment and yAlignemnt values are not implemented yet
 	XAlignment string `json:"xAlignment,omitempty" yaml:"xAlignment,omitempty"`
 	YAlignment string `json:"yAlignment,omitempty" yaml:"yAlignment,omitempty"` // default top left but let them choose
-	// or masks like this. Leave masks out for the moment?
-	//  mask-image: radial-gradient(circle, black 50%, rgba(0, 0, 0, 0.5) 50%);
 
-	// circle properties
-	// border radius - what css uses
+	// border radius - follows the simple layout of
 	// https://prykhodko.medium.com/css-border-radius-how-does-it-work-bfdf23792ac2
-	// taps out at 50% - keep it the simple version to start
+	// taps out at 50% of the shortest dimension.
 	BorderRadius any `json:"border-radius,omitempty" yaml:"border-radius,omitempty"`
 }
 
-// InitAliasBox inits a map of the alias in a context
+// InitAliasBox inits a map of the alias for handlers in a context
 func InitAliasBox(c context.Context) context.Context {
 	n := SyncMapBox{make(map[string]any), &sync.Mutex{}}
 
@@ -145,46 +89,9 @@ func GetAliasBox(c context.Context) SyncMapBox {
 	return SyncMapBox{Mu: &newmu, Data: make(map[string]any)}
 }
 
-/*
-
-no shapes apart from square with rounded edges
-
-cx,cy? are these needed when you can still set squares
-keep
-
-*/
-
-// https://www.w3schools.com/css/css_boxmodel.asp
-
-/*
-
-pixel, string, percentage or grid for xy
-pixel string percentage for height and width
-
-*/
-
-/*
-func anyToLength(coordinate any) int {
-
-	coord := string(fmt.Sprintf("%v", coordinate))
-
-	regSpreadX := regexp.MustCompile(`^[a-zA-Z]{1,}$`)
-	regCoord := regexp.MustCompile(`^[0-9]{1,}$`)
-
-	regPixels := regexp.MustCompile(`^[0-9]{1,}[Pp][Xx]$`)
-	regXY := regexp.MustCompile(`^\(-{0,1}[0-9]{1,5},-{0,1}[0-9]{1,5}\)-\(-{0,1}[0-9]{1,5},-{0,1}[0-9]{1,5}\)$`)
-	regRC := regexp.MustCompile(`^[Rr]([\d]{2,}|[1-9]{1})[Cc]([\d]{2,}|[1-9]{1})$`)
-	regRCArea := regexp.MustCompile(`^[Rr]([\d]{2,}|[1-9]{1})[Cc]([\d]{2,}|[1-9]{1}):[Rr]([\d]{2,}|[1-9]{1})[Cc]([\d]{2,}|[1-9]{1})$`)
-
-	switch {
-	case true:
-	default:
-	}
-
-	return 0
-}
-*/
-
+// GridSquareLocatorAndGenerator converts the box struct into a canvas the size of the grid,
+// the location generated is the upper left most corner of the grid, along with any masks that are required for non square
+// grids.
 func (l Location) GridSquareLocatorAndGenerator(c *context.Context) (draw.Image, image.Point, draw.Image, error) {
 
 	alias := GetAliasBox(*c)
@@ -215,10 +122,11 @@ func (l Location) GridSquareLocatorAndGenerator(c *context.Context) (draw.Image,
 
 	}
 
-	return l.GetAreas(c)
+	return l.gridSquareLocatorAndGenerator(c)
 }
 
-func (b Location) GetAreas(c *context.Context) (draw.Image, image.Point, draw.Image, error) {
+// gridSquareLocatorAndGenerator
+func (b Location) gridSquareLocatorAndGenerator(c *context.Context) (draw.Image, image.Point, draw.Image, error) {
 
 	dims, tsgLocation, err := b.CalcArea(c)
 
@@ -284,10 +192,11 @@ func (b Location) GetAreas(c *context.Context) (draw.Image, image.Point, draw.Im
 	return widgetCanvas, tsgLocation, widgMask, nil
 }
 
+// CalcArea calculates the dimension of the box and the coordinate the top left is placed at.
 func (l Location) CalcArea(c *context.Context) (image.Rectangle, image.Point, error) {
 	if l.Box.X == nil || l.Box.Y == nil {
 		//invalid coordinates received
-		return image.Rectangle{}, image.Point{}, fmt.Errorf("inavlid coordinates of x %v and y %v received", l.Box.X, l.Box.Y)
+		return image.Rectangle{}, image.Point{}, fmt.Errorf("invalid coordinates of x %v and y %v received", l.Box.X, l.Box.Y)
 	}
 
 	dimensions := (*c).Value(sizekey).(image.Point)
@@ -381,39 +290,6 @@ func roundedMask(c *context.Context, rect image.Rectangle, radius int) draw.Imag
 
 func xyToRadius(x, y float64) float64 {
 	return math.Sqrt(x*x + y*y)
-}
-
-type DistanceField struct {
-	Dist any `yaml:",flow"`
-}
-
-func (d *DistanceField) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var ang any
-	err := unmarshal(&ang)
-	if err != nil {
-		return err
-	}
-
-	d.Dist = ang
-	return nil
-}
-
-func (d DistanceField) MarshalYAML() (interface{}, error) {
-	return d.Dist, nil
-}
-
-func (d *DistanceField) UnmarshalJSON(data []byte) error {
-	var dist any
-	err := json.Unmarshal(data, &dist)
-
-	d.Dist = dist
-	return err
-}
-
-func (d DistanceField) MarshalJSON() ([]byte, error) {
-
-	return json.Marshal(d.Dist)
-
 }
 
 // unit distance

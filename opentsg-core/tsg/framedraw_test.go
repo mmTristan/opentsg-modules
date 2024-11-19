@@ -19,14 +19,6 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestLegacy(t *testing.T) {
-	otsg, err := BuildOpenTSG("./testdata/testloader.json", "", true, nil)
-	otsg.Handle("builtin.legacy", []byte("{}"), Legacy{})
-	fmt.Println(err)
-	otsg.Run("")
-
-}
-
 func TestTSIGWidget(t *testing.T) {
 	// set up a fill handler that changes location each time
 
@@ -169,6 +161,13 @@ func TestRaceConditions(t *testing.T) {
 	})
 
 	os.Remove("./testdata/handlerLoaders/racer.png")
+
+	otsgA, buildErr := BuildOpenTSG("./testdata/handlerLoaders/loaderAnalytics.json", "", true, &RunnerConfiguration{RunnerCount: 5})
+	otsgA.Handle("test.fill", []byte("{}"), Filler{})
+
+	AddBaseEncoders(otsgA)
+	otsgA.Use(Logger(slog.New(jSlog)))
+	otsgA.Run("")
 }
 
 // JSONLog is the key fields of the json slogger

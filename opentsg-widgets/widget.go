@@ -20,6 +20,22 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 )
 
+// AddBuiltinWidgets adds all builtin widgets to the openTSG engine
+// It adds:
+/*
+ - All the ebu3373 widgets
+ - Addimage
+ - Bowtie
+ - FourColour
+ - FrameCount
+ - Gradients
+ - Noise
+ - QR Code
+ - Resize
+ - TextBox
+ - ZonePlate
+
+*/
 func AddBuiltinWidgets(otsg *tsg.OpenTSG) {
 
 	// EBU3373

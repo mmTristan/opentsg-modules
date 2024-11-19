@@ -1,0 +1,27 @@
+{
+    "include": [
+        {
+            "uri": "blue.json",
+            "name": "blue"
+        },
+        {
+            "uri": "red.json",
+            "name": "red"
+        },
+        {
+            "uri": "green.json",
+            "name": "green"
+        }
+    ],
+    "create": [
+        {
+            "blue": {}
+        },
+        {
+            "green": {}
+        },
+        {
+            "red": {}
+        }
+    ]
+}
