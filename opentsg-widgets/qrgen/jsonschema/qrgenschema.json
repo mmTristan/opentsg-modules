@@ -107,6 +107,11 @@
     ],
     "additionalProperties": false,
     "$defs": {
+        "locations": {
+			"type": "number",
+            "minimum": 0,
+            "maximum": 100
+		},
         "pixel": {
             "type": "string",
             "desciption": "pattern requires a pi then star with a number, which can be divided by a resulting number",

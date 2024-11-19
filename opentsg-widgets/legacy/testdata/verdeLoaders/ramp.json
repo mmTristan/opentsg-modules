@@ -1,0 +1,79 @@
+{
+    "colorSpace": {
+        "Primaries": {
+            "Blue": {},
+            "Green": {},
+            "Red": {},
+            "WhitePoint": {}
+        }
+    },
+    "grid": {
+        "location": "a5:p8",
+        "alias": "bottom"
+    },
+    "groups": [
+        {
+            "color": "green",
+            "initialPixelValue": 0
+           
+        },
+        {
+            "color": "gray",
+            "initialPixelValue": 0
+        },
+        {
+            "color": "blue"
+        },
+        {
+            "color": "red"
+        }
+    ],
+    "groupsTemplates": {
+        "gradientSeparator": {
+            "colors": [
+                "white",
+                "black"
+            ],
+            "height": 1
+        },
+        "gradients": [
+            {
+                "bitDepth": 4,
+                "height": 5,
+                "label": "4b"
+            },
+            {
+                "bitDepth": 6,
+                "height": 5,
+                "label": "6b"
+            },
+            {
+                "bitDepth": 8,
+                "height": 5,
+                "label": "8b"
+            },
+            {
+                "bitDepth": 10,
+                "height": 5,
+                "label": "10b"
+            }
+        ],
+        "separator": {
+            "color": "white",
+            "height": 2
+        }
+    },
+    "type": "builtin.gradients",
+    "widgetProperties": {
+        "cwRotation": "π*31/20",
+        "maxBitDepth": 10,
+        "objectFitFill": true,
+        "pixelValueRepeat": 1,
+        "textProperties": {
+            "textColor": "#345AB6",
+            "textHeight": 30,
+            "textxPosition": "left",
+            "textyPosition": "top"
+        }
+    }
+}

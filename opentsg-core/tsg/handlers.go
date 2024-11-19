@@ -186,6 +186,26 @@ func (r *response) BaseImage() draw.Image {
 	return r.baseImg
 }
 
+// TestResponder implements the Response interface,
+// for use in testing your widgets.
+type TestResponder struct {
+	BaseImg draw.Image
+	Status  StatusCode
+	Message string
+}
+
+// write to the response struct
+func (r *TestResponder) Write(status StatusCode, message string) {
+	// nothing is written at the moment
+	r.Status = status
+	r.Message = message
+}
+
+// return the base image to handle
+func (r *TestResponder) BaseImage() draw.Image {
+	return r.BaseImg
+}
+
 // StatusCode is the OpenTSG status code.
 // Status codes contain implicit log levels.
 type StatusCode float64

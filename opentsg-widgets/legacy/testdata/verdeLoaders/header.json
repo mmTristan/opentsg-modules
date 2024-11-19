@@ -1,0 +1,12 @@
+{
+    "type":"builtin.textbox",
+    "text": ["Mezzanine Green 4k sequence X version 00"],
+    "font": "title",
+    "borderColor": "#C2A649",
+    "borderSize": 10,
+    "textColor": "#C2A649",
+    "backgroundColor": "#ffffff",
+    "grid": {
+        "location": "d1:m1"
+    }
+}

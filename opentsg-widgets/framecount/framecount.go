@@ -136,7 +136,6 @@ func (f Config) Generate(canvas draw.Image, extraOpts ...any) error {
 	if !f.getFrames() {
 		return fmt.Errorf("0DEV frame counter not enabled for this frame. Ensure frameCounter is set to true")
 	}
-
 	if f.Font == "" {
 		f.Font = text.FontPixel
 	}

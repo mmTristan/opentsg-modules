@@ -17,6 +17,7 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/qrgen"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/resize"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/textbox"
+	"github.com/mrmxf/opentsg-modules/opentsg-widgets/zoneplate"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 )
@@ -30,6 +31,8 @@ type Legacy struct {
 	MNT string `json:"mnt" yaml:"mnt"`
 }
 
+const WidgetType = "builtin.legacy"
+
 // Handle runs the legacy version of openTSG as an independent widget
 func (l Legacy) Handle(resp tsg.Response, req *tsg.Request) {
 
@@ -37,7 +40,7 @@ func (l Legacy) Handle(resp tsg.Response, req *tsg.Request) {
 	otsg.AddCustomWidgets(twosi.SIGenerate, nearblack.NBGenerate, bars.BarGen, saturation.SatGen,
 		luma.Generate, textbox.TBGenerate,
 		gradients.RampGenerate, noise.NGenerator, widgethandler.MockCanvasGen,
-		addimage.ImageGen,
+		addimage.ImageGen, zoneplate.ZoneGen,
 		framecount.CountGen, qrgen.QrGen,
 		fourcolour.FourColourGenerator, geometrytext.LabelGenerator,
 		bowtie.SwirlGen, resize.Gen,
@@ -54,5 +57,5 @@ func (l Legacy) Handle(resp tsg.Response, req *tsg.Request) {
 	// run the old program as normal
 	otsg.Draw(true, l.MNT, "stdout")
 
-	resp.Write(200, "")
+	resp.Write(tsg.WidgetSuccess, "")
 }

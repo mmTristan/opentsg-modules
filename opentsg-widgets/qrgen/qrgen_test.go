@@ -38,8 +38,8 @@ func TestQrGen(t *testing.T) {
 	fileCheck := []string{"./testdata/topleft.png", "./testdata/middle.png", "./testdata/bottomright.png"}
 	explanation := []string{"topleft", "middle", "topright"}
 	qrmock.Code = "https://mrmxf.io/"
-	code, _ := qr.Encode("https://mrmxf.io/", qr.H, qr.Auto)
-	fmt.Println(code.Bounds())
+	//code, _ := qr.Encode("https://mrmxf.io/", qr.H, qr.Auto)
+	//fmt.Println(code.Bounds())
 
 	for i, num := range numberToCheck {
 		// Get file to place the qr code on

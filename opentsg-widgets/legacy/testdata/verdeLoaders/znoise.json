@@ -1,0 +1,10 @@
+{
+    "blend": "sin",
+    "grid": {
+        
+         "location": "a2:c4"
+    },
+    "offset": {},
+    "segmentCount": 8,
+    "type": "builtin.bowtie"
+}

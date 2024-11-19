@@ -1,0 +1,15 @@
+{
+    "type":"builtin.canvasoptions",
+    "name": [
+        "./testdata/myfirstTSG.png"
+    ],
+    "frameSize": {
+        "w": 4096,
+        "h": 2160
+    },
+    "linewidth": 0.5,
+    "filedepth": 16,
+    "gridColumns" : 16,
+    "gridRows":9, 
+    "backgroundFillColor":"#888888"
+}

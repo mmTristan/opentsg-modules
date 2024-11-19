@@ -89,7 +89,7 @@ func baseGen(c *context.Context, geomCanvas draw.Image, frame FrameConfiguration
 
 	// fillColour := getFill(*c)
 	var background color.Color = &colour.CNRGBA64{R: 46080, G: 46080, B: 46080, A: 0xffff}
-	if frame.CanvasFill != nil { // check for user defined colours
+	if frame.CanvasFill == nil { // check for user defined colours
 		background = frame.CanvasFill
 		// background = colourgen.ConvertNRGBA64(col)
 	}
@@ -195,7 +195,7 @@ func gridGen(c *context.Context, geomCanvas canvasAndMask, frame FrameConfigurat
 			size := image.Point{X: int(x+squareX) - int(x), Y: int(y+squareY) - int(y)}
 			gImage, ok := squares[size]
 			if !ok {
-				gImage = maskGen(size.X, size.Y, width, c, frame)
+				gImage = maskGen(size.X, size.Y, width, frame)
 				squares[size] = gImage
 			}
 
@@ -216,14 +216,14 @@ func gridGen(c *context.Context, geomCanvas canvasAndMask, frame FrameConfigurat
 	return canvas, nil
 }
 
-func maskGen(maxX, maxY int, width float64, c *context.Context, frame FrameConfiguration) image.Image {
+func maskGen(maxX, maxY int, width float64, frame FrameConfiguration) image.Image {
 	// make a canvas and change it to a gg context with the required set up
 	maskTailor := image.NewNRGBA64(image.Rect(0, 0, maxX, maxY))
 	// this is automaticall changed to rgb
 	cd := gg.NewContextForImage(maskTailor)
 	var myBorder color.Color = &colour.CNRGBA64{R: 0, G: 0, B: 0, A: 0xffff}
 	// colour := canvaswidget.GetLineColour(*c)
-	if frame.LineColour != nil { // check for user defined colours
+	if frame.LineColour == nil { // check for user defined colours
 		myBorder = frame.LineColour
 		// myBorder = colourgen.ConvertNRGBA64(col)
 	}

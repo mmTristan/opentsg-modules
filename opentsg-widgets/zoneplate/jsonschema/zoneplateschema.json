@@ -10,6 +10,8 @@
         "colorSpace" : {
 			"type" : "object"
 		},
+        "frequency" : {
+		},
         "type": {
             "type": "string",
             "enum": ["builtin.zoneplate"],
@@ -62,6 +64,39 @@
             ],
             "description": "The type of mask that can be applied to the zoneplate"
         },
+        "offset": {
+            "type": "object",
+            "properties": {
+                "x": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/$defs/percent1"
+                        },
+                        {
+                            "$ref": "#/$defs/percent2"
+                        },
+                        {
+                            "$ref": "#/$defs/pixel"
+                        }
+                    ]
+                },
+                "y": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/$defs/percent1"
+                        },
+                        {
+                            "$ref": "#/$defs/percent2"
+                        },
+                        {
+                            "$ref": "#/$defs/pixel"
+                        }
+                    ]
+                }
+            },
+            "additionalProperties":false ,
+            "description":"The offset of the image placement in the x and y direction"
+        } ,
         "zoneSize": {
             "type": "object",
             "properties": {
@@ -99,6 +134,24 @@
     ],
     "additionalProperties": false,
     "$defs": {
+        "pixel": {
+            "type": "string",
+            "desciption": "pattern requires a pi then star with a number, which can be divided by a resulting number",
+            "pattern":"^-{0,1}\\d{1,}px$",
+            "description": "pixel value to move the image"
+        },
+        "percent1": {
+            "type": "string",
+            "desciption": "pattern requires a pi then star with a number, which can be divided by a resulting number",
+            "pattern": "^-{0,1}\\d{0,2}\\.{1}\\d{0,}%$|^-{0,1}\\d{0,2}%$|^-{0,1}(100)%$",
+            "description": "percentage value to move the image, e.g. 25%"
+        },
+        "percent2": {
+            "type": "number",
+            "minimum": -100,
+            "maximum": 100,
+            "description": "The percentage of the image for it to be shifted"
+        },
         "dimensions": {
             "type": "integer",
             "minimum": 24,

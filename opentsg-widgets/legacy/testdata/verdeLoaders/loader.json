@@ -1,0 +1,48 @@
+{
+    "include": [
+      {
+        "uri": "./robot.json",
+        "name": "robocorner"
+      },
+      {
+        "uri": "./qr.json",
+        "name": "qr"
+      },
+      {
+        "uri": "./squarezone.json",
+        "name": "zone"
+      },
+      {
+        "uri": "./logo.json",
+        "name": "logo"
+      },
+      {
+        "uri": "./header.json",
+        "name": "header"
+      },
+      {
+        "uri": "./base.json",
+        "name": "canvas"
+      },
+      {
+        "uri": "./ramp.json",
+        "name": "bigramp"
+      },
+      {
+        "uri": "./znoise.json",
+        "name": "noise"
+      }
+    ],
+    "create": [
+      {
+        "robocorner": {},
+        "qr": {},
+        "zone": {},
+        "logo": {},
+        "header": {},
+        "canvas": {},
+        "bigramp": {},
+        "noise":{}
+      }
+    ]
+  }

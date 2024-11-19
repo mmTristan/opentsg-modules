@@ -1,0 +1,9 @@
+{ "type":"builtin.addimage",
+    "image":
+    "https://mrmxf.com/r/mm/mrmxf-icon-circle-h1000.png",
+  "grid": {
+    "location":
+      "a0:b1"
+  },
+  "imageFill":"fill"
+}

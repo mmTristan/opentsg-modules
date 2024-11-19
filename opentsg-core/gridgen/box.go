@@ -22,7 +22,7 @@ It contains the box properties in css style for drawing shapes.
 type Location struct {
 
 	// What is the alias for this location
-	Alias string `json:"alias" yaml:"alias"`
+	Alias string `json:"alias,omitempty" yaml:"alias,omitempty"`
 	// CSS style fields for drawing the box
 	Box Box `json:"box,omitempty" yaml:"box,omitempty"`
 }

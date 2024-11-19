@@ -1,0 +1,18 @@
+
+{
+  "colorSpace": {
+      "Primaries": {
+          "Blue": {},
+          "Green": {},
+          "Red": {},
+          "WhitePoint": {}
+      }
+  },
+  "frequency": null,
+  "grid": {
+      "alias": " A demo alias",
+      "location": "n2:p4"
+  },
+  "plateType": "circular",
+  "type": "builtin.zoneplate"
+}

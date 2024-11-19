@@ -1,0 +1,7 @@
+{
+    "type":"builtin.addimage",
+        "image": "https://mrmxf.com/r/mm/mrmxf-icon-toon-circle-h1000.png",
+        "grid": {
+            "location": "o0:p1"
+        }
+}

@@ -1,0 +1,11 @@
+{
+    "type":"builtin.qrcode",
+    "code": "https://mrmxf.com/",
+    "grid": {
+        "location": "h3"
+    },
+    "size":{
+        "width":100,
+        "height":100
+    }
+}
