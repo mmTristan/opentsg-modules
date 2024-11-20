@@ -79,12 +79,16 @@ func (f Config) Handle(resp tsg.Response, req *tsg.Request) {
 	// extract the colour here
 	_, filled := bruteColourArea(nodes, len(pallette)+1)
 	// Break if there's an error etc
+
 	for _, node := range filled {
 		setcolour := node.color
+
 		// fmt.Println(node.area, canvas.Bounds(), setcolour)
 		colour.Draw(resp.BaseImage(), node.area, &image.Uniform{pallette[setcolour-1]}, image.Point{}, draw.Src)
 
 	}
+
+	resp.Write(tsg.WidgetSuccess, "success")
 }
 
 // amend so that the number of colours is based off of the input, can be upgraded to 5 or 6 for performance

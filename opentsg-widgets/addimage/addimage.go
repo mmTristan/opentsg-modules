@@ -131,6 +131,8 @@ func (c Config) Handle(resp tsg.Response, req *tsg.Request) {
 	// draw.Src ensures the colourspace transformations are kept
 	// as long as the picture has no alpha
 	colour.Draw(resp.BaseImage(), image.Rectangle{Min: resp.BaseImage().Bounds().Min.Add(imgOffset), Max: resp.BaseImage().Bounds().Max}, newImg64, image.Point{}, draw.Src)
+
+	resp.Write(tsg.WidgetSuccess, "success")
 }
 
 func (i Config) Generate(canvas draw.Image, opts ...any) error {

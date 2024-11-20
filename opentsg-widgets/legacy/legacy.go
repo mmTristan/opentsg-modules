@@ -37,6 +37,12 @@ const WidgetType = "builtin.legacy"
 func (l Legacy) Handle(resp tsg.Response, req *tsg.Request) {
 
 	otsg, err := tsg.BuildOpenTSG(l.FileLocation, "", true, &tsg.RunnerConfiguration{RunnerCount: 6, ProfilerEnabled: true})
+	if err != nil {
+
+		resp.Write(500, err.Error())
+		return
+	}
+
 	otsg.AddCustomWidgets(twosi.SIGenerate, nearblack.NBGenerate, bars.BarGen, saturation.SatGen,
 		luma.Generate, textbox.TBGenerate,
 		gradients.RampGenerate, noise.NGenerator, widgethandler.MockCanvasGen,
@@ -47,12 +53,6 @@ func (l Legacy) Handle(resp tsg.Response, req *tsg.Request) {
 		// This one should be placed last as it is checking for missed names,
 		// however order doesn't matter for concurrent functions with the wait groups.
 		widgethandler.MockMissedGen)
-
-	if err != nil {
-
-		resp.Write(500, err.Error())
-		return
-	}
 
 	// run the old program as normal
 	otsg.Draw(true, l.MNT, "stdout")

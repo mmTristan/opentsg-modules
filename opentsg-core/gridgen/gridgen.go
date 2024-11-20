@@ -8,6 +8,7 @@ import (
 	"image/color"
 	"image/draw"
 	"math"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -75,6 +76,7 @@ type canvasAndMask struct {
 }
 
 func baseGen(c *context.Context, geomCanvas draw.Image, frame FrameConfiguration) (draw.Image, error) {
+
 	var canvas draw.Image
 	cmid := context.WithValue(*c, frameKey, frame)
 	if geomCanvas == nil {
@@ -89,7 +91,18 @@ func baseGen(c *context.Context, geomCanvas draw.Image, frame FrameConfiguration
 
 	// fillColour := getFill(*c)
 	var background color.Color = &colour.CNRGBA64{R: 46080, G: 46080, B: 46080, A: 0xffff}
-	if frame.CanvasFill == nil { // check for user defined colours
+
+	IsNil := false
+	cFillVal := reflect.ValueOf(frame.CanvasFill)
+	if cFillVal.Kind() == reflect.Pointer {
+		if cFillVal.IsNil() {
+			IsNil = true
+		}
+	} else if cFillVal.Kind() == reflect.Invalid {
+		IsNil = true
+	}
+
+	if !IsNil { // check for user defined colours
 		background = frame.CanvasFill
 		// background = colourgen.ConvertNRGBA64(col)
 	}
@@ -106,7 +119,7 @@ func baseGen(c *context.Context, geomCanvas draw.Image, frame FrameConfiguration
 	squareX := float64(canvas.Bounds().Max.X) / float64(frame.Cols)
 	squareY := float64(canvas.Bounds().Max.Y) / float64(frame.Rows)
 	gridToScale(frame.Cols) // Tell the user the valid list of coordinates, not used anymore
-	cmid = context.WithValue(*c, xkey, squareX)
+	cmid = context.WithValue(cmid, xkey, squareX)
 	cmid = context.WithValue(cmid, ykey, squareY)
 	cmid = context.WithValue(cmid, sizekey, canvas.Bounds().Max)
 	*c = cmid
@@ -160,6 +173,7 @@ func GridGen(c *context.Context, dir string, frame FrameConfiguration) (draw.Ima
 		if err != nil {
 			return nil, err
 		}
+
 	}
 
 	// base := baser(*c)
@@ -173,6 +187,7 @@ func GridGen(c *context.Context, dir string, frame FrameConfiguration) (draw.Ima
 
 // Gridgen generates a canvas using the information found in the config options
 func gridGen(c *context.Context, geomCanvas canvasAndMask, frame FrameConfiguration) (draw.Image, error) {
+
 	canvas, err := baseGen(c, geomCanvas.canvas, frame)
 	if err != nil {
 		return canvas, err
@@ -222,8 +237,18 @@ func maskGen(maxX, maxY int, width float64, frame FrameConfiguration) image.Imag
 	// this is automaticall changed to rgb
 	cd := gg.NewContextForImage(maskTailor)
 	var myBorder color.Color = &colour.CNRGBA64{R: 0, G: 0, B: 0, A: 0xffff}
-	// colour := canvaswidget.GetLineColour(*c)
-	if frame.LineColour == nil { // check for user defined colours
+
+	IsNil := true
+	cLineVal := reflect.ValueOf(frame.LineColour)
+	if cLineVal.Kind() == reflect.Pointer {
+		if !cLineVal.IsNil() {
+			IsNil = false
+		}
+	} else if cLineVal.Kind() == reflect.Invalid {
+		IsNil = true
+	}
+
+	if !IsNil { // check for user defined colours
 		myBorder = frame.LineColour
 		// myBorder = colourgen.ConvertNRGBA64(col)
 	}

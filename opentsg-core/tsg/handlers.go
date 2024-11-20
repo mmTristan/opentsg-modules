@@ -266,6 +266,7 @@ func (tsg *OpenTSG) Run(mnt string) {
 		frameNo := frameLoopNo
 		var frameWait sync.WaitGroup
 		frameWait.Add(1)
+
 		go func() {
 			defer wg.Done()
 			defer frameWait.Done()
@@ -306,6 +307,7 @@ func (tsg *OpenTSG) Run(mnt string) {
 				// frameWait.Done() //the frame weight is returned when the programs exit, or the frame has been generated
 				return // continue // skip to the next frame number
 			}
+
 			// generate the canvas of type image.Image
 			canvas, err := gridgen.GridGen(frameContext, core.GetDir(*frameContext),
 				gridgen.FrameConfiguration{
@@ -321,6 +323,7 @@ func (tsg *OpenTSG) Run(mnt string) {
 					Geometry:   canvaswidget.GetGeometry(*frameContext),
 					BaseImage:  canvaswidget.GetBaseImage(*frameContext),
 				})
+
 			if err != nil {
 				tsg.logErrors(500, frameNo, jobID, err)
 				monit.incrementError(1)

@@ -96,7 +96,9 @@ func flatmap(c *context.Context, basePath, tpigpath string) (canvasAndMask, erro
 
 	// Make a flat image of the geometrhy with corresponding mask
 	flatbase := ImageGenerator(*c, image.Rect(segmentLayout.Dimensions.Flat.X0, segmentLayout.Dimensions.Flat.Y0, segmentLayout.Dimensions.Flat.X1, segmentLayout.Dimensions.Flat.Y1))
-	basemask := ImageGenerator(*c, image.Rect(segmentLayout.Dimensions.Flat.X0, segmentLayout.Dimensions.Flat.Y0, segmentLayout.Dimensions.Flat.X1, segmentLayout.Dimensions.Flat.Y1))
+
+	// basemask := ImageGenerator(*c, image.Rect(segmentLayout.Dimensions.Flat.X0, segmentLayout.Dimensions.Flat.Y0, segmentLayout.Dimensions.Flat.X1, segmentLayout.Dimensions.Flat.Y1))
+	basemask := image.NewAlpha16(image.Rect(segmentLayout.Dimensions.Flat.X0, segmentLayout.Dimensions.Flat.Y0, segmentLayout.Dimensions.Flat.X1, segmentLayout.Dimensions.Flat.Y1))
 	// create the empty mask here. Keep it as empty as we want only bits that match the
 	// geometry layout.
 
@@ -133,7 +135,7 @@ func flatmap(c *context.Context, basePath, tpigpath string) (canvasAndMask, erro
 			carveSegements[t.Layout.Carve.Destination] = carved
 		}
 		// fill in the global base mask
-		colour.Draw(basemask, utilitySegements[i].Shape, &image.Uniform{color.NRGBA64{A: 0xffff}}, image.Point{}, draw.Src)
+		colour.Draw(basemask, utilitySegements[i].Shape, &image.Uniform{color.Alpha16{A: 0xffff}}, image.Point{}, draw.Src)
 	}
 
 	for k, v := range carveSegements {
