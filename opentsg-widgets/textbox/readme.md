@@ -19,6 +19,8 @@ the path to a local file or web source.
 - `xAlignment` - the text alignment in the x direction, it can be `left`, `right` or `middle`.
 - `yAlignment` - the text alignment in the y direction, it can be `top`, `bottom` or `middle`.
 
+All colour options follow the [TSG colour formats](../utils/parameters/readme.md#colour)
+
 ```json
 {
     "type" :  "builtin.textbox",

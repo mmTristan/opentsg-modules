@@ -16,7 +16,7 @@ And the following optional fields:
   - `preserve`- The image is not scaled and the original dimensions are preserved. This is centred
   around the widget centre.
 - `offset`- the offset of the image placement.
-All values follow the [offset unit rules](../../opentsg-core/parameters/readme.md#offset)
+All values follow the [offset unit rules](../utils/parameters/readme.md#offset)
 It has the following fields:
   - `x` - The x offset of the image, measured from the left of the image.
   - `y` - The Y offset of the image, measured from the top of the image

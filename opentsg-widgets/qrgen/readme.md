@@ -8,7 +8,7 @@ It has the following required fields
 It has the following optional fields:
 
 - `offset` - the offset of the origin of the qrcode, the default behaviour is to centre
-the origin. All values follow the [offset unit rules](../../opentsg-core/parameters/readme.md#offset)
+the origin. All values follow the [offset unit rules](../utils/parameters/readme.md#offset)
 It has the following fields:
   -`x` - The x offset of the origin. A positive x value moves the origin to the right.
   -`y` - The y offset of the origin. A positive y value moves the origin upwards.

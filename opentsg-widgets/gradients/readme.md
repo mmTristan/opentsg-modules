@@ -51,7 +51,7 @@ than the default low to high.
   - `maxBitDepth`- the overall maximum bit depth of the gradient widget.
 The default is 16
   - `cwRotation` - the clockwise rotation of the ramp.
-it follows the [angle unit rules](../../opentsg-core/parameters/readme.md#clockwise-rotation)
+it follows the [angle unit rules](../utils/parameters/readme.md#clockwise-rotation)
   - `objectFitFill` - if true the gradient will not be accurate
 as values are shifted to fit the bit depth steps across the width the
 gradient was given. Whereas the default behaviour does not change the
@@ -63,6 +63,8 @@ repeated. The default property is 1.
     - `textxPosition` - the text alignment in the x direction, it can be left, right or middle.
     - `textHeight` - the height if the text as a percentage of the ramp height.
     - `textColor` - the colour of the text.
+
+All colour options in the `TextProperties` follow the [TSG colour formats](../utils/parameters/readme.md#colour)
 
 An example json is given below.
 

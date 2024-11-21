@@ -20,6 +20,8 @@ this dictates the size of the frame counter box
 of the grid the inhabit. There are also the builtin positions of
 `"bottom right"`, `"bottom left"`,`"top right"` or `"top left"`.
 
+All colour options follow the [TSG colour formats](../utils/parameters/readme.md#colour)
+
 ```json
 {
     "type" :  "builtin.framecounter",

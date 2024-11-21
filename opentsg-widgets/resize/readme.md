@@ -86,5 +86,5 @@ Here are some further examples and their output:
 
 ![image](../exampleJson/builtin.resize/graticule-example.png)
 
-[dur]: ../../opentsg-core/parameters/readme.md#offset "the parameter readme, linked to the section about offsets"
-[cgen]: ../../opentsg-core/colourgen/readme.md "the pcolourgen readme"
+[dur]: ../utils/parameters/readme.md#offset "the parameter readme, linked to the section about offsets"
+[cgen]: ../utils/parameters/readme.md "the pcolourgen readme"

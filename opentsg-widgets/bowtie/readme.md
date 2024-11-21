@@ -17,13 +17,13 @@ It has the following optional fields:
 
 - `segmentColors` - the colour of each segment, in the order you want the segments to be coloured.
 The default colours are black and white.
-The colours follow the [opoenTSG colour naming conventions](../../opentsg-core/_docs/colourgen/doc.md)
+The colours follow the [opoenTSG colour naming conventions](../utils/parameters/readme.md#colour)
 - `startAngle` - the angle from the origin the bowtie starts from.
-it follows the [angle unit rules](../../opentsg-core/parameters/readme.md#clockwise-rotation)
+it follows the [angle unit rules](../utils/parameters/readme.md#clockwise-rotation)
 - `cwRotation` - the clockwise angle for the zone plate to be to rotated,
-it follows the [angle unit rules](../../opentsg-core/parameters/readme.md#clockwise-rotation)
+it follows the [angle unit rules](../utils/parameters/readme.md#clockwise-rotation)
 - `offset` - the offset of the origin of the bowtie, the default behaviour is to centre
-the origin. All values follow the [offset unit rules](../../opentsg-core/parameters/readme.md#offset)
+the origin. All values follow the [offset unit rules](../utils/parameters/readme.md#offset)
 It has the following fields:
   -`x` - The x offset of the origin. A positive x value moves the origin to the right.
   -`y` - The y offset of the origin. A positive y value moves the origin upwards.

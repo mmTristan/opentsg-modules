@@ -27,6 +27,7 @@ It has the following required field:
 
 - `colors` - a list of TSG colors, it must be an array
 of four strings or more. The algorithm will use the fewest amount of colors required.
+The colours follow the [TSG colour formats](../utils/parameters/readme.md#colour)
 
 ```json
 {

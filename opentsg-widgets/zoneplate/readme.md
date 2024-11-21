@@ -13,9 +13,9 @@ It has the following optional fields:
 - `waveType` -  the formula for calculating the zone plate, the default is `zonePlate`
 the options are `sin`, `cos` or`zonePlate`
 - `cwRotation` - the clockwise angle for the zone plate to be to rotated,
-it follows the [angle unit rules](../../opentsg-core/parameters/readme.md#clockwise-rotation)
+it follows the [angle unit rules](../utils/parameters/readme.md#clockwise-rotation)
 - `frequency` - the frequency of the zone plate, it is capped at π. The default is value `0.8*π`
-it follows the [angle unit rules](../../opentsg-core/parameters/readme.md#clockwise-rotation)
+it follows the [angle unit rules](../utils/parameters/readme.md#clockwise-rotation)
 
 ```json
 {

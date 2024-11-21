@@ -4,10 +4,8 @@ tsg-core contains all the engine and core functionality for running openTSG.
 
 see the documentation for every section here:
 
-- [Aces](_docs/aces/doc.md)
 - [Canvaswidget](_docs/canvaswidget/doc.md)
 - [Colour](_docs/colour/doc.md)
-- [Colourgen](_docs/colourgen/doc.md)
 - [Core](_docs/core/doc.md)
 - [Credentials](_docs/credentials/doc.md)
 - [ErrHandle](_docs/errHandle/doc.md)
