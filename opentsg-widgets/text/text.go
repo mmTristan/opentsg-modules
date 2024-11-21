@@ -62,7 +62,7 @@ func (t TextboxProperties) DrawStringsHandler(canvas draw.Image, req *tsg.Reques
 	if t.backgroundColour != nil {
 		// draw the background first
 		if t.backgroundColour.A != 0 {
-			colour.Draw(canvas, canvas.Bounds(), &image.Uniform{t.backgroundColour}, image.Point{}, draw.Src)
+			colour.Draw(canvas, canvas.Bounds(), &image.Uniform{t.backgroundColour}, image.Point{}, draw.Over)
 		}
 	}
 
@@ -187,7 +187,7 @@ func (t TextboxProperties) DrawStrings(canvas draw.Image, tsgContext *context.Co
 	if t.backgroundColour != nil {
 		// draw the background first
 		if t.backgroundColour.A != 0 {
-			colour.Draw(canvas, canvas.Bounds(), &image.Uniform{t.backgroundColour}, image.Point{}, draw.Src)
+			colour.Draw(canvas, canvas.Bounds(), &image.Uniform{t.backgroundColour}, image.Point{}, draw.Over)
 		}
 	}
 

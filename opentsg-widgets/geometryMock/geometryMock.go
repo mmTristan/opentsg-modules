@@ -9,7 +9,7 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
 )
 
-func Mockgeom(w, h int) []gridgen.Segmenter {
+func Mockgeom(w, h int, nameLength int) []gridgen.Segmenter {
 
 	points := Randomspread(w, h)
 	ns := linearneighbour(points)
@@ -18,10 +18,15 @@ func Mockgeom(w, h int) []gridgen.Segmenter {
 	for i, n := range ns {
 		neighs := make([]string, len(n.neighbours))
 		for j, neigh := range n.neighbours {
-			neighs[j] = fmt.Sprintf("neighbour:%04x %04x", neigh, neigh)
+			neighs[j] = fmt.Sprintf("neighbour:%04x%04x", neigh, neigh)
 		}
 
-		mocksegments[i] = gridgen.Segmenter{Name: fmt.Sprintf("%04x %04x", i, i), Shape: n.area, Tags: neighs}
+		name := ""
+
+		for j := 0; j < nameLength; j += 4 {
+			name += fmt.Sprintf("%04x", i)
+		}
+		mocksegments[i] = gridgen.Segmenter{Name: name, Shape: n.area, Tags: neighs}
 	}
 
 	return mocksegments

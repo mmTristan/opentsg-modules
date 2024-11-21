@@ -10,6 +10,7 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/ebu3373/twosi"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/fourcolour"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/framecount"
+	geometrytext "github.com/mrmxf/opentsg-modules/opentsg-widgets/geometryText"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/gradients"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/legacy"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/noise"
@@ -53,6 +54,9 @@ func AddBuiltinWidgets(otsg *tsg.OpenTSG) {
 	otsg.Handle(fourcolour.WidgetType, fourcolour.Schema, fourcolour.Config{})
 	//FrameCount
 	otsg.Handle(framecount.WidgetType, framecount.Schema, framecount.Config{})
+	// GeometryText
+	otsg.Handle(geometrytext.WidgetType, geometrytext.Schema, geometrytext.Config{})
+
 	//Gradients
 	otsg.Handle(gradients.WidgetType, gradients.Schema, gradients.Ramp{})
 	//Noise

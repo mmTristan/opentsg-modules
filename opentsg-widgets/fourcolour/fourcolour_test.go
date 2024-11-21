@@ -23,7 +23,7 @@ import (
 
 func TestFillMethod(t *testing.T) {
 	rand.Seed(1320)
-	mg := geometrymock.Mockgeom(1000, 1000)
+	mg := geometrymock.Mockgeom(1000, 1000, 8)
 	getGeometry = func(c *context.Context, coordinate string) ([]gridgen.Segmenter, error) {
 		return mg, nil
 	}
@@ -72,7 +72,7 @@ func TestFillMethod(t *testing.T) {
 func BenchmarkNRGBA64ACESColour(b *testing.B) {
 	// decode to get the colour values
 
-	mg := geometrymock.Mockgeom(1000, 1000)
+	mg := geometrymock.Mockgeom(1000, 1000, 8)
 	getGeometry = func(c *context.Context, coordinate string) ([]gridgen.Segmenter, error) {
 		return mg, nil
 	}
@@ -90,7 +90,7 @@ func BenchmarkNRGBA64ACESColour(b *testing.B) {
 func BenchmarkNRGBA64ACESOTher(b *testing.B) {
 	// decode to get the colour values
 
-	mg := geometrymock.Mockgeom(1000, 1000)
+	mg := geometrymock.Mockgeom(1000, 1000, 8)
 	getGeometry = func(c *context.Context, coordinate string) ([]gridgen.Segmenter, error) {
 		return mg, nil
 	}

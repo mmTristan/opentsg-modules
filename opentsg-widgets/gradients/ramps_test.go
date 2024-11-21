@@ -102,7 +102,7 @@ func TestRotation(t *testing.T) {
 		// Assign the colour to the correct type of image NGRBA64 and replace the colour values
 		readImage := image.NewNRGBA64(baseVals.Bounds())
 		colour.Draw(readImage, readImage.Bounds(), baseVals, image.Point{0, 0}, draw.Over)
-		png.Encode(file, angleImage)
+		//	png.Encode(file, angleImage)
 		// Make a hash of the pixels of each image
 		hnormal := sha256.New()
 		htest := sha256.New()
