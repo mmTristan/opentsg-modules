@@ -15,6 +15,7 @@ import (
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/colour"
 	"github.com/mrmxf/opentsg-modules/opentsg-core/config"
+	"github.com/mrmxf/opentsg-modules/opentsg-core/parameters"
 	examplejson "github.com/mrmxf/opentsg-modules/opentsg-widgets/exampleJson"
 	"github.com/mrmxf/opentsg-modules/opentsg-widgets/utils/parameters"
 	. "github.com/smartystreets/goconvey/convey"

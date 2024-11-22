@@ -170,7 +170,6 @@ func FileSearch(authBody credentials.Decoder, uri, mainPath string, parentPaths 
 	inputPath, _ := url.JoinPath(mainPath, uri)
 	// inputPath = filepath.Clean(filepath.Join(inputPath, f.URI))
 	fileBytes, fileErr = authBody.Decode(inputPath)
-
 	if fileErr == nil {
 		return fileBytes, mainPath, nil
 	}
