@@ -13,6 +13,8 @@ is the same as the `"type"` field that would be declared for that widget. exampl
 folders such as builtin.ebu3373/bars, have their widget names including the `/`, so
 `builtin.ebu3373/bars` would be the widget type.
 
+### Legacy version
+
 The positional fields of `"grid"` are expected to be in **every** widget input file. And have the
 layout as shown below. They may not be found in every/any example json.
 The widget type is also required. Each widget has a unique `"type"`,
@@ -27,21 +29,45 @@ so OpenTSG can identify and use the widget.
 
 ```
 
+### Handler version
+
+All openTSG widgets properties are stored in the `"props"` field. This props field
+is not passed to the widget directly and does not need to accounted for in the schema.
+The positional fields of `"location"` are expected to be in **every** widget input file. And have the
+layout as shown below. See the grid [documentation](../opentsg-core/gridgen/readme.md#the-location-system) for more information
+The widget type is also required. Each widget has a unique `"type"`,
+so OpenTSG can identify and handle the widget.
+
+```json
+"props"{
+    "type" : "builtin.example",
+    "location": {
+        "alias" : "A demo Alias",
+        "box": {
+            "x": 0,
+            "y": 0
+        }
+    }
+}
+
+```
+
 ## Widget Properties
 
 This section contains the properties of the widgets.
 This contains the design behind the widget, the fields
 and contents it uses. And an example JSON
 
-- [AddImage](_docs/addimage/doc.md)
-- [Ebu3373](_docs/ebu3373/doc.md)
-- [Fourcolour](_docs/fourcolour/doc.md)
-- [FrameCount](_docs/framecount/doc.md)
-- [Gradients](_docs/gradients/doc.md)
-- [Noise](_docs/noise/doc.md)
-- [QrGen](_docs/qrgen/doc.md)
-- [TextBox](_docs/textbox/doc.md)
-- [ZonePlate](_docs/zoneplate/doc.md)
+- [AddImage](./addimage/readme.md)
+- [Ebu3373](./ebu3373/readme.md)
+- [Fourcolour](./fourcolour/readme.md)
+- [FrameCount](./framecount/readme.md)
+- [GeometryText](./geometryText/readme.md)
+- [Gradients](./gradients/readme.md)
+- [Noise](./noise/readme.md)
+- [QrGen](./qrgen/readme.md)
+- [TextBox](./textbox/readme.md)
+- [ZonePlate](./zoneplate/readme.md)
 
 ## Notes for developers
 
@@ -50,24 +76,18 @@ There are several stages for developing a widget to use in OpenTSG.
 The first is the configuration of the widget. It
 requires the following items:
 
-- The struct with the `*config.Grid` and `colour.ColorSpace` fields.
 - The json schema of the object, preferably embedded in the code.
 (one less file to track)
-- The functions to match the widget handler Generator interface.
+- The functions to match the widget handler interface.
 - Most importantly an idea of what the widget is there to test for and
 achieve.
 
 The widget handler Generator interface
 
 ```go
-// Generator contains the method for running widgets to generate segments of the test chart.
-type Generator interface {
-    // Generate the widget in the bounds of the image
-    Generate(draw.Image, ...any) error
-    // Loc returns the location of the grid for  gridgen.ParamToCanvas
-    Location() string
-    // Alias returns the alias of the grid for  gridgen.ParamToCanvas
-    Alias() string
+// The handler bytes are parsed into an object that runs the Handle method.
+type Handler interface {
+    Handle(Response, *Request)
 }
 ```
 
@@ -84,65 +104,46 @@ import (
 )
 
 
-type exampleJSON struct {
-  // Required fields
-  GridLoc     *config.Grid      `json:"grid,omitempty" yaml:"grid,omitempty"`
-  ColourSpace colour.ColorSpace `json:"colorSpace,omitempty" yaml:"colorSpace,omitempty"`
-
-  // Any other fields relating to the test pattern
-
+type Config struct {
+    // fill out the fields here
 }
 
 // the example schema (this is not a real file)
 //go:embed jsonschema/exampleSchema.json
-var exampleSchema []byte
+var Schema []byte
 
-// return the Alias of the location
-func (ej exampleJSON) Alias() string {
-    return ej.GridLoc.Alias
-}
+const (
+    WidgetType = "builtin.example"
+)
 
-// return the exact location
-func (ej exampleJSON) Location() string {
-    return ej.GridLoc.Location
-}
 
 // It just fills in the canvas as green (for this demo)
-func (ej exampleJSON) Generate(canvas draw.Image, opts ...any) error {
-    draw.Draw(canvas, canvas.Bounds(),  &image.Uniform{color.RGBA{G: 0xff, A: 0xff}}, image.Point{}, draw.Over)
-    return nil
+func (c Config) Handle(resp tsg.Response, req *tsg.Request) {
+
+    draw.Draw(resp.BaseImage(), resp.BaseImage().Bounds(),  &image.Uniform{color.RGBA{G: 0xff, A: 0xff}}, image.Point{}, draw.Over)
+    
+
+    resp.Write(tsg.WidgetSuccess, "success")
 }
 ```
 
-Now we have the groundwork for the widget we need to tie it
-altogether in an exported function, so that it can be used by OpenTSG.
-Like this function given below.
-
-```go
-
-func ExampleGenerate(canvasChan chan draw.Image, debug bool, c *context.Context, wg, wgc *sync.WaitGroup, logs *errhandle.Logger) {
-    defer wg.Done()
-
-    // set up the configuration so ExampleJson is identified
-    conf := widgethandler.GenConf[exampleJSON]{Debug: debug, Schema: exampleSchema, WidgetType: "example"}
-    widgethandler.WidgetRunner(canvasChan, conf, c, logs, wgc) 
-}
-```
-
-which can be added to tsg by calling the following code,
+Which can be added to tsg by calling the following code,
 before the TSG object is run. Or if you want to add it to the standard library of
-openTSG, then add it to line 222 of `/opentsg-modules/opentsg-core/tsg/framedraw.go`
+openTSG, then add it to line 41 of `/opentsg-widgets/widget.go`
 
 The below is a demo of adding an external widget
 without changing the opentsg library.
 
 ```golang
-    opentsg, configErr := tsg.FileImport(commandInputs, *profile, *debug, myFlags...)
-    //handle configERR
 
-    // Add the customWidget here!
-    opentsg.AddCustomWidgets(example.ExampleGenerate)
+    // Set up the openTSG engine
+    otsg, configErr := tsg.BuildOpenTSG(commandInputs, *profile, *debug, &tsg.RunnerConfiguration{RunnerCount: 1, ProfilerEnabled: true}, myFlags...)
+    //handle configErr
 
+    // load default widgets
+    opentsgwidgets.AddBuiltinWidgets(otsg)
+    // load our shiny nex example widget
+    otsg.Handle(example.WidgetType, example.Schema, example.Config{})
     // run opentsg
-    opentsg.Draw(*debug, *outputmnt, *outputLog)
+    otsg.Run(*outputmnt)
 ```

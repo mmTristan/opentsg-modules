@@ -11,7 +11,102 @@ As part of the coordinates system it generates any geometry from TSIGs.
 It also has the art key functionality, to allow for different
 backgrounds to be used, where the background is to be preserved.
 
-## The coordinates systems
+## The location system
+
+The coordinates of an area a widget covers can be defined
+in several formats, but they all use the same fields.
+The (0,0) coordinate is located in the top left of the testcard,
+and the widget positions are generated with the following json layout.
+
+```json
+"location": {
+        "box": {
+            "x": 0,
+            "y": 0
+        }
+    }
+```
+
+The default height and width of a widget is one grid unit,
+if you want to extend it you can with 2 options (in order of precedence):
+
+1. Set the x2,y2 fields
+2. Set the height and width
+
+These fields can be mixed and matched.
+
+The x2 and y2 fields denote the bottom right coordinate of the widget
+and can be created with the following json.
+
+```json
+"location": {
+        "box": {
+            "x": 1,
+            "y": 1,
+            "x2":5,
+            "y2":12
+        }
+    }
+```
+
+The height and width are the height and width of the widget. The height is the distance down to
+the bottom of the widget, and the width is the distance to the right of the widget.
+They can be created with the following json, which creates the same result as the previous demo
+for x2 and y2.
+
+```json
+"location": {
+        "box": {
+            "x": 1,
+            "y": 1,
+            "width":4,
+            "height":11
+        }
+    }
+```
+
+### Distance units
+
+There are several units that can be used to call the coordinates.
+
+Grid coordinates, these are the x,y values of the grid called in the canvas widget.
+Called with the following style values:
+
+- `1`
+- `"1"`
+
+Percentage units, these are the percentage of the total dimension (height or width).
+They can be called like so.
+
+- `"20%"`
+
+Pixel units, these are the absolute pixel values on the test card.
+and are called as so.
+
+- `"500px"`
+
+### border radius
+
+A widget with rounded corners can be created with the
+`"border-radius"` field which is implemented like so.
+
+```json
+"location": {
+        "box": {
+            "x": 1,
+            "y": 1,
+            "width":4,
+            "height":11,
+            "border-radius" : "20%"
+        }
+    }
+```
+
+This uses all the same units as the coordinates but with the percentage
+being the height and width of the widget (which ever is smallest), instead of the whole
+testcard.
+
+## The legacy coordinates systems
 
 There are multiple ways of defining the coordinates of an area a widget covers.
 They are listed below to help you decide which method you prefer to use.
