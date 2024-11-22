@@ -79,7 +79,6 @@ func TestTSIGWidget(t *testing.T) {
 // TestHandlerAdditions checks the handler addition methods to
 // catch the panics
 func TestHandlerAdditions(t *testing.T) {
-	//	So(Ipanic, cv.ShouldPanic)
 
 	otsg, err := BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true, nil)
 	otsg.Handle("test.fill", []byte("{}"), Filler{})
