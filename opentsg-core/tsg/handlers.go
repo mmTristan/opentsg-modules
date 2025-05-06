@@ -33,8 +33,8 @@ type Handler interface {
 type HandlerFunc func(Response, *Request)
 
 // Handle implements the handle method for functions
-func (f HandlerFunc) Handle(resp Response, req *Request) {
-	f(resp, req)
+func (h HandlerFunc) Handle(resp Response, req *Request) {
+	h(resp, req)
 }
 
 // HandleFunc registers the handler function for the given widget type in the
@@ -64,6 +64,22 @@ func (o OpenTSG) Handle(wType string, schema []byte, handler Handler) {
 	o.handlers[wType] = hand{schema: schema, handler: handler}
 }
 
+type Search interface {
+	Search(ctx context.Context, URI string) ([]byte, error)
+}
+
+// HandleFunc implements the Handler interface as a standalone functions
+type SearchFunc func(ctx context.Context, URI string) ([]byte, error)
+
+// Handle implements the handle method for functions
+func (s SearchFunc) Search(ctx context.Context, URI string) ([]byte, error) {
+	return s(ctx, URI)
+}
+
+func (o *OpenTSG) UseSearches(middlewares ...func(Search) Search) {
+	o.searchMiddleware = append(o.searchMiddleware, middlewares...)
+}
+
 // Use appends a middleware handler to the OpenTSG middleware stack.
 func (o *OpenTSG) Use(middlewares ...func(Handler) Handler) {
 	o.middlewares = append(o.middlewares, middlewares...)
@@ -75,6 +91,7 @@ func (o *OpenTSG) Use(middlewares ...func(Handler) Handler) {
 // It has methods for interacting with the core of openTSG.
 // As well as set up for the image
 type Request struct {
+	Context context.Context
 	// For http handlers etc
 	RawWidgetYAML json.RawMessage
 	JobID         string
@@ -88,7 +105,7 @@ type Request struct {
 	// the context is passed to widgets for this
 	// offer a default for the text box search
 
-	searchWithCredentials func(URI string) ([]byte, error)
+	searchWithCredentials Search
 	getWidgetMetadata     func(alias, dotpath string) any
 }
 
@@ -96,12 +113,12 @@ type Request struct {
 // when setting up openTSG.
 //
 // If the URI does not require any credentials then they are not used.
-func (r Request) SearchWithCredentials(URI string) ([]byte, error) {
+func (r Request) SearchWithCredentials(ctx context.Context, URI string) ([]byte, error) {
 	if r.searchWithCredentials == nil {
 		return credentials.GetWebBytes(nil, URI)
 	}
 
-	return r.searchWithCredentials(URI)
+	return r.searchWithCredentials.Search(ctx, URI)
 }
 
 // GenerateSubImage generates an image of area bounds, that matches the type of image given to it.
@@ -238,10 +255,11 @@ func (tsg *OpenTSG) logErrors(code StatusCode, frameNumber int, jobId string, er
 	errHan := HandlerFunc(func(resp Response, req *Request) {
 		resp.Write(code, string(req.RawWidgetYAML))
 	})
-	errs := chain(tsg.middlewares, errHan)
+	errs := chain[Handler](tsg.middlewares, errHan)
 	// call all errors so they are just logged
 	for _, err := range errors {
 		errs.Handle(&response{}, &Request{RawWidgetYAML: json.RawMessage(err.Error()),
+			Context:         context.Background(),
 			JobID:           jobId,
 			PatchProperties: PatchProperties{WidgetFullID: "core.tsg"},
 			FrameProperties: FrameProperties{FrameNumber: frameNumber},
@@ -253,10 +271,11 @@ func (tsg *OpenTSG) logErrorsWithWarning(code StatusCode, frameNumber int, jobId
 	errHan := HandlerFunc(func(resp Response, req *Request) {
 		resp.Write(code, string(req.RawWidgetYAML), "Warning", warning)
 	})
-	errs := chain(tsg.middlewares, errHan)
+	errs := chain[Handler](tsg.middlewares, errHan)
 	// call all errors so they are just logged
 	for _, err := range errors {
 		errs.Handle(&response{}, &Request{RawWidgetYAML: json.RawMessage(err.Error()),
+			Context:         context.Background(),
 			JobID:           jobId,
 			PatchProperties: PatchProperties{WidgetFullID: "core.tsg"},
 			FrameProperties: FrameProperties{FrameNumber: frameNumber},
@@ -452,9 +471,11 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 	MetaDataInit(c)
 	// add the validator last
 	lineErrs := core.GetJSONLines(*c)
-	webSearch := func(URI string) ([]byte, error) {
+	webSearch := func(ctx context.Context, URI string) ([]byte, error) {
 		return credentials.GetWebBytes(c, URI)
 	}
+
+	webSearcher := chain[Search](tsg.searchMiddleware, SearchFunc(webSearch))
 
 	// get the widgtes to be used
 	// and intialiae the metadata
@@ -514,7 +535,10 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 
 			var Han Handler
 			var resp response
-			req := Request{JobID: gonanoid.MustID(16), getWidgetMetadata: extractFunc, PatchProperties: PatchProperties{WidgetFullID: widgProps.FullName, WidgetType: widgProps.WType}}
+			req := Request{
+				JobID: gonanoid.MustID(16), getWidgetMetadata: extractFunc,
+				PatchProperties: PatchProperties{WidgetFullID: widgProps.FullName, WidgetType: widgProps.WType},
+			}
 			var gridCanvas, mask draw.Image
 			var imgLocation image.Point
 
@@ -528,7 +552,7 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 						req.PatchProperties.WidgetFullID = widgProps.FullName
 					}
 
-					profiler := chain(tsg.middlewares, HandlerFunc(func(r1 Response, r2 *Request) {
+					profiler := chain[Handler](tsg.middlewares, HandlerFunc(func(r1 Response, r2 *Request) {
 						out, _ := json.Marshal(p)
 						r1.Write(Profiler, string(out))
 					}))
@@ -603,7 +627,7 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 				resp = response{baseImg: gridCanvas}
 				req.FrameProperties = fp
 				req.RawWidgetYAML = widgProps.Contents
-				req.searchWithCredentials = webSearch
+				req.searchWithCredentials = webSearcher
 				req.PatchProperties = pp
 
 				// chain that middleware at the last second?
@@ -837,7 +861,7 @@ type poolRunner struct {
 
 // chain builds a http.Handler composed of an inline middleware stack and endpoint
 // handler in the order they are passed.
-func chain(middlewares []func(Handler) Handler, endpoint Handler) Handler {
+func chain[T any](middlewares []func(T) T, endpoint T) T {
 
 	// Return ahead of time if there aren't any middlewares for the chain
 	if len(middlewares) == 0 {

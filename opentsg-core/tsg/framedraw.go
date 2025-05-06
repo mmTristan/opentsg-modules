@@ -32,6 +32,8 @@ type OpenTSG struct {
 	// New Wave of handlers
 	handlers    map[string]hand
 	middlewares []func(Handler) Handler
+	// 
+	searchMiddleware []func(Search)Search
 	encoders    map[string]Encoder
 	// runner configuration
 	runnerConf RunnerConfiguration

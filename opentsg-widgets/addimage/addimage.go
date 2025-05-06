@@ -36,7 +36,7 @@ func (c Config) Handle(resp tsg.Response, req *tsg.Request) {
 
 	wDir := req.FrameProperties.WorkingDir
 	// Just check if it's a website first
-	webBytes, errOpen := req.SearchWithCredentials(filename)
+	webBytes, errOpen := req.SearchWithCredentials(req.Context, filename)
 	var newImage image.Image
 	var err error
 	var depth int

@@ -482,7 +482,7 @@ func fontSelector(c *context.Context, fontLocation string) []byte {
 // then predetermined embedded fonts and returns the font based on the input string.
 func fontSelectorHandler(req *tsg.Request, fontLocation string) []byte {
 
-	font, err := req.SearchWithCredentials(fontLocation)
+	font, err := req.SearchWithCredentials(req.Context, fontLocation)
 
 	if err == nil {
 		return font

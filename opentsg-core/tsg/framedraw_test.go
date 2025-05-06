@@ -113,7 +113,7 @@ func TestMethodFunctions(t *testing.T) {
 	otsg, err := BuildOpenTSG("./testdata/testloader.json", "", true, nil)
 	otsg.HandleFunc("builtin.legacy", HandlerFunc(func(r1 Response, r2 *Request) {
 
-		r2.searchWithCredentials("")
+		r2.searchWithCredentials.Search(nil, "")
 	}))
 	fmt.Println(err, "this err")
 	otsg.Run("")
@@ -200,6 +200,35 @@ func TestMiddlewares(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(jErr, ShouldBeNil)
 				So(outMessage, ShouldResemble, JSONLog{WidgetID: "core.tsg", StatusCode: FrameSuccess.String()})
+			})
+		})
+	})
+
+	otsgSearch, err := BuildOpenTSG("./testdata/handlerLoaders/loader.json", "", true, nil)
+	AddBaseEncoders(otsgSearch)
+
+	otsgSearch.HandleFunc("test.fill", HandlerFunc(func(_ Response, r *Request) {
+
+		r.SearchWithCredentials(r.Context, "Valid Middleware search")
+	}))
+	logURI := "tobechanged"
+	otsgSearch.UseSearches(
+		func(s Search) Search {
+
+			return SearchFunc(func(_ context.Context, URI string) ([]byte, error) {
+
+				logURI = URI
+				return s.Search(nil, URI)
+			})
+		},
+	)
+	otsgSearch.Run("")
+
+	Convey("Checking the Search middleware runs", t, func() {
+		Convey("Using a search middleware that logs the URI", func() {
+			Convey("a URI of \"Valid Middleware search\" is logged", func() {
+				So(err, ShouldBeNil)
+				So(logURI, ShouldResemble, "Valid Middleware search")
 			})
 		})
 	})
