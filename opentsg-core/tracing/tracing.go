@@ -119,6 +119,7 @@ func Resources(opts *ResourceOptions) sdktrace.TracerProviderOption {
 }
 
 func resourceOpts(opts ResourceOptions) *resource.Resource {
+
 	return resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.ServiceName(opts.ServiceName),

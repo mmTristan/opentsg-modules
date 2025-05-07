@@ -35,7 +35,7 @@ func TestTracerInit(t *testing.T) {
 	// create the tracer
 	buf := bytes.NewBuffer([]byte{})
 
-	trc, end, _ := InitProvider(
+	trc, end, err := InitProvider(
 		&Configuration{Writer: buf, InstrumentationName: "TestWriter"},
 		Resources(&ResourceOptions{
 			ServiceName: "Demo Tracer",
@@ -48,12 +48,24 @@ func TestTracerInit(t *testing.T) {
 
 	// flush the buffer
 	end(ctx)
+	fmt.Println(buf.String())
 
 	var stub tracetest.SpanStub
+	// jErr := json.Unmarshal(buf.Bytes(), &stub)
 	json.Unmarshal(buf.Bytes(), &stub)
 
-	// make some useful comparisons instead of printing it
-	fmt.Println(stub)
+	Convey("Checking that the init provider generates a tracer that can be written to", t, func() {
+		Convey("writing a tracer to a buffer to test the contents", func() {
+			Convey("The tracer writes to the buffer with the correct fields", func() {
+				So(err, ShouldBeNil)
+				// skip the unmarshall error check as the trace test does not sync up
+				// with the returned value
+				//	So(jErr, ShouldBeNil)
+				So(stub.Name, ShouldResemble, "test")
+				So(stub.InstrumentationScope.Name, ShouldResemble, "TestWriter")
+			})
+		})
+	})
 
 }
 
@@ -67,7 +79,7 @@ func TestMiddleware(t *testing.T) {
 	handler.Handle(&tsg.TestResponder{}, &tsg.Request{})
 
 	spans := exporter.GetSpans()
-	fmt.Println(exporter)
+
 	Convey("Checking that the middleware succesfully generates a log", t, func() {
 		Convey("running with a test tracer to check the internal logs", func() {
 			Convey("A single span is returned from the single run", func() {
@@ -245,16 +257,12 @@ func TestMiddlewareInteraction(t *testing.T) {
 	pseudoTSG.UseSearches(OtelSearchMiddleWare(tracer))
 
 	pseudoTSG.HandleFunc("test.fill", tsg.HandlerFunc(func(_ tsg.Response, r *tsg.Request) {
-		fmt.Println(r.Context)
+
 		r.SearchWithCredentials(r.Context, "Valid Middleware search")
 	}))
 
 	pseudoTSG.Run("")
 	spans := exporter.GetSpans()
-
-	b, _ := json.MarshalIndent(spans, "", "    ")
-
-	fmt.Println(string(b))
 
 	var SearchSpan tracetest.SpanStub
 	var BlueSpan tracetest.SpanStub
