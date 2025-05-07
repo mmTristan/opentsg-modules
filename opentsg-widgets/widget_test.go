@@ -25,7 +25,7 @@ func TestHandlers(t *testing.T) {
 	otsgh.Handle(saturation.WidgetType, saturation.Schema, saturation.Config{})
 	otsgh.Handle(twosi.WidgetType, twosi.Schema, twosi.Config{})
 
-	tsg.LogToFile(otsgh, slog.HandlerOptions{Level: slog.LevelDebug}, "./testdata/", "handler")
+	tsg.LogToFile(otsgh, slog.HandlerOptions{Level: slog.LevelDebug}, &tsg.LogOptions{Folder: "./testdata/", JobID: "handler"})
 	tsg.AddBaseEncoders(otsgh)
 	otsgh.Run("")
 }

@@ -1,3 +1,5 @@
+// package tracing contains the OpenTelemetry tracing components
+// and middleware
 package tracing
 
 import (
@@ -20,15 +22,16 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Configuration sets the tracer bits
-// @TODO allow jaeger configuration for things
+// Configuration sets the tracer output
+// and the name of the tracer
 type Configuration struct {
 	Writer              io.Writer
 	InstrumentationName string
 }
 
 // Init returns an instance of Jaeger Tracer.
-// @TODO test this works
+// @TODO finish implementing this
+// Use it at your own risk
 func InitJaeger(ctx context.Context, service string) trace.Tracer {
 	client := otlptracegrpc.NewClient(
 		otlptracegrpc.WithInsecure(),
@@ -40,22 +43,32 @@ func InitJaeger(ctx context.Context, service string) trace.Tracer {
 
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(newResource(service)),
+	//	sdktrace.WithResource(newResource(service)),
 	)
 
 	return tp.Tracer(service)
 }
 
-func newResource(service string) *resource.Resource {
-	return resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceName(service),
-		semconv.ServiceVersion("0.0.1"),
-	)
-}
-
 // InitProvider sets up the configuration for a OpenTelemtry Tracer
 // If conf is nil, then the default writer is to os.Stdout
+// and the tracer is given no instrument name.
+/*
+
+You can start the tracer with the following code.
+
+	// handle your own error
+	tracer, closer, _ := InitProvider(nil)
+	ctx := context.Background()
+
+	// run a tracer
+	// and generate the context with
+	// the tracer body
+	c, _ := tracer.Start(ctx, "OpenTSG")
+
+	// close the trace at the end of the function
+	defer close(c)
+
+*/
 func InitProvider(conf *Configuration, opts ...sdktrace.TracerProviderOption) (trace.Tracer, func(context.Context) error, error) {
 
 	if conf == nil {
@@ -74,24 +87,17 @@ func InitProvider(conf *Configuration, opts ...sdktrace.TracerProviderOption) (t
 		return nil, nil, fmt.Errorf("error creating trace exporter: %w", err)
 	}
 
-	options := make([]sdktrace.TracerProviderOption, len(opts)+1)
-	// start with the exporter so it can be overwritten?
-	options[0] = sdktrace.WithBatcher(exporter)
-
-	for i, opt := range opts {
-		options[i+1] = opt
-	}
-
 	tracerProvider := sdktrace.NewTracerProvider(
-		options...,
+		opts...,
 	)
+
+	// register the span processor to stream in realtime
+	tracerProvider.RegisterSpanProcessor(sdktrace.NewSimpleSpanProcessor(exporter))
 	otel.SetTracerProvider(tracerProvider)
 
 	return tracerProvider.Tracer(conf.InstrumentationName), tracerProvider.Shutdown, nil
 
 }
-
-// func(Handler) Handler
 
 // Resource Options contains the fields
 // for the resource that is running the tracing.
@@ -101,7 +107,8 @@ type ResourceOptions struct {
 	JobID          string
 }
 
-// Resources generates the attributes for the tracing
+// Resources generates the attributes for the tracing,
+// giving additional information about the resource doing the tracing.
 func Resources(opts *ResourceOptions) sdktrace.TracerProviderOption {
 
 	if opts == nil {
@@ -120,12 +127,16 @@ func resourceOpts(opts ResourceOptions) *resource.Resource {
 	)
 }
 
-// plug this in as the tracer writer
-// Can plug in so is written with the default
-// slog
+// SlogInfoWriter enables the io.Writer interface,
+// that writes to the default slog object, at
+// slog.LevelInfo.
+// It can be used to plug slogging into the tracing middleware,
+// via the io.Writer interface.
 type SlogInfoWriter struct {
 }
 
+// Write writes the byte stream as a string to slog.Log
+// at slog.LevelInfo. Writing to the default slog writers
 func (s SlogInfoWriter) Write(message []byte) (int, error) {
 	slog.Log(nil, slog.LevelInfo, string(message))
 

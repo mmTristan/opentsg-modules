@@ -11,11 +11,26 @@ import (
 
 // os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0777)
 
+// LogOptions provides the configuration options for
+// the logging
+type LogOptions struct {
+	Folder string
+	JobID  string
+	// Make the slog that is used by the middleware
+	// the default slog call as well
+	MakeDefaultSlog bool
+}
+
 // LogToFile attaches a json slogging middleware to openTSG that writes to file of jobid.log
 // If the file already exists it is appended to.
-func LogToFile(otsg *OpenTSG, opts slog.HandlerOptions, folder, jobID string) {
+func LogToFile(otsg *OpenTSG, opts slog.HandlerOptions, options *LogOptions) {
+	if options == nil {
+		options = &LogOptions{
+			JobID: "default",
+		}
+	}
 
-	path := filepath.Join(folder, fmt.Sprintf("%s.log", jobID))
+	path := filepath.Join(options.Folder, fmt.Sprintf("%s.log", options.JobID))
 
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0777)
 
@@ -24,7 +39,11 @@ func LogToFile(otsg *OpenTSG, opts slog.HandlerOptions, folder, jobID string) {
 	}
 
 	jSlog := slog.NewJSONHandler(f, &opts)
-	otsg.Use(Logger(slog.New(jSlog)))
+	slogging := slog.New(jSlog)
+	if options.MakeDefaultSlog {
+		slog.SetDefault(slogging)
+	}
+	otsg.Use(Logger(slogging))
 
 }
 

@@ -16,63 +16,13 @@ const (
 	TotalAlloc    = "TotalAlloc"
 	HeapInUse     = "HeapInUse"
 	GCCPUFraction = "GCCPUFraction"
+	HeapAlloc     = "HeapAlloc"
+	HeapObjects   = "HeapObjects"
 )
 
-/*
-
-write
-
-- pre
-- post
-- difference
-- possibly something else, like a wait group that inremenets eery second.
-cumilative usage
-
-*/
-
-// OtelMiddleWare creates an openTelemetry middleware that uses the tracer,
+// OtelMiddleWarePreProfile creates an openTelemetry middleware that uses the tracer,
 // Documenting the run time of the widget and the version of OTSG used.
-// IT adds a profile event that documents the memory usage.
-func OtelMiddleWareProfile(ctx context.Context, tracer trace.Tracer) func(h tsg.Handler) tsg.Handler {
-
-	return func(h tsg.Handler) tsg.Handler {
-		return tsg.HandlerFunc(func(resp tsg.Response, req *tsg.Request) {
-
-			var memBefore runtime.MemStats
-			runtime.ReadMemStats(&memBefore)
-
-			// add some extra spas in
-			traceCtx, span := tracer.Start(ctx, req.PatchProperties.WidgetFullID,
-				trace.WithAttributes(),
-				trace.WithSpanKind(trace.SpanKindInternal),
-			)
-			defer span.End()
-			// update the context with the trace
-			req.Context = traceCtx
-
-			h.Handle(resp, req)
-			//attribute.Int(int(memAfter.Alloc - memBefore.Alloc))
-			// Capture memory statistics after execution
-			var memAfter runtime.MemStats
-			runtime.ReadMemStats(&memAfter)
-
-			// Choose which stats to add here
-			// https://pkg.go.dev/runtime#MemStats
-			span.AddEvent("Profile", trace.WithAttributes(
-
-				attribute.KeyValue{Key: Alloc, Value: attribute.IntValue(int(memAfter.Alloc - memBefore.Alloc))},
-				attribute.KeyValue{Key: TotalAlloc, Value: attribute.IntValue(int(memAfter.TotalAlloc))},
-				attribute.KeyValue{Key: HeapInUse, Value: attribute.IntValue(int(memAfter.HeapInuse))},
-				attribute.KeyValue{Key: GCCPUFraction, Value: attribute.Float64Value(memAfter.GCCPUFraction)},
-			))
-
-		})
-	}
-}
-
-// OtelMiddleWare creates an openTelemetry middleware that uses the tracer,
-// Documenting the run time of the widget and the version of OTSG used.
-// It adds a profile event that documents the memory usage.
+// It adds a profile event that documents the memory usage, before the handler is run.
 func OtelMiddleWarePreProfile(ctx context.Context, tracer trace.Tracer) func(h tsg.Handler) tsg.Handler {
 
 	return func(h tsg.Handler) tsg.Handler {
@@ -98,19 +48,21 @@ func OtelMiddleWarePreProfile(ctx context.Context, tracer trace.Tracer) func(h t
 			// https://pkg.go.dev/runtime#MemStats
 			span.AddEvent("Profile", trace.WithAttributes(
 
-				attribute.KeyValue{Key: Alloc, Value: attribute.IntValue(int(memBefore.Alloc))},
-				attribute.KeyValue{Key: TotalAlloc, Value: attribute.IntValue(int(memBefore.TotalAlloc))},
-				attribute.KeyValue{Key: HeapInUse, Value: attribute.IntValue(int(memBefore.HeapInuse))},
-				attribute.KeyValue{Key: GCCPUFraction, Value: attribute.Float64Value(memBefore.GCCPUFraction)},
+				attribute.Int(Alloc, int(memBefore.Alloc)),
+				attribute.Int(TotalAlloc, int(memBefore.TotalAlloc)),
+				attribute.Int(HeapInUse, int(memBefore.HeapInuse)),
+				attribute.Float64(GCCPUFraction, memBefore.GCCPUFraction),
+				attribute.Int(HeapObjects, int(memBefore.HeapObjects)),
+				attribute.Int(HeapAlloc, int(memBefore.HeapAlloc)),
 			))
 
 		})
 	}
 }
 
-// OtelMiddleWare creates an openTelemetry middleware that uses the tracer,
+// OtelMiddleWarePostProfile creates an openTelemetry middleware that uses the tracer,
 // Documenting the run time of the widget and the version of OTSG used.
-// It adds a profile event that documents the memory usage.
+// It adds a profile event that documents the memory usage, after the handler is run.
 func OtelMiddleWarePostProfile(ctx context.Context, tracer trace.Tracer) func(h tsg.Handler) tsg.Handler {
 
 	return func(h tsg.Handler) tsg.Handler {
@@ -136,21 +88,23 @@ func OtelMiddleWarePostProfile(ctx context.Context, tracer trace.Tracer) func(h 
 			// https://pkg.go.dev/runtime#MemStats
 			span.AddEvent("Profile", trace.WithAttributes(
 
-				attribute.KeyValue{Key: Alloc, Value: attribute.IntValue(int(memAfter.Alloc))},
-				attribute.KeyValue{Key: TotalAlloc, Value: attribute.IntValue(int(memAfter.TotalAlloc))},
-				attribute.KeyValue{Key: HeapInUse, Value: attribute.IntValue(int(memAfter.HeapInuse))},
-				attribute.KeyValue{Key: GCCPUFraction, Value: attribute.Float64Value(memAfter.GCCPUFraction)},
+				attribute.Int(Alloc, int(memAfter.Alloc)),
+				attribute.Int(TotalAlloc, int(memAfter.TotalAlloc)),
+				attribute.Int(HeapInUse, int(memAfter.HeapInuse)),
+				attribute.Float64(GCCPUFraction, memAfter.GCCPUFraction),
+				attribute.Int(HeapObjects, int(memAfter.HeapObjects)),
+				attribute.Int(HeapAlloc, int(memAfter.HeapAlloc)),
 			))
 
 		})
 	}
 }
 
-// OtelMiddleWare creates an openTelemetry middleware that uses the tracer,
+// OtelMiddleWareAvgPRofile creates an openTelemetry middleware that uses the tracer,
 // Documenting the run time of the widget and the version of OTSG used.
 // It adds a profile event that documents the memory usage, from
 // a calculated average of the memory profile while the handler is running.
-// If the duration is small then the profiling will slow down your program.
+// If the duration is a small increment then the profiling will slow down your program.
 func OtelMiddleWareAvgProfile(ctx context.Context, tracer trace.Tracer, sampleStep time.Duration) func(h tsg.Handler) tsg.Handler {
 
 	return func(h tsg.Handler) tsg.Handler {
@@ -180,6 +134,8 @@ func OtelMiddleWareAvgProfile(ctx context.Context, tracer trace.Tracer, sampleSt
 			alloc := mem.Alloc
 			totalAlloc := mem.TotalAlloc
 			heapInUse := mem.HeapInuse
+			heapAlloc := mem.HeapAlloc
+			heapObjects := mem.HeapObjects
 			gCCPUFraction := 0.0
 			finish := make(chan bool, 1)
 			count := uint64(1)
@@ -195,12 +151,16 @@ func OtelMiddleWareAvgProfile(ctx context.Context, tracer trace.Tracer, sampleSt
 						var mem runtime.MemStats
 						runtime.ReadMemStats(&mem)
 
-						alloc = (alloc*count + mem.Alloc) / (count + 1)
-						heapInUse = (heapInUse*count + mem.HeapInuse) / (count + 1)
-						totalAlloc = mem.TotalAlloc
-						gCCPUFraction = (gCCPUFraction*float64(count) + mem.GCCPUFraction) / (float64(count) + 1)
+						totalCount := count + 1
 
-						count++
+						alloc = (alloc*count + mem.Alloc) / (totalCount)
+						heapInUse = (heapInUse*count + mem.HeapInuse) / (totalCount)
+						totalAlloc = mem.TotalAlloc
+						gCCPUFraction = (gCCPUFraction*float64(count) + mem.GCCPUFraction) / (float64(totalCount))
+						heapAlloc = (heapAlloc*count + mem.HeapAlloc) / (totalCount)
+						heapObjects = (heapObjects*count + mem.HeapObjects) / (totalCount)
+
+						count = totalCount
 					}
 				}
 			}()
@@ -216,10 +176,12 @@ func OtelMiddleWareAvgProfile(ctx context.Context, tracer trace.Tracer, sampleSt
 			// https://pkg.go.dev/runtime#MemStats
 			span.AddEvent("Profile", trace.WithAttributes(
 
-				attribute.KeyValue{Key: Alloc, Value: attribute.IntValue(int(alloc))},
-				attribute.KeyValue{Key: TotalAlloc, Value: attribute.IntValue(int(totalAlloc))},
-				attribute.KeyValue{Key: HeapInUse, Value: attribute.IntValue(int(heapInUse))},
-				attribute.KeyValue{Key: GCCPUFraction, Value: attribute.Float64Value(gCCPUFraction)},
+				attribute.Int(Alloc, int(alloc)),
+				attribute.Int(TotalAlloc, int(totalAlloc)),
+				attribute.Int(HeapInUse, int(heapInUse)),
+				attribute.Float64(GCCPUFraction, gCCPUFraction),
+				attribute.Int(HeapAlloc, int(heapAlloc)),
+				attribute.Int(HeapObjects, int(heapObjects)),
 			))
 
 		})

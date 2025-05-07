@@ -5,10 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 	"go.opentelemetry.io/otel"
@@ -18,27 +21,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-/*
-
-create a test handler to generate some logs
-
-log testing needs to be parsed etc into a buffer then parsed
-find the object to parse it into to check it ran
-
-What metrics do I want to check
-
-
-Check the context span IDs,
-
-
-print the context and see what was stored when it was run
-
-Tests, ensure the middleware works
-
-test the middleware
-and test the making one
-*/
-
+// test handler runs a simple
+// Handle that always passes
 type testHandler struct {
 }
 
@@ -76,20 +60,9 @@ func TestTracerInit(t *testing.T) {
 func TestMiddleware(t *testing.T) {
 
 	// Create an in-memory span exporter
-	exporter := tracetest.NewInMemoryExporter()
-
-	// Set up a tracer provider
-	// Set up a tracer provider with the in-memory exporter
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(exporter)),
-	)
-	otel.SetTracerProvider(tp)
-
-	// Create a tracer
-	tracer := otel.Tracer("example")
+	exporter, tracer := makeExporterSpan()
 
 	// Start a span
-
 	handler := OtelMiddleWare(nil, tracer)(testHandler{})
 	handler.Handle(&tsg.TestResponder{}, &tsg.Request{})
 
@@ -104,75 +77,10 @@ func TestMiddleware(t *testing.T) {
 		})
 	})
 
-	exporter2 := tracetest.NewInMemoryExporter()
-	tp = sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(exporter2)),
-	)
-	otel.SetTracerProvider(tp)
-
-	// Create a tracer
-	tracer = otel.Tracer("example")
-
-	handler2 := OtelMiddleWareProfile(nil, tracer)(testHandler{})
-	resp := &tsg.TestResponder{}
-	handler2.Handle(resp, &tsg.Request{})
-	fmt.Println(resp)
-
-	// set up more profile tests
-	spans = exporter2.GetSpans()
-	by, _ := json.Marshal(spans[0])
-	fmt.Println(string(by))
-	fmt.Println(spans[0].Events[0].Name)
-	Convey("Checking that the middleware succesfully generates a log", t, func() {
-		Convey("running with a test tracer to check the internal logs", func() {
-			Convey("A single span is returned from the single run", func() {
-				So(len(spans), ShouldResemble, 1)
-				So(len(spans[0].Events), ShouldResemble, 1)
-				So(spans[0].Events[0].Name, ShouldResemble, "Profile")
-				So(spans[0].Resource.String(), ShouldResemble, "service.name=unknown_service:tracing.test,telemetry.sdk.language=go,telemetry.sdk.name=opentelemetry,telemetry.sdk.version=1.35.0")
-			})
-		})
-	})
-
-	exporter3 := tracetest.NewInMemoryExporter()
-	tp = sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(exporter3)),
-	)
-	otel.SetTracerProvider(tp)
-
-	// Create a tracer
-	tracer = otel.Tracer("example")
-
-	handler3 := OtelMiddleWareAvgProfile(nil, tracer, time.Nanosecond)(testHandler{})
-	resp = &tsg.TestResponder{}
-	handler3.Handle(resp, &tsg.Request{})
-	fmt.Println(resp)
-
-	// set up more profile tests
-	spans = exporter3.GetSpans()
-	by, _ = json.Marshal(spans[0])
-	fmt.Println(string(by))
-	fmt.Println(spans[0].Events[0].Name)
-	Convey("Checking that the middleware succesfully generates a log", t, func() {
-		Convey("running with a test tracer to check the internal logs", func() {
-			Convey("A single span is returned from the single run", func() {
-				So(len(spans), ShouldResemble, 1)
-				So(len(spans[0].Events), ShouldResemble, 1)
-				So(spans[0].Events[0].Name, ShouldResemble, "Profile")
-				So(spans[0].Resource.String(), ShouldResemble, "service.name=unknown_service:tracing.test,telemetry.sdk.language=go,telemetry.sdk.name=opentelemetry,telemetry.sdk.version=1.35.0")
-			})
-		})
-	})
-
 }
 
-func TestSearchMiddleware(t *testing.T) {
-
-	// Create an in-memory span exporter
+func makeExporterSpan() (*tracetest.InMemoryExporter, trace.Tracer) {
 	exporter := tracetest.NewInMemoryExporter()
-
-	// Set up a tracer provider
-	// Set up a tracer provider with the in-memory exporter
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(exporter)),
 	)
@@ -180,6 +88,127 @@ func TestSearchMiddleware(t *testing.T) {
 
 	// Create a tracer
 	tracer := otel.Tracer("example")
+
+	return exporter, tracer
+}
+
+func validateEvent(event []attribute.KeyValue, expected []string) bool {
+	expec := make([]string, len(expected))
+	copy(expec, expected)
+	for _, ev := range event {
+
+		if slices.Contains(expec, string(ev.Key)) {
+			pos := slices.Index(expec, string(ev.Key))
+			expec = slices.Delete(expec, pos, pos+1)
+		} else {
+
+			return false
+		}
+
+	}
+
+	return true
+
+}
+
+func TestProfilingMiddlewares(t *testing.T) {
+
+	headers := []string{Alloc,
+		TotalAlloc,
+		HeapInUse,
+		GCCPUFraction,
+		HeapAlloc,
+		HeapObjects}
+
+	// set up recorder
+	exporterAvg, tracerAvg := makeExporterSpan()
+	// set up middleware
+	avgHandler := OtelMiddleWareAvgProfile(nil, tracerAvg, time.Nanosecond)(testHandler{})
+	avgHandler.Handle(&tsg.TestResponder{}, &tsg.Request{})
+
+	// set up more profile tests
+	avgSpans := exporterAvg.GetSpans()
+
+	Convey("Checking that the middleware average profiler creates a log", t, func() {
+		Convey("running with a test tracer to check the internal logs", func() {
+			Convey("A single span is returned from the single run, with an events span for profiling", func() {
+				So(len(avgSpans), ShouldResemble, 1)
+				So(len(avgSpans[0].Events), ShouldResemble, 1)
+				So(avgSpans[0].Events[0].Name, ShouldResemble, "Profile")
+				So(avgSpans[0].Resource.String(), ShouldResemble, "service.name=unknown_service:tracing.test,telemetry.sdk.language=go,telemetry.sdk.name=opentelemetry,telemetry.sdk.version=1.35.0")
+			})
+		})
+	})
+
+	Convey("Checking that the average profiler event has all the required memory attributes", t, func() {
+		Convey("comparing the event against the expected attribute headers", func() {
+			Convey("The event has all the required headers", func() {
+				So(validateEvent(avgSpans[0].Events[0].Attributes, headers), ShouldBeTrue)
+			})
+		})
+	})
+
+	// set up recorder
+	exporterPre, tracerPre := makeExporterSpan()
+	// set up middleware
+	preHandler := OtelMiddleWarePreProfile(nil, tracerPre)(testHandler{})
+	preHandler.Handle(&tsg.TestResponder{}, &tsg.Request{})
+
+	// set up more profile tests
+	preSpans := exporterPre.GetSpans()
+
+	Convey("Checking that the middleware average profiler creates a log", t, func() {
+		Convey("running with a test tracer to check the internal logs", func() {
+			Convey("A single span is returned from the single run, with an events span for profiling", func() {
+				So(len(preSpans), ShouldResemble, 1)
+				So(len(preSpans[0].Events), ShouldResemble, 1)
+				So(preSpans[0].Events[0].Name, ShouldResemble, "Profile")
+				So(preSpans[0].Resource.String(), ShouldResemble, "service.name=unknown_service:tracing.test,telemetry.sdk.language=go,telemetry.sdk.name=opentelemetry,telemetry.sdk.version=1.35.0")
+			})
+		})
+	})
+
+	Convey("Checking that the pre profiler event has all the required memory attributes", t, func() {
+		Convey("comparing the event against the expected attribute headers", func() {
+			Convey("The event has all the required headers", func() {
+				So(validateEvent(preSpans[0].Events[0].Attributes, headers), ShouldBeTrue)
+			})
+		})
+	})
+
+	// set up recorder
+	exporterPost, tracerPost := makeExporterSpan()
+	// set up middleware
+	postHandler := OtelMiddleWarePostProfile(nil, tracerPost)(testHandler{})
+	postHandler.Handle(&tsg.TestResponder{}, &tsg.Request{})
+
+	// set up more profile tests
+	postSpans := exporterPost.GetSpans()
+
+	Convey("Checking that the middleware average profiler creates a log", t, func() {
+		Convey("running with a test tracer to check the internal logs", func() {
+			Convey("A single span is returned from the single run, with an events span for profiling", func() {
+				So(len(postSpans), ShouldResemble, 1)
+				So(len(postSpans[0].Events), ShouldResemble, 1)
+				So(postSpans[0].Events[0].Name, ShouldResemble, "Profile")
+				So(postSpans[0].Resource.String(), ShouldResemble, "service.name=unknown_service:tracing.test,telemetry.sdk.language=go,telemetry.sdk.name=opentelemetry,telemetry.sdk.version=1.35.0")
+			})
+		})
+	})
+
+	Convey("Checking that the post profiler event has all the required memory attributes", t, func() {
+		Convey("comparing the event against the expected attribute headers", func() {
+			Convey("The event has all the required headers", func() {
+				So(validateEvent(postSpans[0].Events[0].Attributes, headers), ShouldBeTrue)
+			})
+		})
+	})
+}
+
+func TestSearchMiddleware(t *testing.T) {
+
+	// Create an in-memory span exporter
+	exporter, tracer := makeExporterSpan()
 
 	// Start a span
 
@@ -205,18 +234,7 @@ func TestSearchMiddleware(t *testing.T) {
 
 func TestMiddlewareInteraction(t *testing.T) {
 
-	// Create an in-memory span exporter
-	exporter := tracetest.NewInMemoryExporter()
-
-	// Set up a tracer provider
-	// Set up a tracer provider with the in-memory exporter
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(exporter)),
-	)
-	otel.SetTracerProvider(tp)
-
-	// Create a tracer
-	tracer := otel.Tracer("example")
+	exporter, tracer := makeExporterSpan()
 
 	// Start a span
 
