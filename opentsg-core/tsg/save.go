@@ -143,7 +143,7 @@ func AddBaseEncoders(tsg *OpenTSG) {
 
 }
 
-func (tsg *OpenTSG) encodeFrame(filename string, base draw.Image, bitdepth int) error {
+func (tsg *OpenTSG) encodeFrame(filename string, base draw.Image, opts EncodeOptions) error {
 
 	extensions := strings.Split(filename, ".")
 	ext := extensions[len(extensions)-1]
@@ -171,7 +171,10 @@ func (tsg *OpenTSG) encodeFrame(filename string, base draw.Image, bitdepth int) 
 
 	defer saveTarget.Close()
 
-	fwErr := encodeFunc(saveTarget, base, EncodeOptions{BitDepth: bitdepth})
+	// add the middleware for the encoders
+	encoder := chain(tsg.encoderMiddlewares, encodeFunc)
+
+	fwErr := encoder(saveTarget, base, opts)
 	if fwErr != nil {
 		return fmt.Errorf("0051 %v", fwErr)
 	}

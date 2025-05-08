@@ -5,6 +5,7 @@ package tracing
 import (
 	"context"
 	"fmt"
+	"image"
 	"io"
 	"log"
 	"log/slog"
@@ -255,6 +256,24 @@ func OtelSearchMiddleWareProfile(tracer trace.Tracer) func(tsg.Search) tsg.Searc
 			))
 
 			return data, err
+		})
+	}
+}
+
+// OtelSearchMiddleware adds middleware to the request search function
+func OtelEncoderMiddleWare(ctx context.Context, tracer trace.Tracer) func(tsg.Encoder) tsg.Encoder {
+
+	return func(encode tsg.Encoder) tsg.Encoder {
+
+		return tsg.Encoder(func(w io.Writer, i image.Image, eo tsg.EncodeOptions) error {
+
+			_, span := tracer.Start(ctx, "Encoder",
+				trace.WithAttributes(),
+				trace.WithSpanKind(trace.SpanKindInternal),
+			)
+			defer span.End()
+
+			return encode(w, i, eo)
 		})
 	}
 }

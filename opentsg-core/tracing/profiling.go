@@ -2,6 +2,8 @@ package tracing
 
 import (
 	"context"
+	"image"
+	"io"
 	"runtime"
 	"sync"
 	"time"
@@ -185,6 +187,93 @@ func OtelMiddleWareAvgProfile(ctx context.Context, tracer trace.Tracer, sampleSt
 				attribute.Int(HeapObjects, int(heapObjects)),
 			))
 
+		})
+	}
+}
+
+// OtelSearchMiddlewareProfile adds middleware to the request search function
+// as well as profiling the memory usage of the function
+func OtelEncoderMiddleWareProfile(ctx context.Context, tracer trace.Tracer, sampleStep time.Duration) func(tsg.Encoder) tsg.Encoder {
+
+	return func(encode tsg.Encoder) tsg.Encoder {
+
+		return tsg.Encoder(func(w io.Writer, i image.Image, eo tsg.EncodeOptions) error {
+
+			_, span := tracer.Start(ctx, "Encoder",
+				trace.WithAttributes(),
+				trace.WithSpanKind(trace.SpanKindInternal),
+			)
+			defer span.End()
+
+			//	return encode(w, i, eo)
+
+			// run the handler as  go function
+			wg := sync.WaitGroup{}
+			wg.Add(1)
+			var encErr error
+			go func() {
+				encErr = encode(w, i, eo)
+				wg.Done()
+			}()
+
+			// collect some stats while it is running
+			// @TODO let the user choose the averaging
+			var mem runtime.MemStats
+			runtime.ReadMemStats(&mem)
+			alloc := mem.Alloc
+			totalAlloc := mem.TotalAlloc
+			heapInUse := mem.HeapInuse
+			heapAlloc := mem.HeapAlloc
+			heapObjects := mem.HeapObjects
+			gCCPUFraction := 0.0
+			finish := make(chan bool, 1)
+			count := uint64(1)
+			go func() {
+				monitor := true
+				for monitor {
+
+					select {
+					case <-finish:
+						monitor = false
+					case <-time.Tick(sampleStep):
+						// sample the memory now
+						var mem runtime.MemStats
+						runtime.ReadMemStats(&mem)
+
+						totalCount := count + 1
+
+						alloc = (alloc*count + mem.Alloc) / (totalCount)
+						heapInUse = (heapInUse*count + mem.HeapInuse) / (totalCount)
+						totalAlloc = mem.TotalAlloc
+						gCCPUFraction = (gCCPUFraction*float64(count) + mem.GCCPUFraction) / (float64(totalCount))
+						heapAlloc = (heapAlloc*count + mem.HeapAlloc) / (totalCount)
+						heapObjects = (heapObjects*count + mem.HeapObjects) / (totalCount)
+
+						count = totalCount
+					}
+				}
+			}()
+
+			wg.Wait()
+			// finish immediately
+			finish <- true
+
+			//attribute.Int(int(memAfter.Alloc - memBefore.Alloc))
+			// Capture memory statistics after execution
+
+			// Choose which stats to add here
+			// https://pkg.go.dev/runtime#MemStats
+			span.AddEvent("Profile", trace.WithAttributes(
+
+				attribute.Int(Alloc, int(alloc)),
+				attribute.Int(TotalAlloc, int(totalAlloc)),
+				attribute.Int(HeapInUse, int(heapInUse)),
+				attribute.Float64(GCCPUFraction, gCCPUFraction),
+				attribute.Int(HeapAlloc, int(heapAlloc)),
+				attribute.Int(HeapObjects, int(heapObjects)),
+			))
+
+			return encErr
 		})
 	}
 }

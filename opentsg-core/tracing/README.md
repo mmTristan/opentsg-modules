@@ -298,4 +298,4 @@ then the trace will inherit this and make it the parent of that trace.
 
 [OTEL]: "https://opentelemetry.io/" "The OpenTelemetry website"
 [JGR]: "https://www.jaegertracing.io/" "The official Jaeger website"
-[JSTRT]: "https://www.jaegertracing.io/docs/2.5/getting-started/" "The jaeger getting started instructions" 
+[JSTRT]: "https://www.jaegertracing.io/docs/2.5/getting-started/" "The jaeger getting started instructions"

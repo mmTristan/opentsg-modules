@@ -85,6 +85,11 @@ func (o *OpenTSG) Use(middlewares ...func(Handler) Handler) {
 	o.middlewares = append(o.middlewares, middlewares...)
 }
 
+// UseEncoderMiddleware appends a middleware handler to the OpenTSG middleware stack.
+func (o *OpenTSG) UseEncoderMiddleware(middlewares ...func(Encoder) Encoder) {
+	o.encoderMiddlewares = append(o.encoderMiddlewares, middlewares...)
+}
+
 // Request contains all the information sent to a widget handler
 // for generating an image.
 //
@@ -432,7 +437,7 @@ func (tsg *OpenTSG) canvasSave(canvas draw.Image, filename []string, bitdeph int
 
 			continue
 		}
-		err = tsg.encodeFrame(truepath, canvas, bitdeph)
+		err = tsg.encodeFrame(truepath, canvas, EncodeOptions{bitdeph})
 		if err != nil {
 			monit.incrementError(1)
 			tsg.logErrors(700, monit.frameNo, monit.jobID, err)
@@ -674,11 +679,25 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 			// only draw the image if
 			// no errors occurred running the handler
 			if resp.status == 200 || resp.status == WidgetSuccess {
-				compostion := time.Now()
-				//	canvasLock.Lock()
-				colour.DrawMask(canvas, canvasArea, gridCanvas, image.Point{}, mask, image.Point{}, draw.Over)
-				//	canvasLock.Unlock()
-				p.Composite = time.Since(compostion)
+
+				// use the middleware on the composition - double the logging
+				// is this advisable
+				drawer := HandlerFunc(func(r Response, r2 *Request) {
+					compostion := time.Now()
+					//	canvasLock.Lock()
+					colour.DrawMask(canvas, canvasArea, gridCanvas, image.Point{}, mask, image.Point{}, draw.Over)
+					//	canvasLock.Unlock()
+					p.Composite = time.Since(compostion)
+					r.Write(WidgetSuccess, "written test pattern")
+				})
+
+				compose := chain[Handler](tsg.middlewares, drawer)
+				compose.Handle(&TestResponder{BaseImg: image.NewAlpha(image.Rect(0, 0, 1, 1))}, &req)
+				// compostion := time.Now()
+				// //	canvasLock.Lock()
+				// colour.DrawMask(canvas, canvasArea, gridCanvas, image.Point{}, mask, image.Point{}, draw.Over)
+				// //	canvasLock.Unlock()
+				// p.Composite = time.Since(compostion)
 				// else if there's been an error
 			} else if widgProps.WType != canvaswidget.WType {
 				// error of some sort from somewhere
