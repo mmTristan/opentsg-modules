@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"image"
 	"image/png"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
 	geometrymock "github.com/mrmxf/opentsg-modules/opentsg-widgets/geometryMock"
@@ -42,7 +44,9 @@ func SaveExampleJson(example tsg.Handler, folder, name string, saveImage bool) {
 	}
 
 	if saveImage {
-		mg := geometrymock.Mockgeom(1000, 1000, 8)
+
+		randSrc := rand.New(rand.NewSource(time.Now().Unix()))
+		mg := geometrymock.Mockgeom(randSrc, 1000, 1000, 8)
 
 		baseImage := image.NewNRGBA64(image.Rect(0, 0, 500, 500))
 		example.Handle(&tsg.TestResponder{BaseImg: baseImage}, &tsg.Request{PatchProperties: tsg.PatchProperties{Geometry: mg}})

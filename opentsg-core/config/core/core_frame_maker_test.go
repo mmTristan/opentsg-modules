@@ -273,7 +273,7 @@ func TestErrors(t *testing.T) {
 	testCanvas, _ := filepath.Abs("./testdata/frame_generate2/errors/canvas.json")
 	testWidget, _ := filepath.Abs("./testdata/frame_generate2/errors/widget.json")
 	testWidgetX, _ := filepath.Abs("./testdata/frame_generate2/errors/widget_bad_x.json")
-	reg := "'^-{0,1}\\d{0,2}\\.{1}\\d{0,}%$|^-{0,1}\\d{0,2}%$|^-{0,1}(100)%$'"
+	reg := "'^-{0,1}\\d{0,2}\\.{1}\\d{0,}%$|^-{0,1}\\d{0,2}%$|^-{0,1}(100)%$|^100\\.[0]*%$'"
 
 	propExpec := [][]error{{fmt.Errorf("0026 Invalid type. Expected: string, given: integer at line 3 in %s, for canvas", testCanvas)},
 		{fmt.Errorf("0026 Additional property grid is not allowed at line 4 in %s, for widget", testWidget)},

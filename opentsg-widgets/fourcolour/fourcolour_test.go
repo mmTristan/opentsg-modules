@@ -20,8 +20,9 @@ import (
 )
 
 func TestFillMethod(t *testing.T) {
-	rand.Seed(1320)
-	mg := geometrymock.Mockgeom(1000, 1000, 8)
+	//rand.Seed(1320)
+	randSrc := rand.New(rand.NewSource(1320))
+	mg := geometrymock.Mockgeom(randSrc, 1000, 1000, 8)
 
 	// mockG := config.Grid{Location: "Nothing"}
 	mockJson4 := Config{Colourpallette: []parameters.HexString{"#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF"}}
@@ -67,8 +68,8 @@ func TestFillMethod(t *testing.T) {
 
 func BenchmarkNRGBA64ACESColour(b *testing.B) {
 	// decode to get the colour values
-
-	mg := geometrymock.Mockgeom(1000, 1000, 8)
+	randSrc := rand.New(rand.NewSource(1320))
+	mg := geometrymock.Mockgeom(randSrc, 1000, 1000, 8)
 
 	//	mockG := config.Grid{Location: "Nothing"}
 	// mockJson := fourJSON{GridLoc: &mockG, Colourpallette: []string{"#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF"}}
@@ -84,8 +85,8 @@ func BenchmarkNRGBA64ACESColour(b *testing.B) {
 
 func BenchmarkNRGBA64ACESOTher(b *testing.B) {
 	// decode to get the colour values
-
-	mg := geometrymock.Mockgeom(1000, 1000, 8)
+	randSrc := rand.New(rand.NewSource(1320))
+	mg := geometrymock.Mockgeom(randSrc, 1000, 1000, 8)
 	//	mockG := config.Grid{Location: "Nothing"}
 	mockJson := Config{Colourpallette: []parameters.HexString{"#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF"}}
 

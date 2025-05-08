@@ -23,11 +23,12 @@ func TestFillMethod(t *testing.T) {
 	mockJson4 := Config{TextColour: "#C2A649"}
 	examplejson.SaveExampleJson(mockJson4, WidgetType, fmt.Sprintf("TextLength%v", 8), true)
 	nameLength := []int{8, 12, 16, 18}
-	rand.Seed(1320)
+	//	rand.Seed(1320)
+	randSrc := rand.New(rand.NewSource(1320))
 
 	for _, n := range nameLength {
 
-		mg := geometrymock.Mockgeom(1000, 1000, n)
+		mg := geometrymock.Mockgeom(randSrc, 1000, 1000, n)
 
 		canvas := image.NewNRGBA64(image.Rect(0, 0, 1000, 1000))
 		colour.Draw(canvas, canvas.Bounds(), &image.Uniform{color.NRGBA64{R: 0xffff, G: 0xffff, B: 0xffff, A: 0xffff}}, image.Point{0, 0}, draw.Over)

@@ -232,7 +232,7 @@ func TestErrors(t *testing.T) {
 
 	want := []error{fmt.Errorf("Get \"not%%20even%%20a%%20website\": unsupported protocol scheme \"\""),
 		fmt.Errorf(`Get "https://a.really.fake.website/not/real": dial tcp: lookup a.really.fake.website on 10.255.255.254:53: no such host`),
-		fmt.Errorf("404 Not Found"), fmt.Errorf("404 Not Found"), fmt.Errorf("401 Unauthorized")}
+		fmt.Errorf("error received a status of 404 Not Found"), fmt.Errorf("404 Not Found"), fmt.Errorf("401 Unauthorized")}
 
 	// Open the url and check it is good
 

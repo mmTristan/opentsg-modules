@@ -3,27 +3,43 @@
 Tracing uses [OpenTelemetry][OTEL] to run the tracing
 of OpenTSG.
 
+This library provides the middleware for checking the events that
+occur in OpenTSG and their parents that caused them. As well
+as offering memory profiling of the widgets.
+Allowing you to build up an image of how OpenTSG has run.
+
 ## Using Tracing
 
 The tracing provides a way to trace openTSG as it is running,
 with low impact middleware plugins that can be used in tandem
 with other middlewares.
 
-With the potential for intergration with other tracing services such as jaeger.
+Get the library with
 
-This library uses the OpenTelemetry SDK to write to an user defined
-io.Writer etc.
+```cmd
+go get "github.com/mrmxf/opentsg-modules/opentsg-core/tracing"
+```
+
+OTEL has the potential for integration with other
+tracing services such as jaeger, so you can generate more sophisticated
+reports from OpenTSG.
+
+This library uses the OpenTelemetry SDK to write to a user
+defined location, with the io.Writer interface.
+
+
 
 ### Initialising a Tracer
 
 To start the tracing, you first need to make
 a tracer object and to start it.
 
-The tracer is intialised with the following code.
+The tracer is intialised
+and started with the following code.
 
 ```go
 // handle your own error
-tracer, closer, _ := InitProvider(nil)
+tracer, closer, _ := tracing.InitProvider(nil)
 ctx := context.Background()
 
 // run a tracer
@@ -34,7 +50,8 @@ c, _ := tracer.Start(ctx, "OpenTSG")
 // close the trace at the end of the function
 defer close(c)
 
-//Create middlewares from here and run the program
+// Create middlewares from here and run the program
+// Or manually create a trace
 ```
 
 The context can be used to intialise any middleware
@@ -51,13 +68,36 @@ Tracing middleware for OpenTSG is provided and can be utilised
 with the following code.
 
 ```go
-/*
-Set up tsg and tracer beforehand
-*/
 
-// ctx is the context returned when the tracer
-// is started
-pseudoTSG.Use(OtelMiddleWare(ctx, tracer))
+import (
+    "time"
+    "github.com/mrmxf/opentsg-modules/opentsg-core/tracing"
+    "github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
+)
+
+func main() {
+    tracer, closer, _ := tracing.InitProvider(nil)
+    ctx := context.Background()
+
+    // run a tracer
+    // and generate the context with
+    // the tracer body
+    c, _ := tracer.Start(ctx, "OpenTSG")
+
+    // close the trace at the end of the function
+    defer closer(c)
+
+    otsg, _ := tsg.BuildOpenTSG(commandInputs, *profile, *debug, 
+        &tsg.RunnerConfiguration{RunnerCount: 1, ProfilerEnabled: true}, myFlags...)
+
+    // c is the context returned when the tracer
+    // is started
+    otsg.Use(tracing.OtelMiddleWare(c, tracer))
+
+    // run the engine
+    otsg.Run("")
+
+}
 ```
 
 This logs:
@@ -73,13 +113,33 @@ one of the profiling middlewares, such as the example
 below.
 
 ```go
-/*
-Set up tsg and tracer beforehand
-*/
+import (
+    "time"
+    "github.com/mrmxf/opentsg-modules/opentsg-core/tracing"
+    "github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
+)
 
-// ctx is the context returned when the tracer
-// is started
-pseudoTSG.Use(tracing.OtelMiddleWareAvgProfile(c, tracer, 100*time.Millisecond))
+func main() {
+    tracer, closer, _ := tracing.InitProvider(nil)
+    ctx := context.Background()
+
+    // run a tracer
+    // and generate the context with
+    // the tracer body
+    c, _ := tracer.Start(ctx, "OpenTSG")
+
+    // close the trace at the end of the function
+    defer closer(c)
+
+    otsg, _ := tsg.BuildOpenTSG(commandInputs, *profile, *debug, 
+        &tsg.RunnerConfiguration{RunnerCount: 1, ProfilerEnabled: true}, myFlags...)
+
+    // c is the context returned when the tracer
+    // is started
+    pseudoTSG.Use(tracing.OtelMiddleWareAvgProfile(c, tracer, 100*time.Millisecond))
+    // run the engine
+    otsg.Run("")
+}
 ```
 
 This logs:
@@ -101,11 +161,33 @@ Garbage Cleaner - `GCCPUFraction`
 
 ```go
 
-/*
-Set up tsg beforehand
-*/
+import (
+    "time"
+    "github.com/mrmxf/opentsg-modules/opentsg-core/tracing"
+    "github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
+)
 
-pseudoTSG.UseSearches(OtelSearchMiddleWare(tracer))
+func main() {
+    tracer, closer, _ := tracing.InitProvider(nil)
+    ctx := context.Background()
+
+    // run a tracer
+    // and generate the context with
+    // the tracer body
+    c, _ := tracer.Start(ctx, "OpenTSG")
+
+    // close the trace at the end of the function
+    defer closer(c)
+
+    otsg, _ := tsg.BuildOpenTSG(commandInputs, *profile, *debug, 
+        &tsg.RunnerConfiguration{RunnerCount: 1, ProfilerEnabled: true}, myFlags...)
+
+    // Add the tracing middleware
+    pseudoTSG.UseSearches(tracing.OtelSearchMiddleWare(tracer))
+
+    // run the engine
+    otsg.Run("")
+}
 
 ```
 
@@ -119,5 +201,35 @@ tracing.SlogInfoWriter{}
 
 can be used as an io.Writer, this writes to the default slog.
 At a log level of `slog.LevelInfo`.
+
+#### Manually creating a Trace
+
+Traces can be created manually as well as from using the
+middleware functions provided.
+
+To manually create a trace event
+the following example
+
+```go
+
+import (
+    "context"
+    "go.opentelemetry.io/otel/trace"
+)
+
+func ExampleFunc(ctx context.Context, tracer trace.Tracer){
+    traceCtx, span := tracer.Start(ctx, "myExampleName",
+        trace.WithAttributes(),
+        trace.WithSpanKind(trace.SpanKindInternal),
+    )
+    // end the span at the end of the function
+    defer span.End()
+
+    // Write the rest of the function here
+}
+```
+
+If the context contains previous tracer information,
+then the trace will inherit this and make it the parent of that trace.
 
 [OTEL]: "https://opentelemetry.io/" "The OpenTelemetry website"

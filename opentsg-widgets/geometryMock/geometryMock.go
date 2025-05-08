@@ -9,9 +9,9 @@ import (
 	"github.com/mrmxf/opentsg-modules/opentsg-core/gridgen"
 )
 
-func Mockgeom(w, h int, nameLength int) []gridgen.Segmenter {
+func Mockgeom(randSrc *rand.Rand, w, h int, nameLength int) []gridgen.Segmenter {
 
-	points := Randomspread(w, h)
+	points := Randomspread(randSrc, w, h)
 	ns := linearneighbour(points)
 	mocksegments := make([]gridgen.Segmenter, len(ns))
 
@@ -33,7 +33,7 @@ func Mockgeom(w, h int, nameLength int) []gridgen.Segmenter {
 }
 
 // Randomspread generates random sized rectangles to fill the height and width
-func Randomspread(height, width int) []image.Rectangle {
+func Randomspread(randSrc *rand.Rand, height, width int) []image.Rectangle {
 	/*
 		go down at random height intervals then width to make squares with several borders
 	*/
@@ -54,17 +54,17 @@ func Randomspread(height, width int) []image.Rectangle {
 		*/
 
 		if direction%2 == 0 {
-			width := 20 + rand.Intn(50)
+			width := 20 + randSrc.Intn(50)
 			for vectorstart.In(canv) {
-				height := 20 + rand.Intn(50)
+				height := 20 + randSrc.Intn(50)
 				recs = append(recs, image.Rectangle{vectorstart, image.Point{vectorstart.X + width, vectorstart.Y + height}})
 				vectorstart = image.Point{vectorstart.X, vectorstart.Y + height}
 			}
 			start = image.Point{start.X + width, start.Y}
 		} else {
-			height := 20 + rand.Intn(50)
+			height := 20 + randSrc.Intn(50)
 			for vectorstart.In(canv) {
-				width := 20 + rand.Intn(50)
+				width := 20 + randSrc.Intn(50)
 				recs = append(recs, image.Rectangle{vectorstart, image.Point{vectorstart.X + width, vectorstart.Y + height}})
 				vectorstart = image.Point{vectorstart.X + width, vectorstart.Y}
 			}

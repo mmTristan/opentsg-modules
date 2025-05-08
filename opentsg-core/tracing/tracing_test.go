@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"slices"
 	"testing"
 	"time"
@@ -48,8 +47,6 @@ func TestTracerInit(t *testing.T) {
 
 	// flush the buffer
 	end(ctx)
-	fmt.Println(buf.String())
-
 	var stub tracetest.SpanStub
 	// jErr := json.Unmarshal(buf.Bytes(), &stub)
 	json.Unmarshal(buf.Bytes(), &stub)

@@ -300,7 +300,7 @@ func repsonseHelper(resp *http.Response) error {
 	stat := resp.Status
 	valid := regexp.MustCompile("OK")
 	if !valid.MatchString(stat) {
-		return fmt.Errorf(stat)
+		return fmt.Errorf("error received a status of %s", stat)
 	}
 
 	return nil
