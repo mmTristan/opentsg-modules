@@ -4,15 +4,14 @@ tsg-core contains all the engine and core functionality for running openTSG.
 
 see the documentation for every section here:
 
-- [Canvaswidget](_docs/canvaswidget/doc.md)
-- [Colour](_docs/colour/doc.md)
-- [Core](_docs/core/doc.md)
-- [Credentials](_docs/credentials/doc.md)
-- [ErrHandle](_docs/errHandle/doc.md)
-- [Gridgen](_docs/gridgen/doc.md)
-- [Middleware](_docs/middleware/doc.md)
-- [tsg](_docs/tsg/doc.md)
-- [widgethandler](_docs/widgethandler/doc.md)
+- [Canvaswidget](./canvaswidget/readme.md)
+- [Colour](./colour/readme.md)
+- [Core](./config/core/readme.md)
+- [Credentials](./credentials/README.md)
+- [Gridgen](./gridgen/readme.md)
+- [Middleware](./middleware/readme.md)
+- [Tracing](./tracing/README.md)
+- [tsg](./tsg/readme.md)
 
 ## Test Signal Input Geometry (TSIG)
 

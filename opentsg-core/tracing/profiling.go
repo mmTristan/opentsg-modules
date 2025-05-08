@@ -18,6 +18,7 @@ const (
 	GCCPUFraction = "GCCPUFraction"
 	HeapAlloc     = "HeapAlloc"
 	HeapObjects   = "HeapObjects"
+	FileSize      = "DataSize"
 )
 
 // OtelMiddleWarePreProfile creates an openTelemetry middleware that uses the tracer,

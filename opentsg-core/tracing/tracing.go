@@ -25,14 +25,44 @@ import (
 // Configuration sets the tracer output
 // and the name of the tracer
 type Configuration struct {
+	InstrumentationName string
+}
+
+type WriterConfiguration struct {
 	Writer              io.Writer
 	InstrumentationName string
 }
 
-// Init returns an instance of Jaeger Tracer.
-// @TODO finish implementing this
-// Use it at your own risk
-func InitJaeger(ctx context.Context, service string) trace.Tracer {
+// InitJAeger sets up the configuration for a OpenTelemtry Tracer
+// If conf is nil then the tracer is given no instrument name.
+// This tracer will always write to Jaeger
+/*
+
+You can start the tracer with the following code.
+
+	// handle your own error
+	tracer, closeJag, _ := tracing.InitProvider(nil)
+	ctx := context.Background()
+
+	// run a tracer
+	// and generate the context with
+	// the tracer body
+	c, span := tracer.Start(ctx, "OpenTSG",
+    trace.WithSpanKind(trace.SpanKindInternal))
+
+    // End the span then close the tracer
+    defer func() {
+        span.End()
+        closeJag(c)
+    }()
+
+*/
+func InitJaeger(conf *Configuration, ctx context.Context, opts ...sdktrace.TracerProviderOption) (trace.Tracer, func(context.Context) error) {
+
+	if conf == nil {
+		conf = &Configuration{}
+	}
+
 	client := otlptracegrpc.NewClient(
 		otlptracegrpc.WithInsecure(),
 	)
@@ -41,12 +71,21 @@ func InitJaeger(ctx context.Context, service string) trace.Tracer {
 		log.Fatal("creating OTLP trace exporter: %w", err)
 	}
 
+	opt := make([]sdktrace.TracerProviderOption, len(opts)+1)
+
+	// set up the output to be a batch
+	opt[0] = sdktrace.WithBatcher(exporter)
+	for i, o := range opts {
+		opt[i+1] = o
+	}
+
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
+
+		opt...,
 	//	sdktrace.WithResource(newResource(service)),
 	)
 
-	return tp.Tracer(service)
+	return tp.Tracer(conf.InstrumentationName), tp.Shutdown
 }
 
 // InitProvider sets up the configuration for a OpenTelemtry Tracer
@@ -57,22 +96,26 @@ func InitJaeger(ctx context.Context, service string) trace.Tracer {
 You can start the tracer with the following code.
 
 	// handle your own error
-	tracer, closer, _ := InitProvider(nil)
+	tracer, closer, _ := tracing.InitProvider(nil)
 	ctx := context.Background()
 
 	// run a tracer
 	// and generate the context with
 	// the tracer body
-	c, _ := tracer.Start(ctx, "OpenTSG")
+	c, span := tracer.Start(ctx, "OpenTSG",
+    trace.WithSpanKind(trace.SpanKindInternal))
 
-	// close the trace at the end of the function
-	defer close(c)
+    // End the span then close the tracer
+    defer func() {
+        span.End()
+        closeJag(c)
+    }()
 
 */
-func InitProvider(conf *Configuration, opts ...sdktrace.TracerProviderOption) (trace.Tracer, func(context.Context) error, error) {
+func InitProvider(conf *WriterConfiguration, opts ...sdktrace.TracerProviderOption) (trace.Tracer, func(context.Context) error, error) {
 
 	if conf == nil {
-		conf = &Configuration{Writer: os.Stdout}
+		conf = &WriterConfiguration{Writer: os.Stdout}
 	}
 	// default is single line jsons to os.Stdout
 	// For choosing your own writers
@@ -186,6 +229,32 @@ func OtelSearchMiddleWare(tracer trace.Tracer) func(tsg.Search) tsg.Search {
 			defer span.End()
 
 			return search.Search(ctx, URI)
+		})
+	}
+}
+
+// OtelSearchMiddlewareProfile adds middleware to the request search function.
+// It records the size of the data returned in bytes.
+func OtelSearchMiddleWareProfile(tracer trace.Tracer) func(tsg.Search) tsg.Search {
+
+	return func(search tsg.Search) tsg.Search {
+
+		return tsg.SearchFunc(func(ctx context.Context, URI string) ([]byte, error) {
+
+			_, span := tracer.Start(ctx, URI,
+
+				trace.WithAttributes(),
+				trace.WithSpanKind(trace.SpanKindInternal),
+			)
+			defer span.End()
+
+			data, err := search.Search(ctx, URI)
+
+			span.AddEvent("Profile", trace.WithAttributes(
+				attribute.Int(FileSize, len(data)),
+			))
+
+			return data, err
 		})
 	}
 }

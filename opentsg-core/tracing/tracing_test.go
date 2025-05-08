@@ -35,7 +35,7 @@ func TestTracerInit(t *testing.T) {
 	buf := bytes.NewBuffer([]byte{})
 
 	trc, end, err := InitProvider(
-		&Configuration{Writer: buf, InstrumentationName: "TestWriter"},
+		&WriterConfiguration{Writer: buf, InstrumentationName: "TestWriter"},
 		Resources(&ResourceOptions{
 			ServiceName: "Demo Tracer",
 		}))
@@ -235,6 +235,36 @@ func TestSearchMiddleware(t *testing.T) {
 			Convey("A single span is returned from the single run", func() {
 				So(len(spans), ShouldResemble, 1)
 				So(spans[0].Resource.String(), ShouldResemble, "service.name=unknown_service:tracing.test,telemetry.sdk.language=go,telemetry.sdk.name=opentelemetry,telemetry.sdk.version=1.35.0")
+			})
+		})
+	})
+
+	exporterProf, tracerProf := makeExporterSpan()
+	// set up middleware
+	handlerProf := OtelSearchMiddleWareProfile(tracerProf)(tsg.SearchFunc(func(_ context.Context, URI string) ([]byte, error) {
+
+		return []byte{0, 0, 0, 0}, nil
+	}))
+
+	handlerProf.Search(nil, "")
+	// set up more profile tests
+	profSpans := exporterProf.GetSpans()
+
+	Convey("Checking that the search middleware profiler succesfully generates a log", t, func() {
+		Convey("running with a test tracer to check the internal logs", func() {
+			Convey("A single span is returned from the single run, with an events span for profiling", func() {
+				So(len(profSpans), ShouldResemble, 1)
+				So(len(profSpans[0].Events), ShouldResemble, 1)
+				So(profSpans[0].Events[0].Name, ShouldResemble, "Profile")
+				So(profSpans[0].Resource.String(), ShouldResemble, "service.name=unknown_service:tracing.test,telemetry.sdk.language=go,telemetry.sdk.name=opentelemetry,telemetry.sdk.version=1.35.0")
+			})
+		})
+	})
+
+	Convey("Checking that the profiler event has all the required file size attributes", t, func() {
+		Convey("comparing the event against the expected attribute headers", func() {
+			Convey("The event has all the required headers", func() {
+				So(validateEvent(profSpans[0].Events[0].Attributes, []string{FileSize}), ShouldBeTrue)
 			})
 		})
 	})

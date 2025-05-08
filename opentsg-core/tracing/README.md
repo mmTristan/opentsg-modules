@@ -6,7 +6,18 @@ of OpenTSG.
 This library provides the middleware for checking the events that
 occur in OpenTSG and their parents that caused them. As well
 as offering memory profiling of the widgets.
-Allowing you to build up an image of how OpenTSG has run.
+Allowing you to build up an image of how OpenTSG has run,
+in real time if you are using Jaeger as an add on.
+
+## Contents
+
+- [Using Tracing](#using-jaeger)
+- [Using Jaeger](#using-jaeger)
+  - [Initialising a Tracer](#initialising-a-tracer)
+  - [Middleware](#middleware)
+  - [Search Middleware](#searchmiddleware)
+  - [Writing to Slog](#writing-to-slog)
+  - [Manually Creating a Trace](#manually-creating-a-trace)
 
 ## Using Tracing
 
@@ -14,25 +25,43 @@ The tracing provides a way to trace openTSG as it is running,
 with low impact middleware plugins that can be used in tandem
 with other middlewares.
 
-Get the library with
+Get the tracing library with the following command.
 
 ```cmd
 go get "github.com/mrmxf/opentsg-modules/opentsg-core/tracing"
 ```
 
-OTEL has the potential for integration with other
-tracing services such as jaeger, so you can generate more sophisticated
-reports from OpenTSG.
+Now you have the tracing library lets integrate it into your
+code.
 
-This library uses the OpenTelemetry SDK to write to a user
-defined location, with the io.Writer interface.
+## Using Jaeger
 
+If you want to plug the tracing straight into [Jaeger][JGR],
+because it uses Open Telemetry as a base,
+so you can plug OpenTSG straight into jaeger and start visualising
+your tracing results.
 
+To get Jaeger started follow the instructions on
+[the website][JSTRT]
+
+You can then view your traces at [http://localhost:16686](http://localhost:16686)
+
+To use the Jaeger follow the examples below,
+but swap out `tracing.InitProvider` for `tracing.InitJaeger`
 
 ### Initialising a Tracer
 
 To start the tracing, you first need to make
 a tracer object and to start it.
+
+Where you create the tracer, you then start it
+to generate a parent context, which you pass onto child
+tracers and spans.
+
+Then you have to end the tracer and close it.
+In that order, if you close it before you end it then
+the final trace is not flushed leading to
+potential errors down the line.
 
 The tracer is intialised
 and started with the following code.
@@ -45,22 +74,34 @@ ctx := context.Background()
 // run a tracer
 // and generate the context with
 // the tracer body
-c, _ := tracer.Start(ctx, "OpenTSG")
+c, span := tracer.Start(ctx, "OpenTSG",
+trace.WithSpanKind(trace.SpanKindInternal))
 
-// close the trace at the end of the function
-defer close(c)
+// End the span then close the tracer
+defer func() {
+    span.End()
+    closeer(c)
+}()
 
 // Create middlewares from here and run the program
 // Or manually create a trace
 ```
 
 The context can be used to intialise any middleware
-you would like to use.
+you would like to use, as it gives the parent trace
+as OpentTSG.
 
 This library utilises the openTelemetry SDK of
 `"go.opentelemetry.io/otel/sdk/trace"`, which can
 be used to customise the tracer object with the
 `sdktrace.TracerProviderOption` type.
+
+The `tracing.Resources`function also creates fields
+for the tracer to use, with the following fields:
+
+- ServiceVersion
+- ServiceName
+- JobID
 
 #### Middleware
 
@@ -82,10 +123,14 @@ func main() {
     // run a tracer
     // and generate the context with
     // the tracer body
-    c, _ := tracer.Start(ctx, "OpenTSG")
+    c, span := tracer.Start(ctx, "OpenTSG",
+    trace.WithSpanKind(trace.SpanKindInternal))
 
-    // close the trace at the end of the function
-    defer closer(c)
+    // End the span then close the tracer
+    defer func() {
+        span.End()
+        closer(c)
+    }()
 
     otsg, _ := tsg.BuildOpenTSG(commandInputs, *profile, *debug, 
         &tsg.RunnerConfiguration{RunnerCount: 1, ProfilerEnabled: true}, myFlags...)
@@ -126,10 +171,14 @@ func main() {
     // run a tracer
     // and generate the context with
     // the tracer body
-    c, _ := tracer.Start(ctx, "OpenTSG")
+    c, span := tracer.Start(ctx, "OpenTSG",
+    trace.WithSpanKind(trace.SpanKindInternal))
 
-    // close the trace at the end of the function
-    defer closer(c)
+    // End the span then close the tracer
+    defer func() {
+        span.End()
+        closer(c)
+    }()
 
     otsg, _ := tsg.BuildOpenTSG(commandInputs, *profile, *debug, 
         &tsg.RunnerConfiguration{RunnerCount: 1, ProfilerEnabled: true}, myFlags...)
@@ -159,6 +208,10 @@ Garbage Cleaner - `GCCPUFraction`
 
 #### SearchMiddleware
 
+Tracing middleware is also provided for
+the `SearchWithCredentials` function and can
+be added like so.
+
 ```go
 
 import (
@@ -174,22 +227,33 @@ func main() {
     // run a tracer
     // and generate the context with
     // the tracer body
-    c, _ := tracer.Start(ctx, "OpenTSG")
+    c, span := tracer.Start(ctx, "OpenTSG",
+    trace.WithSpanKind(trace.SpanKindInternal))
 
-    // close the trace at the end of the function
-    defer closer(c)
+    // End the span then close the tracer
+    defer func() {
+        span.End()
+        closer(c)
+    }()
 
     otsg, _ := tsg.BuildOpenTSG(commandInputs, *profile, *debug, 
         &tsg.RunnerConfiguration{RunnerCount: 1, ProfilerEnabled: true}, myFlags...)
 
     // Add the tracing middleware
-    pseudoTSG.UseSearches(tracing.OtelSearchMiddleWare(tracer))
+    pseudoTSG.UseSearches(tracing.OtelSearchMiddleWareProfile(tracer))
 
     // run the engine
     otsg.Run("")
 }
 
 ```
+
+This logs:
+
+- Start time
+- End time
+- The URI of the data
+- The size of the data extracted in bytes.
 
 #### Writing to Slog
 
@@ -233,3 +297,5 @@ If the context contains previous tracer information,
 then the trace will inherit this and make it the parent of that trace.
 
 [OTEL]: "https://opentelemetry.io/" "The OpenTelemetry website"
+[JGR]: "https://www.jaegertracing.io/" "The official Jaeger website"
+[JSTRT]: "https://www.jaegertracing.io/docs/2.5/getting-started/" "The jaeger getting started instructions" 
