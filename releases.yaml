@@ -1,85 +1,11 @@
-# code names here: https://www.plumbingsupply.com/plumbing_dictionary.html
+# opentsg codenames from https://www.mythical-creatures-and-beasts.com/
 ---
-- version: "v0.4.3"
-  date: 2024-02-06
-  codename: drainage
-  note: "deb script debug"
-- version: "v0.4.2"
-  date: 2024-02-06
-  codename: drainage
-  note: "clog Inc"
-- version: "v0.4.1"
-  date: 2024-02-03
-  codename: drainage
-  note: "new UX, Ls, Cat, Cp"
-- version: "v0.4.0"
-  date: 2023-12-18
-  codename: drainage
-  note: "CI/CD refactor"
-- version: "v0.3.4"
-  date: 2023-09-11
-  codename: closet-flange
-  note: "Core Init command"
-- version: "v0.3.3"
-  date: 2023-08-31
-  codename: closet-flange
-  note: "Core Update ui fix & versionstr generalization"
-- version: "v0.3.2"
-  date: 2023-08-18
-  codename: closet-flange
-  note: "installer bug fix"
-- version: "v0.3.1"
-  date: 2023-08-17
-  codename: closet-flange
-  note: "mac, linux & win builds"
-- version: "v0.3.0"
-  date: 2023-08-15
-  codename: closet-flange
-- version: "v0.2.7"
-  date: 2022-11-23
-  codename: ball-cock
-  note: added wsync script
-- version: "v0.2.6"
-  date: 2022-11-04
-  codename: ball-cock
-  note: "added clog Install <app>"
-- version: "v0.2.5"
-  date: 2022-11-01
-  codename: "ball-cock"
-  note: win, amd64 + arm64 & better installers
-- version: "v0.2.4"
-  date: 2022-10-23
-  codename: ball-cock
-  note: refactored core
-- version: "v0.2.3"
-  date: 2022-08-15
-  codename: ball-cock
-  note: AWS profile, domains, zones
-- version: "v0.2.2"
-  date: 2022-08-15
-  codename: ball-cock
-  note: fixed menus
-- version: "v0.2.1"
-  date: 2022-08-15
-  codename: ball-cock
-  note: added lightsail scripts
-- version: "v0.2.1"
-  date: 2022-07-29
-  codename: ball-cock
-  note: deploy via curl and clogbin
-- version: "v0.2.0"
-  date: 2022-07-25
-  codename: ball-cock
-  note: embed all scripts
-- version: "v0.1.5"
-  date: 2022-04-13
-  codename: angle-bend
-  note: clog pulls resources from S3
-- version: "v0.1.2"
-  date: 2022-02-24
-  codename: angle-bend
-  note: clog updates path
-- version: "v0.1.0"
-  date: 2021-10-04
-  codename: angle-bend
-  note: allow user scripts
+- { version: "0.6.1", date: 2024-11-22, codename: fenrir,       note: tracing and middlewares }
+- { version: "0.6.0", date: 2024-11-22, codename: fenrir,       note: tsigs boxes coordinates }
+- { version: "0.5.0", date: 2024-11-22, codename: erymanthian,  note: HandlingAndBoxes }
+- { version: "0.4.1", date: 2023-12-05, codename: dragon,       note: camelCapsConsistency }
+- { version: "0.4.0", date: 2023-11-29, codename: dragon,       note: color space & text }
+- { version: "0.3.0", date: 2023-09-01, codename: camazotz,     note: internal testing release }
+- { version: "0.2.1", date: 2023-08-30, codename: bunyip,       note: bug fixes and naming consistency }
+- { version: "0.2.0", date: 2023-07-21, codename: bunyip,       note: first public repo for feedback }
+- { version: "0.1.0", date: 2023-04-28, codename: aigamuxa,     note: pre-release demo for feedback }
