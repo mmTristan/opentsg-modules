@@ -85,9 +85,14 @@ func (o *OpenTSG) Use(middlewares ...func(Handler) Handler) {
 	o.middlewares = append(o.middlewares, middlewares...)
 }
 
-// UseEncoderMiddleware appends a middleware handler to the OpenTSG middleware stack.
-func (o *OpenTSG) UseEncoderMiddleware(middlewares ...func(Encoder) Encoder) {
-	o.encoderMiddlewares = append(o.encoderMiddlewares, middlewares...)
+// UseContextMiddleware appends a context middleware handler to the OpenTSG middleware stack.
+// Context middlewares run when:
+/*
+ - encoding a file
+ - composing a widget to the test pattern
+*/
+func (o *OpenTSG) UseContextMiddleware(middlewares ...func(ContFunc) ContFunc) {
+	o.contextMiddlewares = append(o.contextMiddlewares, middlewares...)
 }
 
 // Request contains all the information sent to a widget handler
@@ -410,6 +415,7 @@ func (tsg *OpenTSG) Run(mnt string) {
 		frameWait.Wait()
 
 	}
+
 	wg.Wait()
 	fmt.Println("")
 
@@ -437,12 +443,14 @@ func (tsg *OpenTSG) canvasSave(canvas draw.Image, filename []string, bitdeph int
 
 			continue
 		}
+
 		err = tsg.encodeFrame(truepath, canvas, EncodeOptions{bitdeph})
 		if err != nil {
 			monit.incrementError(1)
 			tsg.logErrors(700, monit.frameNo, monit.jobID, err)
 		}
 	}
+
 }
 
 type monitor struct {
@@ -682,17 +690,17 @@ func (tsg *OpenTSG) widgetHandle(c *context.Context, canvas draw.Image, monit *m
 
 				// use the middleware on the composition - double the logging
 				// is this advisable
-				drawer := HandlerFunc(func(r Response, r2 *Request) {
+				drawer := ContFunc(func(ctx context.Context) {
 					compostion := time.Now()
 					//	canvasLock.Lock()
 					colour.DrawMask(canvas, canvasArea, gridCanvas, image.Point{}, mask, image.Point{}, draw.Over)
 					//	canvasLock.Unlock()
 					p.Composite = time.Since(compostion)
-					r.Write(WidgetSuccess, "written test pattern")
+
 				})
 
-				compose := chain[Handler](tsg.middlewares, drawer)
-				compose.Handle(&TestResponder{BaseImg: image.NewAlpha(image.Rect(0, 0, 1, 1))}, &req)
+				compose := chain(tsg.contextMiddlewares, drawer)
+				compose(setName(context.Background(), req.PatchProperties.WidgetFullID+"-compose"))
 				// compostion := time.Now()
 				// //	canvasLock.Lock()
 				// colour.DrawMask(canvas, canvasArea, gridCanvas, image.Point{}, mask, image.Point{}, draw.Over)

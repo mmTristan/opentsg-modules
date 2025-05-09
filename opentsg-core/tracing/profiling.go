@@ -2,8 +2,6 @@ package tracing
 
 import (
 	"context"
-	"image"
-	"io"
 	"runtime"
 	"sync"
 	"time"
@@ -191,15 +189,16 @@ func OtelMiddleWareAvgProfile(ctx context.Context, tracer trace.Tracer, sampleSt
 	}
 }
 
-// OtelSearchMiddlewareProfile adds middleware to the request search function
+// OtelContextMiddlewareProfile adds middleware to the request search function
 // as well as profiling the memory usage of the function
-func OtelEncoderMiddleWareProfile(ctx context.Context, tracer trace.Tracer, sampleStep time.Duration) func(tsg.Encoder) tsg.Encoder {
+func OtelContextMiddleWareProfile(ctx context.Context, tracer trace.Tracer, sampleStep time.Duration) func(conter tsg.ContFunc) tsg.ContFunc {
 
-	return func(encode tsg.Encoder) tsg.Encoder {
+	return func(conter tsg.ContFunc) tsg.ContFunc {
 
-		return tsg.Encoder(func(w io.Writer, i image.Image, eo tsg.EncodeOptions) error {
+		return tsg.ContFunc(func(ctxFunc context.Context) {
 
-			_, span := tracer.Start(ctx, "Encoder",
+			contName := tsg.GetName(ctxFunc)
+			_, span := tracer.Start(ctx, contName,
 				trace.WithAttributes(),
 				trace.WithSpanKind(trace.SpanKindInternal),
 			)
@@ -210,9 +209,8 @@ func OtelEncoderMiddleWareProfile(ctx context.Context, tracer trace.Tracer, samp
 			// run the handler as  go function
 			wg := sync.WaitGroup{}
 			wg.Add(1)
-			var encErr error
 			go func() {
-				encErr = encode(w, i, eo)
+				conter(ctxFunc)
 				wg.Done()
 			}()
 
@@ -273,7 +271,6 @@ func OtelEncoderMiddleWareProfile(ctx context.Context, tracer trace.Tracer, samp
 				attribute.Int(HeapObjects, int(heapObjects)),
 			))
 
-			return encErr
 		})
 	}
 }

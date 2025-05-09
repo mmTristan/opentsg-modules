@@ -44,6 +44,18 @@ your tracing results.
 To get Jaeger started follow the instructions on
 [the website][JSTRT]
 
+This boils down to running the following command
+
+```cmd
+docker run --rm --name jaeger \
+  -p 16686:16686 \
+  -p 4317:4317 \
+  -p 4318:4318 \
+  -p 5778:5778 \
+  -p 9411:9411 \
+  jaegertracing/jaeger:2.5.0
+```
+
 You can then view your traces at [http://localhost:16686](http://localhost:16686)
 
 To use the Jaeger follow the examples below,
@@ -80,7 +92,7 @@ trace.WithSpanKind(trace.SpanKindInternal))
 // End the span then close the tracer
 defer func() {
     span.End()
-    closeer(c)
+    closer(c)
 }()
 
 // Create middlewares from here and run the program
@@ -255,6 +267,63 @@ This logs:
 - The URI of the data
 - The size of the data extracted in bytes.
 
+#### Context Middleware
+
+Tracing middleware is also provided for
+the context function and can
+be added like so.
+
+```go
+
+import (
+    "time"
+    "github.com/mrmxf/opentsg-modules/opentsg-core/tracing"
+    "github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
+)
+
+func main() {
+    tracer, closer, _ := tracing.InitProvider(nil)
+    ctx := context.Background()
+
+    // run a tracer
+    // and generate the context with
+    // the tracer body
+    c, span := tracer.Start(ctx, "OpenTSG",
+    trace.WithSpanKind(trace.SpanKindInternal))
+
+    // End the span then close the tracer
+    defer func() {
+        span.End()
+        closer(c)
+    }()
+
+    otsg, _ := tsg.BuildOpenTSG(commandInputs, *profile, *debug, 
+        &tsg.RunnerConfiguration{RunnerCount: 1, ProfilerEnabled: true}, myFlags...)
+
+    // Add the tracing middleware
+    pseudoTSG.UseSearches(tracing.OtelContextMiddleWareProfile(c, tracer, 100 * time.Millisecond))
+
+    // run the engine
+    otsg.Run("")
+}
+
+```
+
+This logs:
+
+- Start time
+- End time
+- The job ID
+- The openTSG version
+- The widget being run
+- The current memory allocation being used in bytes - `Alloc`
+- The total memory in bytes used in the lifetime of the program - `TotalAlloc`
+- The memory heaps in bytes, in use by the program - `HeapInUse`
+- The total percentage of the CPU in use by the program, that is used by the
+Garbage Cleaner - `GCCPUFraction`
+- The total Bytes used by the heap - `HeapAlloc`
+- The number of objects in the heap - `HeapObjects`
+
 #### Writing to Slog
 
 To write to the `logging/slog`library
@@ -295,6 +364,15 @@ func ExampleFunc(ctx context.Context, tracer trace.Tracer){
 
 If the context contains previous tracer information,
 then the trace will inherit this and make it the parent of that trace.
+
+## What to add / finish
+
+- [ ] Add more Context based middleware for Tracing
+  - [ ] Decide what to do with the search middleware - should this become context middleware or be left the same
+  - [ ] Add more useful fields to the context to be extracted
+- [ ] Add better name tags to context names
+- [ ] Write more tests - optional
+- [ ] Other plugins for modules like grafana etc
 
 [OTEL]: "https://opentelemetry.io/" "The OpenTelemetry website"
 [JGR]: "https://www.jaegertracing.io/" "The official Jaeger website"

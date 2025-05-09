@@ -35,10 +35,35 @@ type OpenTSG struct {
 	//
 	searchMiddleware   []func(Search) Search
 	encoders           map[string]Encoder
-	encoderMiddlewares []func(Encoder) Encoder
+	contextMiddlewares []func(ContFunc) ContFunc
 	// runner configuration
 	runnerConf RunnerConfiguration
 }
+
+// ContFunc is the format for context wrapped functions
+// that cn be chained with middleware in the
+// openTSG internals.
+// It is designed to be used for generic profiling
+// with more features as teh context is extended.
+type ContFunc func(ctx context.Context)
+
+type contKey string
+
+const (
+	contName = "context name for context middleware"
+)
+
+// GetName gets the name of a process running from a context
+// to be used in tandem with a ContFunc
+func GetName(ctx context.Context) string {
+	return ctx.Value(contName).(string)
+}
+
+func setName(ctx context.Context, name string) context.Context {
+	return context.WithValue(ctx, contName, name)
+}
+
+// Make a getter
 
 // RunnerConfiguration is the set up for the internal runners
 // of openTSG

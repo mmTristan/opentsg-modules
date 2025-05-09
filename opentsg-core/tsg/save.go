@@ -2,6 +2,7 @@
 package tsg
 
 import (
+	"context"
 	"fmt"
 	"image"
 	"image/draw"
@@ -171,10 +172,17 @@ func (tsg *OpenTSG) encodeFrame(filename string, base draw.Image, opts EncodeOpt
 
 	defer saveTarget.Close()
 
-	// add the middleware for the encoders
-	encoder := chain(tsg.encoderMiddlewares, encodeFunc)
+	// wrap the function based in a context
+	var fwErr error
+	encodeContext := ContFunc(func(ctx context.Context) {
+		fwErr = encodeFunc(saveTarget, base, opts)
 
-	fwErr := encoder(saveTarget, base, opts)
+	})
+
+	// add the middleware for the encoders
+	encoder := chain(tsg.contextMiddlewares, encodeContext)
+
+	encoder(setName(context.Background(), filename))
 	if fwErr != nil {
 		return fmt.Errorf("0051 %v", fwErr)
 	}

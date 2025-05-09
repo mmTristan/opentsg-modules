@@ -75,3 +75,70 @@ func jpegEncode(w io.Writer, img draw.Image, _ tsg.EncodeOptions) error {
     return jpeg.Encode(w, img, &jpeg.Options{Quality:100})
 }
 ```
+
+## Implementing middlewares
+
+OTSG has several hooks for middlewares to
+monitor, log and do whatever you fancy to the results
+of the engine running.
+
+These are handler middlewares for interacting with the request and writer
+
+```go
+
+package example
+
+import (
+    "fmt"
+    "github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
+)
+
+func main () {
+    opentsg, configErr := tsg.FileImport(commandInputs, *profile, *debug, myFlags...)
+    //handle configErr
+
+    // add a simple middleware that prints a line
+    tsg.Use(func(h tsg.Handler) tsg.Handler {
+        return tsg.HandlerFunc(func(r1 tsg.Response, r2 *tsg.Request) {
+           fmt.Println("A middleware that does something")
+           h.Handle(r1,r2)
+        })
+    })
+
+    // run opentsg
+    opentsg.Draw(*debug, *outputmnt, *outputLog)
+}
+
+```
+
+Or context middlewares that run when:
+
+- encoding a file
+- composing a widget to the test pattern
+
+```go
+
+package example
+
+import (
+    "fmt"
+    "github.com/mrmxf/opentsg-modules/opentsg-core/tsg"
+)
+
+func main () {
+    opentsg, configErr := tsg.FileImport(commandInputs, *profile, *debug, myFlags...)
+    //handle configErr
+
+    // add a simple middleware that prints a line
+    otsg.UseContextMiddleware(func(cf tsg.ContFunc) tsg.ContFunc {
+        return func(ctx context.Context) {
+            fmt.Println("hello from a context middleware")
+            cf(ctx)
+        }
+    })
+
+    // run opentsg
+    opentsg.Draw(*debug, *outputmnt, *outputLog)
+}
+
+```
